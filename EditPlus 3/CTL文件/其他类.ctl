@@ -1,0 +1,11 @@
+#TITLE=       其他类
+#INFO
+EditPlus Cliptext Library v1.0 written by ES-Computing.
+This file is provided as a sample Clitext library of EditPlus.
+#SORT=n
+
+#T= _DoubleToStr 类型转换
+_DoubleToStr(
+#T= _GetSysVer   获取系统版本更新日期
+_GetSysVer(
+#

@@ -1,0 +1,95 @@
+#TITLE=       DBF数据库类
+#INFO
+EditPlus Cliptext Library v1.0 written by ES-Computing.
+This file is provided as a sample Clitext library of EditPlus.
+#SORT=n
+ 
+#T=_Select   选择工作区
+_Select(
+#T=_Go       定位记录	
+_Go( 
+#T=_Skip     相对移动记录
+_Skip( 
+#T=_Use      打开数据库
+_Use(
+#T=_Recno    获取当前记录	
+_Recno()
+#T=_Reccount 获取当前工作区总记录
+_Reccount()
+#T=_Bof      是否到第一条记录	
+_Bof()
+#T=_Eof      是否到最后一条记录	
+_Eof();
+#T=_App      追加一条空记录
+_App();
+#T=_Del      逻辑删除当前记录
+_Del();
+#T=_Pack     物理删除记录
+_Pack();
+#T=_Zap      清空所有记录	 
+_Zap();
+#T=_Replace  更新记录
+_Replace(
+#T=_ReadField读字段
+_ReadField( 
+#T=ENERGY_通讯地址 C  12
+ENERGY_txdz
+#T=ENERGY_结算日 C  10
+ENERGY_jsr
+#T=ENERGY_组合有功 C  50
+ENERGY_zhyg
+#T=ENERGY_正向有功 C  50
+ENERGY_zxyg
+#T=ENERGY_反向有功 C  50
+ENERGY_fxyg
+#T=ENERGY_组合无功1 C  50
+ENERGY_zhwg1
+#T=ENERGY_组合无功2 C  50
+ENERGY_zhwg2
+#T=ENERGY_一象限无功 C  50
+ENERGY_xxwg1
+#T=ENERGY_二象限无功 C  50
+ENERGY_xxwg2
+#T=ENERGY_三象限无功 C  50
+ENERGY_xxwg3
+#T=ENERGY_四象限无功 C  50
+ENERGY_xxwg4
+#T=ENERGY_正向视在 C  50
+ENERGY_zxxz
+#T=ENERGY_反向视在 C  50
+ENERGY_fxxz
+#T=ENERGY_抄收时间 C  21
+ENERGY_cssj
+#T=FREEZE_通讯地址 C  12
+FREEZE_txdz
+#T=FREEZE_数据标识 C  8
+FREEZE_sjbs
+#T=FREEZE_数据说明 C  26
+FREEZE_sjsm
+#T=FREEZE_冻结时间 C  10
+FREEZE_djsj
+#T=FREEZE_正有电能 C  50
+FREEZE_zydn
+#T=FREEZE_反有电能 C  50
+FREEZE_fydn
+#T=FREEZE_组合无功1 C  50
+FREEZE_zhwg1
+#T=FREEZE_组合无功2 C  50
+FREEZE_zhwg2
+#T=FREEZE_一象限无功 C  50
+FREEZE_xxwg1
+#T=FREEZE_二象限无功 C  50
+FREEZE_xxwg2
+#T=FREEZE_三象限无功 C  50
+FREEZE_xxwg3
+#T=FREEZE_四象限无功 C  50
+FREEZE_xxwg4
+#T=FREEZE_正有需量 C  95
+FREEZE_zyxl
+#T=FREEZE_反有需量 C  95
+FREEZE_fyxl
+#T=FREEZE_变量数据 C  64
+FREEZE_blsj
+#T=FREEZE_抄收时间 C  21
+FREEZE_cssj
+#
