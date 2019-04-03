@@ -100,11 +100,11 @@ void File(void)
 	char *p;
 	_ClearScreen();
 	_Printfxy(0,0,"FIELSYS TEST",0);
-	p= _GetFileList("文|\n  |\n件|\n  |\n查|\n  |\n看|\n  |\n","","CB/");
+	p= _GetFileList("文|\n  |\n件|\n  |\n查|\n  |\n看|\n  |\n","","");
 	_ClearScreen();
 	_Printfxy(0,2*16,p,0);
 	_ReadKey();
-	/*
+	
 	_ClearScreen();
 	_Printfxy(0,0,"FIELSYS TEST",0);
 
@@ -114,6 +114,8 @@ void File(void)
 	_Printfxy(0,1*16,"space:",0);
 	_Printfxy(5*8,1*16,tmp,0);
 
+	_Printfxy(0,2*16,"mkdir,fopen/fwrite",0);
+	
 	if (_MkDir("test" )==-1)
 	{
 	     FileTestError("build test folder error!");
@@ -150,7 +152,9 @@ void File(void)
 	 //文件关闭
 	_Fclose(hdl);
 	_Fclose(hdl1);
-	_Printfxy(0,3*16,"file comp",0);
+
+	_Printfxy(0,3*16,"file read/close",0);
+	
 	hdl=_Fopen("test/1.tmp","R");
 	//文件读取
 	for(i=0;i<10;i++)
@@ -162,9 +166,7 @@ void File(void)
 	   break;
 
 	}
-
 	 _Fclose(hdl);
-
 
 	if (i!=10)
 	{   FileTestError("file read erro!");
@@ -172,21 +174,18 @@ void File(void)
 
 	  }
 	else
-	 _Printfxy(0,4*16,"file test ok ",0);
-
-
-
-
-	 _Printfxy(0,4*16,"1.tmp dele ",0);
-
+	 
+	//文件删除/重命名
+	_Printfxy(0,4*16,"remove/rename/access",0);
+	
 	 _Remove("test/1.tmp");
-	_Printfxy(0,5*16,"file 2 size:",0);
-
+	
 	if (_Rename("test/2.tmp","test/3.tmp")==-1)
 	{
 	    FileTestError("2.tmp rename erro");
 	   return;
 	}
+	
 	 //检查文件是否存在
 	if(_Access("test/3.tmp",0)==-1)
 	{
@@ -199,17 +198,21 @@ void File(void)
 	   FileTestError("3.tmp open error");
 	   return;
 	}
+	
 	//文件大小
+	_Printfxy(0,5*16,"file 2 size:",0);
+	
 	i=_Filelenth(hdl);
 	sprintf(tmp,"%d",i);
+	
 	_Printfxy(90,5*16,tmp,0);
 
 	 //文件移动
 	_Lseek(hdl,-2,2);
 	i=_Fread(tmp,4,hdl);
 	tmp[i]=0;
-	_Printfxy(0,6*16,"file:",0);
-	_Printfxy(_strlen("文件内容:")*8,6*16,tmp,0);
+	_Printfxy(0,6*16,"after seek:",0);
+	_Printfxy(_strlen("after seek:")*8,6*16,tmp,0);
 
 	//检查文件是否到结尾
 	if (_Feof(hdl))
@@ -219,10 +222,13 @@ void File(void)
 
 	_Fclose(hdl);
 
-
+	_ReadKey();
+	
 	 ListDir("test/");
 
 	 _GetFileList("文|\n  |\n件|\n  |\n查|\n  |\n看|\n  |\n","","");
+
+	 _ReadKey();
 
 	 _Remove("test/3.tmp");
 	if (_RmDir("test/sbutest")==-1)
@@ -235,7 +241,8 @@ void File(void)
 	      FileTestError("test 目录删除失败");
 	   return;
 	 }
-	 */
+
+	FileTestError("file test ok !");
 }
 
 /*****************************************
@@ -765,11 +772,11 @@ void DispComponents(void)
 {
 	char byds[20]= {0};
 	uint8 key,i;
-	char filed[20][50]= {{"张学友"},{"刘德华"},{"黎明"},{"郭富成"},{"许志安"},{"古巨基"},{"陈奕迅"},{"侧田"},{"张国荣"}};
-
+	char filed[20][50]= {{"张学友"},{"周星驰"},{"刘德华刘德华刘德华"},{"黎明"},{"郭富成"},{"许志安"},{"古巨基"},{"陈奕迅"},{"侧田"},{"张国荣"}};
 
 	_GuiInputBoxStru  inputbox;
 	_GuiLisStru  ThisList;
+	WINDOWS win;
 
 	_ClearScreen();
 	inputbox.top=5*16;
@@ -797,18 +804,23 @@ void DispComponents(void)
 
 	_ClearScreen();
 
+	_Printfxy(0,0,   "一二三四五六七八九拾",1);
 
+	ThisList.title = "    列表演示    ";
+	ThisList.no=10;
 	ThisList.MaxNum=8;
 	ThisList.x=0;
-	ThisList.y=0;
-	ThisList.no=9;
+	ThisList.y=16;
+	ThisList.with = 16 * 10;
 	for(i=0; i<ThisList.no; i++)
 		ThisList.str[i]=filed[i];
 	i=  _List(&ThisList);
+
 	if (i==0) return ;
 	_ClearScreen();
-	_Printfxy(0,0 ,"选择的是:",0);
-	_Printfxy(0,16 , filed[i-1],0);
+
+	_Printfxy(0,0 ,"选择的是:",1);
+	_Printfxy(0,16 , filed[i-1],1);
 	_ReadKey();
 }
 
