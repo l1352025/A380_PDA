@@ -752,7 +752,8 @@ void DispComponents(void)
 {
 	char byds[20] = {0};
 	uint8 key, i;
-	char filed[20][50] = {{"张学友"}, {"周星驰"}, {"刘德华刘德华刘德华"}, {"黎明"}, {"郭富成"}, {"许志安"}, {"古巨基"}, {"陈奕迅"}, {"侧田"}, {"张国荣"}};
+	char filed[20][50] = {{"1.张学友"}, {"2.周星驰"}, {"3.刘德华刘德华刘德华"}, {"4.黎明"},
+		{"5.郭富成"}, {"6.许志安"}, {"7.古巨基"}, {"8.陈奕迅"}, {"9.侧田"}, {"10.张国荣"}};
 
 	_GuiInputBoxStru inputbox;
 	_GuiLisStru ThisList;
@@ -785,9 +786,9 @@ void DispComponents(void)
 
 	ThisList.title = "    列表演示    ";
 	ThisList.no = 10;
-	ThisList.MaxNum = 8;
+	ThisList.MaxNum = 6;
 	ThisList.x = 0;
-	ThisList.y = 16;
+	ThisList.y = 2*16;
 	ThisList.with = 16 * 10;
 	for (i = 0; i < ThisList.no; i++)
 		ThisList.str[i] = filed[i];
@@ -795,10 +796,9 @@ void DispComponents(void)
 
 	if (i == 0)
 		return;
-	_ClearScreen();
-
-	_Printfxy(0, 0, "选择的是:", 1);
-	_Printfxy(0, 16, filed[i - 1], 1);
+	
+	_Printfxy(0, 9 * 16, "选择了:", 1);
+	_Printfxy(60, 9 * 16, filed[i - 1], 1);
 	_ReadKey();
 }
 
