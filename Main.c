@@ -5,6 +5,52 @@
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
+uint8 ComBuf[1080];
+uint8 TmpBuf[1080];
+uint32 rxLen, txLen;
+
+//---------------------------------  common function  -------------------------------------
+/*
+* 函数名：IndexOf
+* 描  述：在数组中查找，可指定查找的起始位置和范围
+* 参  数：srcArray - 源数组地址， srcLen - 源数组长度
+		  dstBytes - 目的数组地址， dstLen - 目的数组长度 
+		  startIndex - 源数组查找的起始位置，offset - 查找的范围
+* 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
+*/
+int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset)
+{
+    int index = -1, i, j;
+
+    if (dstBytes == NULL || dstLen == 0) return index;
+
+    if(offset > (srcLen - startIndex))
+    {
+        offset = (srcLen - startIndex);
+    }
+
+    for (i = startIndex; i <= (startIndex + offset - dstLen); i++)
+    {
+        if (srcArray[i] == dstBytes[0])
+        {
+            for (j = 0; j < dstLen; j++)
+            {
+                if (srcArray[i + j] != dstBytes[j])
+                {
+                    break;
+                }
+            }
+
+            if (j == dstLen)
+            {
+                index = i;
+                break;
+            }
+        }
+    }
+
+    return index;
+}
 
 
 // --------------------------------  电力主节点通信  -----------------------------------------
@@ -32,12 +78,14 @@ void WaterMainNodeFunc(void)
 // --------------------------------  透传模块设置  -----------------------------------------
 void TransParentModuleFunc(void)
 {
-	uint8 key, menuItemNo;
+	uint8 key, menuItemNo, tryCnt = 0;
 	_ProGressBar progBar;
 	_GuiLisStruEx menuList;
 	char *fileName;
 	char tmp[70];
-
+	int fileHdl, fileLen, totalCnt, sendCnt;
+	int index, progBarValue;
+	
 	_ClearScreen();
 
 	// 菜单
@@ -61,105 +109,152 @@ void TransParentModuleFunc(void)
 	progBar.width = 10*16;
 	progBar.hight = 16;
 
+	_CloseCom();
+	_ComSetTran(3);
+	_ComSet((uint8 *)"19200,E,8,1", 2);
+
 	while(1){
 
 		menuItemNo = _ListEx(&menuList);
 
-		if (menuItemNo == 0) 
-			return;
+		if (menuItemNo == 0){
+			break;
+		}
+
+		menuList.defbar = menuItemNo;
 
 		switch(menuItemNo){
 		case 1:	// " 查看当前版本 ";
 			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			sprintf(tmp, "当前版本: %s\0", "SRWF-4E88M-SG-BXD17-20190401-Vsp0.33");
-			_Printfxy(0, 5*16, &tmp[0], 0);
-			_Printfxy(0, 6*16, &tmp[20], 0);
-			_Printfxy(0, 7*16, &tmp[40], 0);
+			txLen = 0;
+			ComBuf[txLen++] = 0xAA;
+			ComBuf[txLen++] = 0xBB;
+			ComBuf[txLen++] = 0x01;
+			ComBuf[txLen++] = 0x07;
+			ComBuf[txLen++] = 0xCC;
+			_GetComStr(TmpBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(ComBuf, txLen);
+			_Printfxy(0, 5*16, "查询中...", 0);
+
+			sprintf(ComBuf, "当前版本:");
+			rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
+			if(rxLen < 30 || strncmp(&ComBuf[9], "SRWF-", 5) != 0)
+			{
+				_Printfxy(0, 5*16, "接收超时", 0);
+				break;
+			}
+			_Printfxy(0, 5*16, &ComBuf[0], 0);
+			_Printfxy(0, 6*16, &ComBuf[20], 0);
+			_Printfxy(0, 7*16, &ComBuf[40], 0);
 			break;
 
 		case 2:	// " 打开升级文件 "
-			// 选择升级文件
 			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			sprintf(tmp, "文件: %s\0", "SRWF-4E88-APP-20190401-Vsp0.33.bin");
+
+			_SaveScreenToBuff(Screenbuff);
+			_ClearScreen();
+			fileName = _GetFileList("选|\n择|\n升|\n级|\n文|\n件|\n  |\n  |\n", "", "");
+			_ClearScreen();
+			_RestoreBuffToScreen(Screenbuff);
+
+			if (fileName == NULL){
+				break;
+			}
+			
+			sprintf(tmp, "文件: %s\0", fileName);
 			_Printfxy(0, 5*16, &tmp[0], 0);
 			_Printfxy(0, 6*16, &tmp[20], 0);
-			sprintf(tmp, "大小:%dK,总包数:%d\0", 30, 300);
-			_Printfxy(0, 7*16, &tmp[0], 0);
-			// 保存路径
-			//fileName = 
 
+			fileHdl = _Fopen(fileName, "R");
+			fileLen = _Filelenth(fileHdl);
+			totalCnt = (fileLen + 1023)/1024;
+			sendCnt = 0;
+			_Fread(ComBuf, 1024, fileHdl);
+			_Fclose(fileHdl);
+				
+			index = IndexOf(ComBuf, 1024, "SRWF-", 5, 512, 512);
+			if(index < 0){
+				_Printfxy(0, 7*16, "不是4E88-APP文件", 0);
+				fileName = NULL;
+			}
+			else{
+				sprintf(tmp, "大小:%dK,总包数:%d\0", fileLen/1024, totalCnt);
+				_Printfxy(0, 7*16, &tmp[0], 0);
+			}
 			break;
 			
 		case 3:	// " 开始升级 ";
-		
 			// 初始化
+			if (fileName == NULL){
+				_Printfxy(0, 5*16, "请先选择升级文件", 0);
+				break;
+			}
+			fileHdl = _Fopen(fileName, "R");
+			sendCnt = 0;
+
 			//progBar.step = 1;	
 			progBar.min = 0;
-			progBar.max = 300; 	// 总包数
+			progBar.max = totalCnt;		// 总包数
 			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			sprintf(tmp, "总包数：%d\0", 300);
+			sprintf(tmp, "总包数: %d\0", totalCnt);
 			_Printfxy(0, 5*16, &tmp[0], 0);
-			sprintf(tmp, "已发送：%d\0",233);
+			sprintf(tmp, "正发送: %d   \0",sendCnt);
 			_Printfxy(0, 6*16, &tmp[0], 0);
 
 			_Printfxy(0, 9*16, "状态: 升级中...", 0);
-
 			_GUIRectangle(0, 7*16, 160, 8*16, 1);
 
-			// 更新进度
 			//_CreateProgressBar(&progBar);
 			_ReadKey();
 
-			progBar.value = 30;
-			//_IncrementProgressBar(&progBar);
-			_GUIRectangleFill(0, 7 * 16, 30, 8 * 16, 1);
-			_ReadKey();
+			// 升级进度
+			while(sendCnt < totalCnt){
+				
+				txLen = _Fread(ComBuf, 1024, fileHdl);
+				_GetComStr(TmpBuf, 1024, 10); // clear , 100ms timeout
+				_SendComStr(ComBuf, txLen);
 
-			progBar.value = 150;
-			//_IncrementProgressBar(&progBar);
-			_GUIRectangleFill(0, 7 * 16, 80, 8 * 16, 1);
-			_ReadKey();
+				sprintf(tmp, "正发送: %d   \0",sendCnt);
+				_Printfxy(0, 6*16, &tmp[0], 0);
+				if(tryCnt > 0){
+					sprintf(tmp, "重试%d \0",tryCnt);
+					_Printfxy(6*16, 6*16, &tmp[0], 0);
+				}
+				tryCnt++;
 
-			progBar.value = 250;
-			//_IncrementProgressBar(&progBar);
-			_GUIRectangleFill(0, 7 * 16, 130, 8 * 16, 1);
-			_ReadKey();
+				if(tryCnt > 3 || sendCnt >= totalCnt){
+					break;
+				}
 
-			progBar.value = 300 - 10;
-			//_IncrementProgressBar(&progBar);
-			_GUIRectangleFill(0, 7 * 16, 160, 8 * 16, 1);
+				rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
+				if(rxLen < 10){
+				//	continue;
+				}
+
+				sendCnt++;
+				tryCnt = 0;
+				//progBar.value = 30;
+				//_IncrementProgressBar(&progBar);
+				progBarValue = (sendCnt == totalCnt ? 160 : 160*sendCnt/totalCnt);
+				_GUIRectangleFill(0, 7 * 16, progBarValue, 8 * 16, 1);
+			}
+			_Fclose(fileHdl);
+
+			if(tryCnt > 3){
+				_Printfxy(0, 9*16, "状态: 升级失败  ", 0);
+				break;
+			}
 
 			// 升级完成
 			_Printfxy(0, 9*16, "状态: 升级完成  ", 0);
 			break;
+
+			default: 
+				break;
 		}
-		
-		key = _ReadKey();
-		
-		switch(key){
-			
-		case KEY_CANCEL:
-			return;
-			
-		case KEY_1:
-		case KEY_2:
-		case KEY_3:
-			menuList.defbar = (key - '0');
-			break;
-
-		case KEY_LEFT:
-		case KEY_UP:
-			menuList.defbar = (menuItemNo <= 1 ? 3 : menuItemNo - 1);
-			break;
-
-		case KEY_RIGHT:
-		case KEY_DOWN:
-		default:
-			menuList.defbar = (menuItemNo >= 3 ? 1 : menuItemNo + 1);
-			break;
-		}
-
 	}
+
+	_CloseCom();
 }
 
 
