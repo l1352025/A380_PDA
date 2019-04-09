@@ -52,6 +52,20 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
     return index;
 }
 
+/*
+* 函数名：showProgressBar
+* 描  述：显示进度条
+* 参  数：y - 进度条y坐标，将显示在(0,y)位置，固定宽度为160，固定高度为16,黑色填充
+		  maxValue - 进度条最大值
+		  currValue - 进度条当前值
+* 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
+*/
+void showProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
+{
+	uint32 width = (currValue >= maxValue? 160 : 160*currValue/maxValue);
+	_GUIRectangleFill(0, y, width, y + 16, 1);
+}
+
 
 // --------------------------------  电力主节点通信  -----------------------------------------
 
@@ -79,12 +93,11 @@ void WaterMainNodeFunc(void)
 void TransParentModuleFunc(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0;
-	_ProGressBar progBar;
 	_GuiLisStruEx menuList;
-	char *fileName;
+	char *fileName = NULL;
 	char tmp[70];
 	int fileHdl, fileLen, totalCnt, sendCnt;
-	int index, progBarValue;
+	int index;
 	
 	_ClearScreen();
 
@@ -101,13 +114,6 @@ void TransParentModuleFunc(void)
 	menuList.str[2] = "  3. 开始升级";
 	menuList.defbar = 1;
 	_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 进度条
-	progBar.caption = "升级进度";
-	progBar.left = 0;
-	progBar.top = 7*16;
-	progBar.width = 10*16;
-	progBar.hight = 16;
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -184,6 +190,9 @@ void TransParentModuleFunc(void)
 			break;
 			
 		case 3:	// " 开始升级 ";
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+			totalCnt = 200;
+			
 			// 初始化
 			if (fileName == NULL){
 				_Printfxy(0, 5*16, "请先选择升级文件", 0);
@@ -192,29 +201,26 @@ void TransParentModuleFunc(void)
 			fileHdl = _Fopen(fileName, "R");
 			sendCnt = 0;
 
-			//progBar.step = 1;	
-			progBar.min = 0;
-			progBar.max = totalCnt;		// 总包数
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
 			sprintf(tmp, "总包数: %d\0", totalCnt);
 			_Printfxy(0, 5*16, &tmp[0], 0);
 			sprintf(tmp, "正发送: %d   \0",sendCnt);
 			_Printfxy(0, 6*16, &tmp[0], 0);
-
 			_Printfxy(0, 9*16, "状态: 升级中...", 0);
-			_GUIRectangle(0, 7*16, 160, 8*16, 1);
 
-			//_CreateProgressBar(&progBar);
-			_ReadKey();
+			showProgressBar(7*16+8, totalCnt, sendCnt);
 
 			// 升级进度
-			while(sendCnt < totalCnt){
+			while(1){
+
+				if(tryCnt > 3 || sendCnt >= totalCnt){
+					break;
+				}
 				
 				txLen = _Fread(ComBuf, 1024, fileHdl);
-				_GetComStr(TmpBuf, 1024, 10); // clear , 100ms timeout
+				_GetComStr(TmpBuf, 1024, 1);		// clear , 100ms timeout
 				_SendComStr(ComBuf, txLen);
 
-				sprintf(tmp, "正发送: %d   \0",sendCnt);
+				sprintf(tmp, "正发送: %d   \0",sendCnt + 1);
 				_Printfxy(0, 6*16, &tmp[0], 0);
 				if(tryCnt > 0){
 					sprintf(tmp, "重试%d \0",tryCnt);
@@ -222,31 +228,31 @@ void TransParentModuleFunc(void)
 				}
 				tryCnt++;
 
-				if(tryCnt > 3 || sendCnt >= totalCnt){
-					break;
-				}
-
-				rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
+				rxLen = _GetComStr(&ComBuf[9], 50, 1);	// recv , 500ms timeout
 				if(rxLen < 10){
 				//	continue;
 				}
 
 				sendCnt++;
 				tryCnt = 0;
-				//progBar.value = 30;
-				//_IncrementProgressBar(&progBar);
-				progBarValue = (sendCnt == totalCnt ? 160 : 160*sendCnt/totalCnt);
-				_GUIRectangleFill(0, 7 * 16, progBarValue, 8 * 16, 1);
+				showProgressBar(7*16+8, totalCnt, sendCnt);
+
 			}
 			_Fclose(fileHdl);
 
+			// 升级完成
 			if(tryCnt > 3){
 				_Printfxy(0, 9*16, "状态: 升级失败  ", 0);
-				break;
+			}else{
+				_Printfxy(0, 9*16, "状态: 升级完成  ", 0);
 			}
-
-			// 升级完成
-			_Printfxy(0, 9*16, "状态: 升级完成  ", 0);
+			_SoundOn();
+			_Sleep(500);
+			_SoundOff();
+			_Sleep(300);
+			_SoundOn();
+			_Sleep(500);
+			_SoundOff();
 			break;
 
 			default: 
@@ -262,6 +268,7 @@ void TransParentModuleFunc(void)
 int main(void)
 {
 	_GuiMenuStru MainMenu;
+	
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=4;
@@ -279,7 +286,7 @@ int main(void)
 	MainMenu.Function[2]=WaterMainNodeFunc;
 	MainMenu.Function[3]=TransParentModuleFunc;
 	MainMenu.FunctionEx=0;
-
-	_Menu(&MainMenu);
+	_OpenLcdBackLight();
+	_Menu(&MainMenu);	
 }
 
