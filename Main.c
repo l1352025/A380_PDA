@@ -8,8 +8,15 @@ char Screenbuff[160*(160/3+1)*2];
 uint8 ComBuf[1080];
 uint8 TmpBuf[1080];
 uint32 rxLen, txLen;
+typedef enum{
+	ModType_MainNode,
+	ModType_PowerSub,
+	ModType_WaterSub
+}ModuleType;
+ModuleType currModType;
 
-//---------------------------------  common function  -------------------------------------
+
+//---------------------------------  通用方法  -------------------------------------
 /*
 * 函数名：IndexOf
 * 描  述：在数组中查找，可指定查找的起始位置和范围
@@ -66,6 +73,13 @@ void showProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 	_GUIRectangleFill(0, y, width, y + 16, 1);
 }
 
+// --------------------------------  参数配置/读取  -----------------------------------------
+
+
+
+// --------------------------------  现场调试  -----------------------------------------
+
+
 
 // --------------------------------  电力主节点通信  -----------------------------------------
 
@@ -79,7 +93,89 @@ void ElectricMainNodeFunc(void)
 
 void ElectricSubNodeFunc(void)
 {
+	uint8 key, menuItemNo, tryCnt = 0;
+	_GuiLisStruEx menuList;
+	int index;
 	
+	_ClearScreen();
+
+	// 菜单
+	menuList.title = ">> 电力子节点通信 ";
+	menuList.no = 3;
+	menuList.MaxNum = 3;
+	menuList.isRt = 0;
+	menuList.x = 0;
+	menuList.y = 0;
+	menuList.with = 10 * 16;
+	menuList.str[0] = "  1. 读取软件版本";
+	menuList.str[1] = "  2. 读取节点配置";
+	menuList.str[2] = "  3. 645-07抄表";
+	menuList.defbar = 1;
+	_GUIHLine(0, 4*16 + 8, 160, 1);
+
+	_CloseCom();
+	_ComSetTran(3);
+	_ComSet((uint8 *)"19200,E,8,1", 2);
+
+	while(1){
+
+		menuItemNo = _ListEx(&menuList);
+
+		if (menuItemNo == 0){
+			break;
+		}
+		menuList.defbar = menuItemNo;
+
+		switch(menuItemNo){
+		case 1:		// " 读取软件版本 ";
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+			txLen = 0;
+			ComBuf[txLen++] = 0xAA;
+			ComBuf[txLen++] = 0xBB;
+			ComBuf[txLen++] = 0x01;
+			ComBuf[txLen++] = 0x07;
+			ComBuf[txLen++] = 0xCC;
+			_GetComStr(TmpBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(ComBuf, txLen);
+			_Printfxy(0, 5*16, "查询中...", 0);
+
+			sprintf(ComBuf, "当前版本:");
+			rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
+			if(rxLen < 30 || strncmp(&ComBuf[9], "SRWF-", 5) != 0)
+			{
+				_Printfxy(0, 5*16, "接收超时", 0);
+				break;
+			}
+			_Printfxy(0, 5*16, &ComBuf[0], 0);
+			_Printfxy(0, 6*16, &ComBuf[20], 0);
+			_Printfxy(0, 7*16, &ComBuf[40], 0);
+			break;
+
+		case 2:		// " 读取节点配置 "
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+
+			sprintf(TmpBuf, "文件: %s\0", fileName);
+			_Printfxy(0, 5*16, &TmpBuf[0], 0);
+			_Printfxy(0, 6*16, &TmpBuf[20], 0);
+
+			break;
+			
+		case 3:		// " 645-07抄表 ";
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+			
+
+			sprintf(tmp, "总包数: %d\0", totalCnt);
+			_Printfxy(0, 5*16, &tmp[0], 0);
+
+			
+			break;
+
+			default: 
+				break;
+		}
+	}
+
+	_CloseCom();
 }
 
 // --------------------------------  水力子节点通信  -----------------------------------------
