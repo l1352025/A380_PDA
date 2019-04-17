@@ -768,7 +768,7 @@ void DispComponents(void)
 	inputbox.type = 1;			//数字
 	inputbox.keyUpDown = 1; //上下键盘有效
 	inputbox.IsClear = 0;
-	// _SetInputMode(uint32); //设置输入方式
+	_SetInputMode(1); //设置输入方式
 	_DisInputMode(1); //输入法是否允许切换
 	key = _InputBox(&inputbox);
 	if (key == KEY_CANCEL)

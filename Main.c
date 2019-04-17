@@ -3,11 +3,24 @@
 //#include "dbf.h"
 #include "stdio.h"
 
+typedef unsigned char bool;
+#ifndef true
+#define true    1
+#endif
+#ifndef false
+#define false   0
+#endif
+
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
-uint8 ComBuf[1080];
 uint8 TmpBuf[1080];
-uint32 rxLen, txLen;
+uint8 TxBuf[1080];
+uint8 RxBuf[1080];
+uint32 RxLen, TxLen;
+uint8 Fsn;
+char * ZeroAddr = "00000000000000";	// 0 地址，14字符
+char * LocalAddr = "00201900002019";	// 0 地址，14字符
+
 typedef enum{
 	ModType_MainNode,
 	ModType_PowerSub,
@@ -15,6 +28,24 @@ typedef enum{
 }ModuleType;
 ModuleType currModType;
 
+typedef enum{
+	PowerCmd_ReadVerInfo,
+	PowerCmd_ReadNodeInfo,
+	PowerCmd_ReadMeter_645_07,
+	
+	PowerCmd_ReadReportData,
+	PowerCmd_ClearReportData,
+	PowerCmd_QueryBindedWaterMeter,
+	PowerCmd_ReadVerInfo,
+	PowerCmd_ReadVerInfo,
+}PowerCmdDef;
+
+typedef enum{
+	 WaterCmd_ReadMeter,
+	 WaterCmd_0x01_,
+	 WaterCmd_0x01_,
+	 WaterCmd_0x01_
+}WaterCmdDef;
 
 //---------------------------------  通用方法  -------------------------------------
 /*
@@ -60,14 +91,14 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 }
 
 /*
-* 函数名：showProgressBar
+* 函数名：ShowProgressBar
 * 描  述：显示进度条
 * 参  数：y - 进度条y坐标，将显示在(0,y)位置，固定宽度为160，固定高度为16,黑色填充
 		  maxValue - 进度条最大值
 		  currValue - 进度条当前值
 * 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
 */
-void showProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
+void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 {
 	uint32 width = (currValue >= maxValue? 160 : 160*currValue/maxValue);
 	_GUIRectangleFill(0, y, width, y + 16, 1);
@@ -79,32 +110,34 @@ void showProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 * 参  数：srcStr - 原字符串
 		  totalLen - 总字符长度：原字符+左侧填充的字符（若原字符长度>=总长度，则无需填充）
 		  padChar - 填充的字符
-* 返回值：char * 左侧填充后的字符串
+* 返回值：void
 */
-char * StringPadLeft(const char * srcStr, int totalLen, char padChar)
+void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 {
 	uint32 srcStrLen, i = 0;
-	char * newStr = NULL;
+	char *pr, *pw;
 
 	srcStrLen = strlen(srcStr);
-	if(srcStrLen >= totalLen){
-		return srcStr;
+	if(srcStrLen >= totalLen || padChar == 0x00){
+		return;
 	}
-	if(padChar == 0x00){
-		return NULL;
-	}
+
+	pr = srcStr + srcStrLen - 1;
+	pw = srcStr + totalLen - 1;
+	*(pw + 1) = 0x00;
 	
-	newStr = (char *)malloc(totalLen + 1);
-	for(i = 0; i < (totalLen - srcStrLen); i++){
-		newStr[i] = padChar;
+	for(i = 0; i < srcStrLen; i++){
+		*pw = *pr;
+		pr--;
+		pw--;
 	}
+
 	while(i < totalLen){
-		newStr[i] = srcStr[i];
+		*pw = padChar;
+		pw--;
 		i++;
 	}
-	newStr[i] = 0x00;
 
-	return newStr;
 }
 
 /*
@@ -142,70 +175,85 @@ uint8 CharToHex(char c)
 	return hex;
 }
 
-char * GetStringHexFromBytes(uint8 bytes[], int iStart, int iLength, char strSeparate, uint8 Reverse)
+/*
+* 函数名：GetStringHexFromBytes
+* 描  述：将字节数组转换成16进制字符串
+* 参  数：strHex - 目的字符串缓冲区地址
+		  bytes - 源字节数组
+		  iStart - 数组中需要转换的起始索引
+		  iLength - 需要转换的长度
+		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
+		  reverse - 是否需要倒序：0 - 不倒序， 1 - 倒序
+* 返回值：int - 转换后的字符数：0 - 转换失败
+*/
+int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, uint8 reverse)
 {
-	char * strHex = "";
 	uint8 aByte;
-	int iLoop;
+	int iLoop, index = 0;
    
-	if(bytes == NULL || iStart + iLength > sizeof(bytes) || iStart < 0){
-		return strHex;
-	}
-
-	if(strSeparate != 0){
-		strHex = (char *)malloc(iLength * 3);
-	}else{
-		strHex = (char *)malloc(iLength * 2);
+	if(iLength == 0 || iStart < 0){
+		strHex[index] = 0;
+		return 0;
 	}
 	
 	for (iLoop = 0; iLoop < iLength; iLoop++)
 	{
-		if (Reverse){
+		if (reverse){
 			aByte = bytes[iStart + iLength - 1 - iLoop];
 		}
 		else{
 			aByte = bytes[iStart + iLoop];
 		}
-		strHex[iLoop] = HexToChar(aByte >> 4);
-		strHex[iLoop + 1] = HexToChar(aByte & 0x0F);
-		if(strSeparate != 0){
-			strHex[iLoop + 2] = strSeparate;
+		strHex[index++] = HexToChar(aByte >> 4);
+		strHex[index++] = HexToChar(aByte & 0x0F);
+		if(separate != 0){
+			strHex[index++] = separate;
 		}
 	}
+	strHex[index++] = 0;
 
-	return strHex;
+	return index;
 }
-
-int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char strSeparate, uint8 Reverse)
+/*
+* 函数名：GetBytesFromStringHex
+* 描  述：将16进制字符串转换成字节数组
+* 参  数：bytes - 目的字节数组
+		  iStart - 数组中保存的起始索引
+		  strHex - 源字符串缓冲区地址
+		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
+		  reverse - 是否需要倒序：0 - 不倒序， 1 - 倒序
+* 返回值：int - 转换后的字节数：0 - 转换失败
+*/
+int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char separate, uint8 reverse)
 {
-	int index = 0, bytesLen, strHexLen;
+	int iLoop = 0, index = 0;
+	int bytesLen, strHexLen;
 	uint8 aByte;
-	int iLoop;
   
 	strHexLen = strlen(strHex);
-	if(strSeparate != 0){
+	if(separate != 0){
 		bytesLen = (strHexLen + 1) / 3;
 	}else{
 		bytesLen = (strHexLen + 1) / 2;
 	}
 
-	if(bytes == NULL || iStart + bytesLen > sizeof(bytes) || iStart < 0){
+	if(bytesLen == 0 || iStart < 0){
 		return 0;
 	}
 
-	for (iLoop = 0; iLoop < strHexLen; iLoop++)
+	while (iLoop < strHexLen - 1)
 	{
-		aByte = (CharToHex(strHex[iLoop]) << 4) + (CharToHex(strHex[iLoop + 1]) & 0x0F);
+		aByte = (CharToHex(strHex[iLoop]) << 4) | (CharToHex(strHex[iLoop + 1]) & 0x0F);
 		iLoop += 2;
 
-		if (Reverse){
+		if (reverse){
 			bytes[iStart + bytesLen - 1 - index] = aByte;
 		}
 		else{
 			bytes[iStart + index] = aByte;
 		}
 	
-		if(strSeparate != 0){
+		if(separate != 0){
 			iLoop++;
 		}
 		index++;
@@ -214,6 +262,91 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char s
 	return index;
 }
 
+/*
+* 函数名：GetCrc16
+* 描  述：计算CRC16
+* 参  数：Buf - 数据缓存起始地址
+		  Len - 计算的总长度
+		  Seed - 如电力/水力固定使用 0x8408
+* 返回值：uint16 CRC16值
+*/
+uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
+{
+    uint16 crc = 0xFFFF;
+    uint8 i;
+
+	while (Len--){
+        crc ^= * Buf++;
+        for(i = 0; i < 8; i++){
+            if (crc & 0x0001){
+                crc >>= 1;
+                crc ^= Seed;
+            }
+            else{
+                crc >>= 1;
+            }
+        }
+    }
+    crc ^= 0xFFFF;
+
+    return crc;
+}
+
+//---------------------------------  命令发送	-----------------------------------------
+
+/*
+* 函数名：PackElectricReqFrame
+* 描  述：打包电力命令请求帧
+* 参  数：buf - 数据缓存起始地址
+		  dstAddr - 目的地址
+		  cmdId - 命令字
+		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
+* 返回值：uint8 帧总长度
+*/
+uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, bool retryCnt)
+{
+	static uint8 macFsn = 0xFF, nwkFsn = 0xFF, apsFsn = 0xFF, index = 0;
+
+	if(retryCnt > 0 && index > 0){
+		return index;
+	}
+
+	macFsn = (retryCnt > 0 ? macFsn : macFsn + 1);
+	nwkFsn = (retryCnt > 0 ? nwkFsn : nwkFsn + 1);
+	apsFsn = (retryCnt > 0 ? apsFsn : apsFsn + 1);
+	
+	// mac layer
+	index = 0;
+	buf[index++] = 0x00;	// length		- skip
+	buf[index++] = 0x00;	// channel
+	buf[index++] = 0x01;	// ver
+	buf[index++] = 0x00;	// xor check	- skip
+	buf[index++] = 0x41;	// mac ctrl 
+	buf[index++] = 0xCD;
+	buf[index++] = macFsn;	// mac fsn
+	buf[index++] = 0xFF;	// panid
+	buf[index++] = 0xFF;
+	GetBytesFromStringHex(buf, index, dstAddr, 0, 1);
+	index += 6; 			// mac dst addr - skip
+	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
+	index += 6; 			// mac src addr
+
+	// nwk layer
+	buf[index++] = 0x3C;	// nwk ctrl
+	GetBytesFromStringHex(buf, index, dstAddr, 0, 1);
+	index += 6; 			// nwk dst addr - skip
+	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
+	index += 6; 			// nwk src addr
+	buf[index++] = (nwkFsn << 4) | 0x01;	// nwk fsn|radius - fixed
+
+	// aps layer
+	buf[index++] = 0x09;	// aps ctrl 
+	buf[index++] = apsFsn;	// aps Fsn
+
+	
+	
+	return index;
+}
 
 // --------------------------------  参数配置/读取  -----------------------------------------
 
@@ -238,10 +371,10 @@ void ElectricSubNodeFunc(void)
 	uint8 key, menuItemNo, tryCnt = 0;
 	_GuiLisStruEx menuList;
 	_GuiInputBoxStru inputBox;
-	uint8 inputLen;
+	uint8 inputBuff[20] = {0};
+	int inputLen;
 	int index;
-	char * zeroAddr = "00000000000000";	// 0 地址，14字符
-	
+
 	_ClearScreen();
 
 	// 菜单
@@ -259,13 +392,18 @@ void ElectricSubNodeFunc(void)
 	//_GUIHLine(0, 4*16 + 8, 160, 1);
 
 	// 输入框
-	inputBox.top = 1 * 16;
-	inputBox.left = 5 * 16;
-	inputBox.width = 5 * 16;
+	inputBox.top = 2 * 16;
+	inputBox.left = 3 * 16;
+	inputBox.width = 7 * 16;
 	inputBox.hight = 16;
-	inputBox.type = 1;	// 数字
-	inputBox.keyUpDown = 1;
+	inputBox.caption = "";
+	inputBox.context = inputBuff;
+	inputBox.type = 1;		// 数字
+	inputBox.datelen = 12;	// 最大长度
+	inputBox.keyUpDown = 1; 
 	inputBox.IsClear = 0;
+	_SetInputMode(1); 		//设置输入方式 
+	_DisInputMode(0);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -284,9 +422,11 @@ void ElectricSubNodeFunc(void)
 
 		switch(menuItemNo){
 		case 1:		// " 读取软件版本 ";
-			_Printfxy(0, 0, "电表>>读取软件版本", 0);
-			_Printfxy(0, 1*16, "电表地址:", 0);
-			_Printfxy(0, 9*16, "返回            确定", 0);
+			_Printfxy(0, 0, ">> 读取软件版本", 0);
+			/*---------------------------------------------*/
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			_Printfxy(0, 2*16, "地址:", 0);
+			_Printfxy(0, 8*16, "返回            确定", 0);
 
 			while(1)
 			{
@@ -295,47 +435,44 @@ void ElectricSubNodeFunc(void)
 					break;
 
 				inputLen = strlen(inputBox.context);
-				if(inputBox.datelen == 0 || strncmp(zeroAddr, inputBox.context, inputLen) == 0){
-					_Printfxy(0, 3*16, "请先输入有效地址", 0);
+				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+					_Printfxy(0, 4*16, "请输入有效地址", 0);
 				}else{
-					_Printfxy(0, 3*16, "                ", 0);
+					_Printfxy(0, 4*16, "                ", 0);
 				}
-				inputBox.context = StringPadLeft(inputBox.context, 12, '0');
+				StringPadLeft(inputBox.context, 12, '0');
 
-				GetBytesFromStringHex(TmpBuf, 0, inputBox.context, 0, 1);
-				_Printfxy(0, 3*16, &TmpBuf[0], 0);
+
+				index = GetBytesFromStringHex(TxBuf, 5, inputBox.context, 0, 1);
+				TxLen += index;
 				
-				txLen = 0;
-				ComBuf[txLen++] = 0xAA;
-				ComBuf[txLen++] = 0xBB;
-				ComBuf[txLen++] = 0x01;
-				ComBuf[txLen++] = 0x07;
-				ComBuf[txLen++] = 0xCC;
-				_GetComStr(TmpBuf, 1024, 10);	// clear , 100ms timeout
-				_SendComStr(ComBuf, txLen);
-				_Printfxy(0, 2*16, "已发送...        ", 0);
+				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
+				_Printfxy(0, 3*16, "数据发送...        ", 0);
 
-				sprintf(ComBuf, "版本信息:");
-				rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
-				if(rxLen < 30 || strncmp(&ComBuf[9], "SRWF-", 5) != 0)
+				
+				RxLen = _GetComStr(RxBuf, 50, 50);	// recv , 500ms timeout
+				if(RxLen < 30 || strncmp(&RxBuf[9], "SRWF-", 5) != 0)
 				{
-					_Printfxy(0, 2*16, "接收超时       ", 0);
-					break;
+					_Printfxy(0, 3*16, "接收超时！       ", 0);
+					continue;
 				}
-				_Printfxy(0, 5*16, &ComBuf[0], 0);
-				_Printfxy(0, 6*16, &ComBuf[20], 0);
-				_Printfxy(0, 7*16, &ComBuf[40], 0);
+				
+				sprintf(&TxBuf[20], "版本信息:");
+				_Printfxy(0, 3*16, &TxBuf[0], 0);
+				_Printfxy(0, 4*16, &TxBuf[20], 0);
 
 				_ReadKey();
+				continue;
 			}
 			break;
 
 		case 2:		// " 读取节点配置 "
 			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
 
-			//sprintf(TmpBuf, "文件: %s\0", fileName);
-			_Printfxy(0, 5*16, &TmpBuf[0], 0);
-			_Printfxy(0, 6*16, &TmpBuf[20], 0);
+			//sprintf(RxBuf, "文件: %s\0", fileName);
+			_Printfxy(0, 5*16, &RxBuf[0], 0);
+			_Printfxy(0, 6*16, &RxBuf[20], 0);
 
 			break;
 			
@@ -407,26 +544,26 @@ void TransParentModuleFunc(void)
 		switch(menuItemNo){
 		case 1:	// " 查看当前版本 ";
 			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			txLen = 0;
-			ComBuf[txLen++] = 0xAA;
-			ComBuf[txLen++] = 0xBB;
-			ComBuf[txLen++] = 0x01;
-			ComBuf[txLen++] = 0x07;
-			ComBuf[txLen++] = 0xCC;
-			_GetComStr(TmpBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(ComBuf, txLen);
+			TxLen = 0;
+			TxBuf[TxLen++] = 0xAA;
+			TxBuf[TxLen++] = 0xBB;
+			TxBuf[TxLen++] = 0x01;
+			TxBuf[TxLen++] = 0x07;
+			TxBuf[TxLen++] = 0xCC;
+			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(TxBuf, TxLen);
 			_Printfxy(0, 5*16, "查询中...", 0);
 
-			sprintf(ComBuf, "当前版本:");
-			rxLen = _GetComStr(&ComBuf[9], 50, 50);	// recv , 500ms timeout
-			if(rxLen < 30 || strncmp(&ComBuf[9], "SRWF-", 5) != 0)
+			sprintf(TxBuf, "当前版本:");
+			RxLen = _GetComStr(&TxBuf[9], 50, 50);	// recv , 500ms timeout
+			if(RxLen < 30 || strncmp(&TxBuf[9], "SRWF-", 5) != 0)
 			{
 				_Printfxy(0, 5*16, "接收超时", 0);
 				break;
 			}
-			_Printfxy(0, 5*16, &ComBuf[0], 0);
-			_Printfxy(0, 6*16, &ComBuf[20], 0);
-			_Printfxy(0, 7*16, &ComBuf[40], 0);
+			_Printfxy(0, 5*16, &TxBuf[0], 0);
+			_Printfxy(0, 6*16, &TxBuf[20], 0);
+			_Printfxy(0, 7*16, &TxBuf[40], 0);
 			break;
 
 		case 2:	// " 打开升级文件 "
@@ -450,10 +587,10 @@ void TransParentModuleFunc(void)
 			fileLen = _Filelenth(fileHdl);
 			totalCnt = (fileLen + 1023)/1024;
 			sendCnt = 0;
-			_Fread(ComBuf, 1024, fileHdl);
+			_Fread(TxBuf, 1024, fileHdl);
 			_Fclose(fileHdl);
 				
-			index = IndexOf(ComBuf, 1024, "SRWF-", 5, 512, 512);
+			index = IndexOf(TxBuf, 1024, "SRWF-", 5, 512, 512);
 			if(index < 0){
 				_Printfxy(0, 7*16, "不是4E88-APP文件", 0);
 				fileName = NULL;
@@ -482,7 +619,7 @@ void TransParentModuleFunc(void)
 			_Printfxy(0, 6*16, &tmp[0], 0);
 			_Printfxy(0, 9*16, "状态: 升级中...", 0);
 
-			showProgressBar(7*16+8, totalCnt, sendCnt);
+			ShowProgressBar(7*16+8, totalCnt, sendCnt);
 
 			// 升级进度
 			while(1){
@@ -491,9 +628,9 @@ void TransParentModuleFunc(void)
 					break;
 				}
 				
-				txLen = _Fread(ComBuf, 1024, fileHdl);
-				_GetComStr(TmpBuf, 1024, 1);		// clear , 100ms timeout
-				_SendComStr(ComBuf, txLen);
+				TxLen = _Fread(TxBuf, 1024, fileHdl);
+				_GetComStr(RxBuf, 1024, 1);		// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
 
 				sprintf(tmp, "正发送: %d   \0",sendCnt + 1);
 				_Printfxy(0, 6*16, &tmp[0], 0);
@@ -503,14 +640,14 @@ void TransParentModuleFunc(void)
 				}
 				tryCnt++;
 
-				rxLen = _GetComStr(&ComBuf[9], 50, 1);	// recv , 500ms timeout
-				if(rxLen < 10){
+				RxLen = _GetComStr(&TxBuf[9], 50, 1);	// recv , 500ms timeout
+				if(RxLen < 10){
 				//	continue;
 				}
 
 				sendCnt++;
 				tryCnt = 0;
-				showProgressBar(7*16+8, totalCnt, sendCnt);
+				ShowProgressBar(7*16+8, totalCnt, sendCnt);
 
 			}
 			_Fclose(fileHdl);
