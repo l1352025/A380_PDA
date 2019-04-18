@@ -3,6 +3,8 @@
 //#include "dbf.h"
 #include "stdio.h"
 
+
+// --------------------------------  类型定义/常量  -----------------------------------------
 typedef unsigned char bool;
 #ifndef true
 #define true    1
@@ -10,6 +12,60 @@ typedef unsigned char bool;
 #ifndef false
 #define false   0
 #endif
+
+#define CRC16_Seed		0x8408		// 国网/北网 CRC16算法 seed 固定为 0x8408
+typedef enum{
+	ModType_MainNode,
+	ModType_PowerSub,
+	ModType_WaterSub
+}ModuleTypeDef;
+
+typedef enum{
+	// 抄表
+	PowerCmd_ReadMeter_645_07,	
+	PowerCmd_ReadMeter_645_97,	
+	PowerCmd_ReadMeter_698,
+
+	// 节点控制
+	PowerCmd_SetSerialCom,
+	PowerCmd_SetChanelGrp,
+	PowerCmd_SetRssiThreshold,
+	PowerCmd_SetSendPower,
+	PowerCmd_DeviceReboot,
+	
+	PowerCmd_ParamsInit,			// 仅对集中器
+	PowerCmd_StartNwkBuild,		// 仅对集中器
+	PowerCmd_StartNwkMaintain,	// 仅对集中器
+	PowerCmd_BroadClearNeighbor,	// 仅对集中器 Aps命令 97
+	PowerCmd_BroadSetSendPower,	// 仅对集中器
+	
+	PowerCmd_ClearNeighbor,		// 仅对电表 Aps命令 97 00
+	PowerCmd_ChangeCollect2Addr,	// 仅对电表 Aps命令 96
+	PowerCmd_ForceJoinNwkRequest,// 仅对电表 Aps命令 99
+	
+	// 参数读取
+	PowerCmd_ReadNodeInfo,
+	PowerCmd_ReadSendPower,
+	PowerCmd_ReadNwkStatus,
+	PowerCmd_ReadVerInfo,
+	PowerCmd_ReadSubNodeRoute,	// 仅对集中器
+	PowerCmd_ReadAllMeterDoc,	// 仅对集中器
+	PowerCmd_ReadNeighbor,		// 仅对电表 Aps命令 97 00
+
+	// 单向水表
+	PowerCmd_ReadReportData,		
+	PowerCmd_ClearReportData,
+	PowerCmd_QueryBindedWaterMeter,
+	PowerCmd_AddBindedWaterMeter,
+	PowerCmd_DelBindedWaterMeter
+}PowerCmdDef;
+
+typedef enum{
+	 WaterCmd_ReadMeterDirect,
+	 WaterCmd_ReadMeterByPwrMeter,
+	 WaterCmd_ReadNeighbor,	
+	 WaterCmd_ClearNeighbor,		// aps命令 97 02
+}WaterCmdDef;
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
@@ -20,32 +76,6 @@ uint32 RxLen, TxLen;
 uint8 Fsn;
 char * ZeroAddr = "00000000000000";	// 0 地址，14字符
 char * LocalAddr = "00201900002019";	// 0 地址，14字符
-
-typedef enum{
-	ModType_MainNode,
-	ModType_PowerSub,
-	ModType_WaterSub
-}ModuleType;
-ModuleType currModType;
-
-typedef enum{
-	PowerCmd_ReadVerInfo,
-	PowerCmd_ReadNodeInfo,
-	PowerCmd_ReadMeter_645_07,
-	
-	PowerCmd_ReadReportData,
-	PowerCmd_ClearReportData,
-	PowerCmd_QueryBindedWaterMeter,
-	PowerCmd_ReadVerInfo,
-	PowerCmd_ReadVerInfo,
-}PowerCmdDef;
-
-typedef enum{
-	 WaterCmd_ReadMeter,
-	 WaterCmd_0x01_,
-	 WaterCmd_0x01_,
-	 WaterCmd_0x01_
-}WaterCmdDef;
 
 //---------------------------------  通用方法  -------------------------------------
 /*
@@ -59,7 +89,7 @@ typedef enum{
 int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset)
 {
     int index = -1, i, j;
-
+	
     if (dstBytes == NULL || dstLen == 0) return index;
 
     if(offset > (srcLen - startIndex))
@@ -303,26 +333,25 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
 * 返回值：uint8 帧总长度
 */
-uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, bool retryCnt)
+uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8 *args, bool retryCnt)
 {
 	static uint8 macFsn = 0xFF, nwkFsn = 0xFF, apsFsn = 0xFF, index = 0;
+	uint8 nwkCmdStart, apsCmdStart;
+	uint16 crc16;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
 	}
 
-	macFsn = (retryCnt > 0 ? macFsn : macFsn + 1);
-	nwkFsn = (retryCnt > 0 ? nwkFsn : nwkFsn + 1);
-	apsFsn = (retryCnt > 0 ? apsFsn : apsFsn + 1);
-	
 	// mac layer
 	index = 0;
 	buf[index++] = 0x00;	// length		- skip
 	buf[index++] = 0x00;	// channel
 	buf[index++] = 0x01;	// ver
-	buf[index++] = 0x00;	// xor check	- skip
+	buf[index++] = 0x00;	// xor(0~2) check	- skip
 	buf[index++] = 0x41;	// mac ctrl 
 	buf[index++] = 0xCD;
+	macFsn++;
 	buf[index++] = macFsn;	// mac fsn
 	buf[index++] = 0xFF;	// panid
 	buf[index++] = 0xFF;
@@ -337,13 +366,76 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, bool 
 	index += 6; 			// nwk dst addr - skip
 	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
 	index += 6; 			// nwk src addr
+	nwkFsn++;
 	buf[index++] = (nwkFsn << 4) | 0x01;	// nwk fsn|radius - fixed
+	nwkCmdStart = index;
 
 	// aps layer
 	buf[index++] = 0x09;	// aps ctrl 
 	buf[index++] = apsFsn;	// aps Fsn
-
+	buf[index++] = 0x06;	// expand : "SR2019"
+	buf[index++] = 0x53;
+	buf[index++] = 0x52;
+	buf[index++] = 0x32;
+	buf[index++] = 0x30;
+	buf[index++] = 0x31;
+	buf[index++] = 0x39;
+	apsCmdStart = index;
 	
+	// cmd case
+	switch(cmdId){
+	case PowerCmd_ReadNodeInfo:
+		apsFsn++;
+		buf[index++] = 0x04;
+		break;
+	case PowerCmd_ReadSubNodeRoute:
+		apsFsn++;
+		buf[index++] = 0x92;
+		memcpy(&buf[index], args, 6);
+		index += 6;
+		break;
+	case PowerCmd_ReadNwkStatus:
+		apsFsn++;
+		buf[index++] = 0x93;
+		break;
+	case PowerCmd_ReadSendPower:
+		apsFsn++;
+		buf[index++] = 0x94;
+		break;
+	case PowerCmd_ReadVerInfo:
+		apsFsn++;
+		buf[index++] = 0x95;
+		break;
+	case PowerCmd_ReadNeighbor:
+		index = nwkCmdStart;
+		buf[index - 14] = 0x3D;	// nwk ctrl
+		buf[index++] = 0x10;
+		break;
+	case PowerCmd_ReadAllMeterDoc:
+		apsFsn++;
+		buf[index++] = 0x88;
+		buf[index++] = *args;		// start index
+		buf[index++] = 20;			// read cnt
+		break;
+		
+	case PowerCmd_ReadMeter_645_97:
+		apsFsn++;
+		buf[index++] = 0x95;
+		break;
+	case PowerCmd_ReadMeter_645_07:
+
+		break;
+
+	default:
+		break;
+	}
+
+	// calc length / crc16
+	buf[0] = index;
+	buf[3] = buf[0] ^ buf[1] ^ buf[2];
+	crc16 = GetCrc16(buf, index, CRC16_Seed);
+	buf[index++] = (uint8)(crc16 & 0xFF);
+	buf[index++] = (uint8)(crc16 >> 4);
 	
 	return index;
 }
