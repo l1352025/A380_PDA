@@ -2,80 +2,18 @@
 #include "string.h"
 //#include "dbf.h"
 #include "stdio.h"
+#include "main.h"
 
-
-// --------------------------------  类型定义/常量  -----------------------------------------
-typedef unsigned char bool;
-#ifndef true
-#define true    1
-#endif
-#ifndef false
-#define false   0
-#endif
-
-#define CRC16_Seed		0x8408		// 国网/北网 CRC16算法 seed 固定为 0x8408
-typedef enum{
-	ModType_MainNode,
-	ModType_PowerSub,
-	ModType_WaterSub
-}ModuleTypeDef;
-
-typedef enum{
-	// 抄表
-	PowerCmd_ReadMeter_645_07,	
-	PowerCmd_ReadMeter_645_97,	
-	PowerCmd_ReadMeter_698,
-
-	// 节点控制
-	PowerCmd_SetSerialCom,
-	PowerCmd_SetChanelGrp,
-	PowerCmd_SetRssiThreshold,
-	PowerCmd_SetSendPower,
-	PowerCmd_DeviceReboot,
-	
-	PowerCmd_ParamsInit,			// 仅对集中器
-	PowerCmd_StartNwkBuild,		// 仅对集中器
-	PowerCmd_StartNwkMaintain,	// 仅对集中器
-	PowerCmd_BroadClearNeighbor,	// 仅对集中器 Aps命令 97
-	PowerCmd_BroadSetSendPower,	// 仅对集中器
-	
-	PowerCmd_ClearNeighbor,		// 仅对电表 Aps命令 97 00
-	PowerCmd_ChangeCollect2Addr,	// 仅对电表 Aps命令 96
-	PowerCmd_ForceJoinNwkRequest,// 仅对电表 Aps命令 99
-	
-	// 参数读取
-	PowerCmd_ReadNodeInfo,
-	PowerCmd_ReadSendPower,
-	PowerCmd_ReadNwkStatus,
-	PowerCmd_ReadVerInfo,
-	PowerCmd_ReadSubNodeRoute,	// 仅对集中器
-	PowerCmd_ReadAllMeterDoc,	// 仅对集中器
-	PowerCmd_ReadNeighbor,		// 仅对电表 Aps命令 97 00
-
-	// 单向水表
-	PowerCmd_ReadReportData,		
-	PowerCmd_ClearReportData,
-	PowerCmd_QueryBindedWaterMeter,
-	PowerCmd_AddBindedWaterMeter,
-	PowerCmd_DelBindedWaterMeter
-}PowerCmdDef;
-
-typedef enum{
-	 WaterCmd_ReadMeterDirect,
-	 WaterCmd_ReadMeterByPwrMeter,
-	 WaterCmd_ReadNeighbor,	
-	 WaterCmd_ClearNeighbor,		// aps命令 97 02
-}WaterCmdDef;
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
+uint8 ArgsInOutBuf[200];
 uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
-uint8 Fsn;
-char * ZeroAddr = "00000000000000";	// 0 地址，14字符
-char * LocalAddr = "00201900002019";	// 0 地址，14字符
+const char * ZeroAddr = "00000000000000";	// 0 地址，14字符
+const char * LocalAddr = "00201900002019";	// 0 地址，14字符
 
 //---------------------------------  通用方法  -------------------------------------
 /*
@@ -322,6 +260,25 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
     return crc;
 }
 
+/*
+* 函数名：GetSum8
+* 描  述：计算8位累加和
+* 参  数：Buf - 数据缓存起始地址
+		  Len - 计算的总长度
+* 返回值：uint8 累加和
+*/
+uint8 GetSum8(uint8 *buf, uint16 len)
+{
+    uint8 sum = 0;
+
+	while(len-- > 0){
+		sum += *buf++;
+	}
+	
+    return sum;
+}
+
+
 //---------------------------------  命令发送	-----------------------------------------
 
 /*
@@ -336,7 +293,7 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8 *args, bool retryCnt)
 {
 	static uint8 macFsn = 0xFF, nwkFsn = 0xFF, apsFsn = 0xFF, index = 0;
-	uint8 nwkCmdStart, apsCmdStart;
+	uint8 macCmdStart, nwkCmdStart, apsCmdStart, dltStart, i;
 	uint16 crc16;
 
 	if(retryCnt > 0 && index > 0){
@@ -359,6 +316,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	index += 6; 			// mac dst addr - skip
 	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
 	index += 6; 			// mac src addr
+	macCmdStart = index;
 
 	// nwk layer
 	buf[index++] = 0x3C;	// nwk ctrl
@@ -368,6 +326,28 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	index += 6; 			// nwk src addr
 	nwkFsn++;
 	buf[index++] = (nwkFsn << 4) | 0x01;	// nwk fsn|radius - fixed
+	
+	// 若带路由，添加中继地址
+	if(cmdId == PowerCmd_ReadMeter_645_97
+		|| cmdId == PowerCmd_ReadMeter_645_07
+		|| cmdId == PowerCmd_ReadMeter_698){
+		
+		if(*args > 0){	
+			// 修改mac层目的地址
+			memcpy(&buf[9], &args[7], 6);
+			// 修改网络半径
+			buf[index - 1] = (nwkFsn << 4) | ((*args & 0x07) + 1);
+			// 中继总数bit4-0 , 中继索引 bit9-5 , 中继地址模式 bit23-10, 2位 * 7 ：10 - 短地址， 11 - 长地址
+			buf[index++] = ((*args & 0x07）<< 5) | (*args & 0x1F);
+			buf[index++] = (*args >> 3）| 0xFC;
+			buf[index++] = 0xFF;
+			// 中继列表
+			for(i = 0; i < *args; i++){
+				memcpy(&buf[index], &args[7 + i*6], 6);
+				index += 6;
+			}
+		}
+	}
 	nwkCmdStart = index;
 
 	// aps layer
@@ -384,15 +364,91 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	
 	// cmd case
 	switch(cmdId){
-	case PowerCmd_ReadNodeInfo:
+
+	//-------------------------------------------  抄表		-------------
+	//--------------------------------- args[0]   : 中继个数
+	//--------------------------------- args[1-6] : 电表地址
+	//--------------------------------- args[7-n] : 中继地址列表
+	case PowerCmd_ReadMeter_645_97:
+		apsFsn++;
+		buf[nwkCmdStart] = 0x0A;		// aps ctrl
+		buf[index++] = 0x00;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		dltStart = index;
+		buf[index++] = 0x68;
+		memcpy(&buf[index], &args[1], 6);
+		index += 6;
+		buf[index++] = 0x68;
+		buf[index++] = 0x01;
+		buf[index++] = 0x02;
+		buf[index++] = 0x43;
+		buf[index++] = 0xC3;
+		buf[index++] = GetSum8(&buf[dltStart], index - dltStart);
+		buf[index++] = 0x16;
+		break;
+	case PowerCmd_ReadMeter_645_07:
+		apsFsn++;
+		buf[nwkCmdStart] = 0x0A;	// aps ctrl
+		buf[index++] = 0x00;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		dltStart = index;
+		buf[index++] = 0x68;
+		memcpy(&buf[index], &args[1], 6);
+		index += 6;
+		buf[index++] = 0x68;
+		buf[index++] = 0x11;
+		buf[index++] = 0x04;
+		buf[index++] = 0x33;
+		buf[index++] = 0x33;
+		buf[index++] = 0x34;
+		buf[index++] = 0x33;
+		buf[index++] = GetSum8(&buf[dltStart], index - dltStart);
+		buf[index++] = 0x16;
+		break;
+	case PowerCmd_ReadMeter_698:
+		apsFsn++;
+		buf[nwkCmdStart] = 0x0A;	// aps ctrl
+		buf[index++] = 0x00;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		buf[index++] = 0xFF;
+		dltStart = index;
+		buf[index++] = 0x68;	// start
+		buf[index++] = 0x17;	// length :  length --> Fcs 
+		buf[index++] = 0x00;
+		buf[index++] = 0x43;	// ctrl
+		buf[index++] = 0x05;	// addr  05 + addr(6 byte) + 00
+		memcpy(&buf[index], &args[1], 6);
+		index += 6;
+		buf[index++] = 0x00;
+		crc16 = GetCrc16(&buf[dltStart + 1], index - dltStart, CRC16_Seed);
+		buf[index++] = (uint8)(crc16 & 0xFF);	// header crc16 : length --> addr
+		buf[index++] = (uint8)(crc16 >> 4);
+		buf[index++] = 0x05;	// data filed
+		buf[index++] = 0x01;
+		buf[index++] = 0x01;
+		buf[index++] = 0x00;
+		buf[index++] = 0x10;
+		buf[index++] = 0x02;
+		buf[index++] = 0x00;
+		buf[index++] = 0x00;
+		crc16 = GetCrc16(&buf[dltStart + 1], index - dltStart, CRC16_Seed);
+		buf[index++] = (uint8)(crc16 & 0xFF);	// frame crc16 : length --> data filed
+		buf[index++] = (uint8)(crc16 >> 4);
+		buf[index++] = 0x16;	// end
+		break;
+	//-------------------------------------------  参数读取	 -------------
+	
+	case PowerCmd_ReadNodeInfo:		/*	集中器/电表 命令  */
 		apsFsn++;
 		buf[index++] = 0x04;
-		break;
-	case PowerCmd_ReadSubNodeRoute:
-		apsFsn++;
-		buf[index++] = 0x92;
-		memcpy(&buf[index], args, 6);
-		index += 6;
 		break;
 	case PowerCmd_ReadNwkStatus:
 		apsFsn++;
@@ -406,10 +462,16 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		apsFsn++;
 		buf[index++] = 0x95;
 		break;
-	case PowerCmd_ReadNeighbor:
+	case PowerCmd_ReadNeighbor:			/*	电表 命令  */
 		index = nwkCmdStart;
-		buf[index - 14] = 0x3D;	// nwk ctrl
+		buf[macCmdStart] = 0x3D;	// nwk ctrl
 		buf[index++] = 0x10;
+		break;
+	case PowerCmd_ReadSubNodeRoute:		/*	集中器 命令  */
+		apsFsn++;
+		buf[index++] = 0x92;
+		memcpy(&buf[index], args, 6);
+		index += 6;
 		break;
 	case PowerCmd_ReadAllMeterDoc:
 		apsFsn++;
@@ -417,21 +479,113 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[index++] = *args;		// start index
 		buf[index++] = 20;			// read cnt
 		break;
-		
-	case PowerCmd_ReadMeter_645_97:
+
+	//-------------------------------------------  节点控制		-------------
+	
+	case PowerCmd_SetSerialCom:			/*	集中器/电表 命令  */
 		apsFsn++;
-		buf[index++] = 0x95;
+		buf[index++] = 0x00;
+		buf[index++] = *args;
+		buf[index++] = *(args + 1);
 		break;
-	case PowerCmd_ReadMeter_645_07:
-
+	case PowerCmd_SetChanelGrp:
+		apsFsn++;
+		buf[index++] = 0x01;
+		buf[index++] = *args;
+		break;
+	case PowerCmd_SetRssiThreshold:
+		apsFsn++;
+		buf[index++] = 0x02;
+		buf[index++] = *args;
+		break;
+	case PowerCmd_SetSendPower:
+		apsFsn++;
+		buf[index++] = 0x03;
+		buf[index++] = *args;
+		break;
+	case PowerCmd_DeviceReboot:
+		apsFsn++;
+		buf[index++] = 0x05;
+		break;
+	case PowerCmd_ParamsInit:			/*	集中器 命令  */
+		apsFsn++;
+		buf[index++] = 0x90;
+		break;
+	case PowerCmd_StartNwkBuild:
+		apsFsn++;
+		buf[index++] = 0x91;
+		break;
+	case PowerCmd_StartNwkMaintain:
+		apsFsn++;
+		buf[index++] = 0x9A;
+		break;
+	case PowerCmd_BroadClearNeighbor:
+		apsFsn++;
+		buf[index++] = 0x97;
+		break;
+	case PowerCmd_BroadSetSendPower:
+		apsFsn++;
+		buf[index++] = 0x98;
+		buf[index++] = *args;
+		break;
+	case PowerCmd_ClearNeighbor:		/*	电表 命令  */
+		apsFsn++;
+		buf[index++] = 0x97;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_ChangeCollect2Addr:
+		apsFsn++;
+		buf[index++] = 0x96;
+		memcpy(&buf[index], args, 6);
+		index += 6;
+		break;
+	case PowerCmd_ForceJoinNwkRequest:
+		apsFsn++;
+		buf[index++] = 0x99;
+		buf[index++] = *args;
 		break;
 
+	case PowerCmd_ReadReportData:		/*	单向水表 命令  */
+		index = nwkCmdStart;
+		buf[macCmdStart] = 0x3D;	// nwk ctrl
+		buf[index++] = 0x0A;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_ClearReportData:
+		apsFsn++;
+		buf[index++] = 0x97;
+		buf[index++] = 0x01;
+		break;
+	case PowerCmd_QueryBindedWaterMeter:
+		index = nwkCmdStart;
+		buf[macCmdStart] = 0x3D;	// nwk ctrl
+		buf[index++] = 0xFA;
+		buf[index++] = 0x00;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_AddBindedWaterMeter:
+		index = nwkCmdStart;
+		buf[macCmdStart] = 0x3D;	// nwk ctrl
+		buf[index++] = 0xFA;
+		buf[index++] = 0x01;
+		memcpy(&buf[index], args, 7);
+		index += 7;
+		break;
+	case PowerCmd_DelBindedWaterMeter:
+		index = nwkCmdStart;
+		buf[macCmdStart] = 0x3D;	// nwk ctrl
+		buf[index++] = 0xFA;
+		buf[index++] = 0x02;
+		memcpy(&buf[index], args, 7);
+		index += 7;
+		break;
+	
 	default:
 		break;
 	}
 
 	// calc length / crc16
-	buf[0] = index;
+	buf[0] = index - 1;
 	buf[3] = buf[0] ^ buf[1] ^ buf[2];
 	crc16 = GetCrc16(buf, index, CRC16_Seed);
 	buf[index++] = (uint8)(crc16 & 0xFF);
