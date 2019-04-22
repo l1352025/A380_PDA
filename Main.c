@@ -4,16 +4,18 @@
 #include "stdio.h"
 #include "main.h"
 
-
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
-uint8 ArgsInOutBuf[200];
 uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
 const char * ZeroAddr = "00000000000000";	// 0 地址，14字符
-const char * LocalAddr = "00201900002019";	// 0 地址，14字符
+const uint8 LocalAddr[7] = {0x19, 0x20, 0x00, 0x00, 0x19, 0x20, 0x00};	// 地址 00201900002019，14字符
+uint8 DstAddr[7];
+uint8 CurrCmd;
+ParamsBuf Args;
+ParamsBuf Disps;
 
 //---------------------------------  通用方法  -------------------------------------
 /*
@@ -109,6 +111,45 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 }
 
 /*
+* 函数名：StringTrimStart
+* 描  述：字符串头部裁剪
+* 参  数：srcStr - 字符串起始地址
+		  trimChar - 裁剪的字符
+* 返回值：int 裁剪后的字符串长度
+*/
+int StringTrimStart(const char * srcStr, char trimChar)
+{
+	uint32 srcStrLen, i = 0;
+	char *pr, *pw;
+
+	srcStrLen = strlen(srcStr);
+	if(srcStrLen == 0 || trimChar == 0x00){
+		return 0;
+	}
+
+	pr = srcStr;
+	pw = srcStr;
+	
+	for(i = 0; i < srcStrLen; i++){
+		if(*pr != trimChar){
+			break;
+		}
+		pr++;
+	}
+	if(pr != srcStr){
+		while(pr < srcStr + srcStrLen){
+			*pw = *pr;
+			pr++;
+			pw++;
+		}
+		*(pw + 1) = 0x00;
+	}
+
+	return (srcStrLen - i);
+}
+
+
+/*
 * 函数名：HexToChar
 * 描  述：16进制数转换成对应的字符
 */
@@ -151,10 +192,10 @@ uint8 CharToHex(char c)
 		  iStart - 数组中需要转换的起始索引
 		  iLength - 需要转换的长度
 		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：0 - 不倒序， 1 - 倒序
+		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
 * 返回值：int - 转换后的字符数：0 - 转换失败
 */
-int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, uint8 reverse)
+int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse)
 {
 	uint8 aByte;
 	int iLoop, index = 0;
@@ -189,10 +230,10 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 		  iStart - 数组中保存的起始索引
 		  strHex - 源字符串缓冲区地址
 		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：0 - 不倒序， 1 - 倒序
+		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
 * 返回值：int - 转换后的字节数：0 - 转换失败
 */
-int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char separate, uint8 reverse)
+int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char separate, bool reverse)
 {
 	int iLoop = 0, index = 0;
 	int bytesLen, strHexLen;
@@ -282,7 +323,7 @@ uint8 GetSum8(uint8 *buf, uint16 len)
 //---------------------------------  命令发送	-----------------------------------------
 
 /*
-* 函数名：PackElectricReqFrame
+* 函数名：PackElectricRequestFrame
 * 描  述：打包电力命令请求帧
 * 参  数：buf - 数据缓存起始地址
 		  dstAddr - 目的地址
@@ -290,11 +331,12 @@ uint8 GetSum8(uint8 *buf, uint16 len)
 		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
 * 返回值：uint8 帧总长度
 */
-uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8 *args, bool retryCnt)
+uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, uint8 *args[], uint8 retryCnt)
 {
 	static uint8 macFsn = 0xFF, nwkFsn = 0xFF, apsFsn = 0xFF, index = 0;
-	uint8 macCmdStart, nwkCmdStart, apsCmdStart, dltStart, i;
+	uint8 macCmdStart, nwkCmdStart, apsCmdStart, dltStart, i, relayCnt;
 	uint16 crc16;
+	uint8 crc8;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
@@ -312,17 +354,17 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	buf[index++] = macFsn;	// mac fsn
 	buf[index++] = 0xFF;	// panid
 	buf[index++] = 0xFF;
-	GetBytesFromStringHex(buf, index, dstAddr, 0, 1);
+	memcpy(&buf[index], dstAddr, 6);
 	index += 6; 			// mac dst addr - skip
-	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
+	memcpy(&buf[index], LocalAddr, 6);
 	index += 6; 			// mac src addr
 	macCmdStart = index;
 
 	// nwk layer
 	buf[index++] = 0x3C;	// nwk ctrl
-	GetBytesFromStringHex(buf, index, dstAddr, 0, 1);
+	memcpy(&buf[index], dstAddr, 6);
 	index += 6; 			// nwk dst addr - skip
-	GetBytesFromStringHex(buf, index, LocalAddr, 0, 1);
+	memcpy(&buf[index], LocalAddr, 6);
 	index += 6; 			// nwk src addr
 	nwkFsn++;
 	buf[index++] = (nwkFsn << 4) | 0x01;	// nwk fsn|radius - fixed
@@ -331,19 +373,23 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	if(cmdId == PowerCmd_ReadMeter_645_97
 		|| cmdId == PowerCmd_ReadMeter_645_07
 		|| cmdId == PowerCmd_ReadMeter_698){
-		
-		if(*args > 0){	
+
+		// args[0] - 电表地址
+		// args[1] - 中继总数
+		// args[2-n] - 地址列表
+		relayCnt = *args[1];
+		if(relayCnt > 0){	
 			// 修改mac层目的地址
-			memcpy(&buf[9], &args[7], 6);
+			memcpy(&buf[9], args[2], 6);
 			// 修改网络半径
-			buf[index - 1] = (nwkFsn << 4) | ((*args & 0x07) + 1);
+			buf[index - 1] = (nwkFsn << 4) | ((relayCnt & 0x07) + 1);
 			// 中继总数bit4-0 , 中继索引 bit9-5 , 中继地址模式 bit23-10, 2位 * 7 ：10 - 短地址， 11 - 长地址
-			buf[index++] = ((*args & 0x07）<< 5) | (*args & 0x1F);
-			buf[index++] = (*args >> 3）| 0xFC;
+			buf[index++] = ((relayCnt & 0x07) << 5) + (relayCnt & 0x1F);
+			buf[index++] = (relayCnt >> 3)+ 0xFC;
 			buf[index++] = 0xFF;
 			// 中继列表
-			for(i = 0; i < *args; i++){
-				memcpy(&buf[index], &args[7 + i*6], 6);
+			for(i = 0; i < relayCnt; i++){
+				memcpy(&buf[index], args[2 + i], 6);
 				index += 6;
 			}
 		}
@@ -366,9 +412,9 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	switch(cmdId){
 
 	//-------------------------------------------  抄表		-------------
-	//--------------------------------- args[0]   : 中继个数
-	//--------------------------------- args[1-6] : 电表地址
-	//--------------------------------- args[7-n] : 中继地址列表
+	// args[0] - 电表地址
+	// args[1] - 中继总数
+	// args[2-n] - 地址列表
 	case PowerCmd_ReadMeter_645_97:
 		apsFsn++;
 		buf[nwkCmdStart] = 0x0A;		// aps ctrl
@@ -379,14 +425,15 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[index++] = 0xFF;
 		dltStart = index;
 		buf[index++] = 0x68;
-		memcpy(&buf[index], &args[1], 6);
+		memcpy(&buf[index], args[0], 6);
 		index += 6;
 		buf[index++] = 0x68;
 		buf[index++] = 0x01;
 		buf[index++] = 0x02;
 		buf[index++] = 0x43;
 		buf[index++] = 0xC3;
-		buf[index++] = GetSum8(&buf[dltStart], index - dltStart);
+		crc8 = GetSum8(&buf[dltStart], index - dltStart);
+		buf[index++] = crc8;
 		buf[index++] = 0x16;
 		break;
 	case PowerCmd_ReadMeter_645_07:
@@ -399,7 +446,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[index++] = 0xFF;
 		dltStart = index;
 		buf[index++] = 0x68;
-		memcpy(&buf[index], &args[1], 6);
+		memcpy(&buf[index], args[0], 6);
 		index += 6;
 		buf[index++] = 0x68;
 		buf[index++] = 0x11;
@@ -408,7 +455,8 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[index++] = 0x33;
 		buf[index++] = 0x34;
 		buf[index++] = 0x33;
-		buf[index++] = GetSum8(&buf[dltStart], index - dltStart);
+		crc8 = GetSum8(&buf[dltStart], index - dltStart);
+		buf[index++] = crc8;
 		buf[index++] = 0x16;
 		break;
 	case PowerCmd_ReadMeter_698:
@@ -425,7 +473,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[index++] = 0x00;
 		buf[index++] = 0x43;	// ctrl
 		buf[index++] = 0x05;	// addr  05 + addr(6 byte) + 00
-		memcpy(&buf[index], &args[1], 6);
+		memcpy(&buf[index], args[0], 6);
 		index += 6;
 		buf[index++] = 0x00;
 		crc16 = GetCrc16(&buf[dltStart + 1], index - dltStart, CRC16_Seed);
@@ -470,13 +518,13 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	case PowerCmd_ReadSubNodeRoute:		/*	集中器 命令  */
 		apsFsn++;
 		buf[index++] = 0x92;
-		memcpy(&buf[index], args, 6);
+		memcpy(&buf[index], args[0], 6);
 		index += 6;
 		break;
 	case PowerCmd_ReadAllMeterDoc:
 		apsFsn++;
 		buf[index++] = 0x88;
-		buf[index++] = *args;		// start index
+		buf[index++] = *args[0];	// start index
 		buf[index++] = 20;			// read cnt
 		break;
 
@@ -485,23 +533,23 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	case PowerCmd_SetSerialCom:			/*	集中器/电表 命令  */
 		apsFsn++;
 		buf[index++] = 0x00;
-		buf[index++] = *args;
-		buf[index++] = *(args + 1);
+		buf[index++] = *args[0];
+		buf[index++] = *args[1];
 		break;
 	case PowerCmd_SetChanelGrp:
 		apsFsn++;
 		buf[index++] = 0x01;
-		buf[index++] = *args;
+		buf[index++] = *args[0];
 		break;
 	case PowerCmd_SetRssiThreshold:
 		apsFsn++;
 		buf[index++] = 0x02;
-		buf[index++] = *args;
+		buf[index++] = *args[0];
 		break;
 	case PowerCmd_SetSendPower:
 		apsFsn++;
 		buf[index++] = 0x03;
-		buf[index++] = *args;
+		buf[index++] = *args[0];
 		break;
 	case PowerCmd_DeviceReboot:
 		apsFsn++;
@@ -526,7 +574,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	case PowerCmd_BroadSetSendPower:
 		apsFsn++;
 		buf[index++] = 0x98;
-		buf[index++] = *args;
+		buf[index++] = *args[0];
 		break;
 	case PowerCmd_ClearNeighbor:		/*	电表 命令  */
 		apsFsn++;
@@ -536,13 +584,13 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	case PowerCmd_ChangeCollect2Addr:
 		apsFsn++;
 		buf[index++] = 0x96;
-		memcpy(&buf[index], args, 6);
+		memcpy(&buf[index], args[0], 6);
 		index += 6;
 		break;
 	case PowerCmd_ForceJoinNwkRequest:
 		apsFsn++;
 		buf[index++] = 0x99;
-		buf[index++] = *args;
+		buf[index++] = *args[0];
 		break;
 
 	case PowerCmd_ReadReportData:		/*	单向水表 命令  */
@@ -568,7 +616,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[macCmdStart] = 0x3D;	// nwk ctrl
 		buf[index++] = 0xFA;
 		buf[index++] = 0x01;
-		memcpy(&buf[index], args, 7);
+		memcpy(&buf[index], args[0], 7);
 		index += 7;
 		break;
 	case PowerCmd_DelBindedWaterMeter:
@@ -576,7 +624,7 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 		buf[macCmdStart] = 0x3D;	// nwk ctrl
 		buf[index++] = 0xFA;
 		buf[index++] = 0x02;
-		memcpy(&buf[index], args, 7);
+		memcpy(&buf[index], args[0], 7);
 		index += 7;
 		break;
 	
@@ -593,6 +641,235 @@ uint8 PackElectricReqFrame(uint8 * buf, const char * dstAddr, uint8 cmdId, uint8
 	
 	return index;
 }
+
+/*
+* 函数名：ExplainElectricResponseFrame
+* 描  述：解析电力命令响应帧
+* 参  数：buf - 接收缓存起始地址
+		  srcAddr - 源地址
+		  cmdId - 命令字
+		  disp - 解析的显示数据
+* 返回值：bool 解析结果：fasle - 失败 ， true - 成功
+*/
+bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAddr, uint8 cmdId, ParamsBuf * disps)
+{
+	uint8 index = 0, len = 0, radius;
+	uint8 nwkCtrl, apsCtrl, dltStart, i;
+	bool ret = false;
+	uint16 crc16;
+
+	// 缓冲区多包中查找
+	while(1){
+
+		index += 3;
+
+		// length check
+		if(rxlen < index + 35){
+			return false;
+		}
+		if(index + buf[index] + 3 > rxlen){
+			return false;
+		}	
+
+		// dstaddr check
+		if(strncmp(&buf[index + 9], LocalAddr, 6) != 0){
+			index += buf[index] + 3;
+			continue;
+		}
+
+		// crc16 check
+		crc16 = buf[buf[index] + 1] + buf[buf[index] + 2] * 256;
+		if(GetCrc16(&buf[index], buf[index] + 1, CRC16_Seed) != crc16){
+			return false;
+		}
+
+		break;
+	}
+
+
+	// mac layer
+	index += 21;
+	// nwk layer
+	nwkCtrl = buf[index];
+	index += 13;
+	radius = buf[index++] & 0x0F;
+	index += (radius > 1 ? (radius - 1) * 6 + 3 : 0);
+
+	// aps layer
+	if(nwkCtrl == 0x3C || nwkCtrl == 0xBC){
+		apsCtrl = buf[index++];	// aps ctrl
+		index++;				// aps Fsn
+		if(apsCtrl == 0x09){
+			index += buf[index] + 1;
+		}
+	}
+	
+	// cmd case
+	switch(cmdId){
+
+	//-------------------------------------------  抄表		-------------
+	case PowerCmd_ReadMeter_645_97:
+		index++;					// skip 0x00
+		if(rxlen > index + 17 
+			&& buf[index] == 0x68 && buf[index + 7] == 0x68
+			&& buf[index + 8] == 0x91)
+		{
+			ret = true;
+			
+			buf[index + 14] -= 0x33;
+			buf[index + 15] -= 0x33;
+			buf[index + 16] -= 0x33;
+			buf[index + 17] -= 0x33;
+			GetStringHexFromBytes(&disps->buf[0], buf, index + 15, 3, 0, true);
+			len = StringTrimStart(&disps->buf[0], '0');
+			if(disps->buf[0] == 0x00){
+				disps->buf[len++] = '0';
+			}
+			disps->buf[len++] = '.';
+			GetStringHexFromBytes(&disps->buf[len], buf, index + 14, 1, 0, true);
+			len++;
+			disps->buf[len++] = 'k';
+			disps->buf[len++] = 'W';
+			disps->buf[len++] = 'h';                                   
+			disps->cnt = 1;
+			disps->items[0] = &disps->buf[0];
+		}
+		break;
+	case PowerCmd_ReadMeter_645_07:
+		index++;					// skip 0x00
+		if(rxlen > index + 17 
+			&& buf[index] == 0x68 && buf[index + 7] == 0x68
+			&& buf[index + 8] == 0x91 && buf[index + 9] == 0x08)
+		{
+			ret = true;
+			
+			buf[index + 14] -= 0x33;
+			buf[index + 15] -= 0x33;
+			buf[index + 16] -= 0x33;
+			buf[index + 17] -= 0x33;
+			GetStringHexFromBytes(&disps->buf[0], buf, index + 15, 3, 0, true);
+			len = StringTrimStart(&disps->buf[0], '0');
+			if(disps->buf[0] == 0x00){
+				disps->buf[len++] = '0';
+			}
+			disps->buf[len++] = '.';
+			GetStringHexFromBytes(&disps->buf[len], buf, index + 14, 1, 0, true);
+			len++;
+			disps->buf[len++] = 'k';
+			disps->buf[len++] = 'W';
+			disps->buf[len++] = 'h';
+			disps->items[0] = &disps->buf[0];
+			disps->cnt = 1;
+		}
+		break;
+	case PowerCmd_ReadMeter_698:
+		index++;
+		dltStart = index;
+		if(buf[index] == 0x68 
+			&& buf[index + 1] == 0x34 && buf[index + 2] == 0x00	// length
+			&& buf[index + 3] == 0xC3 		// ctrl
+			&& buf[index + 4] == 0x05
+			){
+			// 抄读成功，暂不解析
+			ret = true;
+		}
+		break;
+	//-------------------------------------------  参数读取	 -------------
+	
+	case PowerCmd_ReadNodeInfo:		/*	集中器/电表 命令  */
+		buf[index++] = 0x04;
+		break;
+	case PowerCmd_ReadNwkStatus:
+		buf[index++] = 0x93;
+		break;
+	case PowerCmd_ReadSendPower:
+		buf[index++] = 0x94;
+		break;
+	case PowerCmd_ReadVerInfo:
+		buf[index++] = 0x95;
+		break;
+	case PowerCmd_ReadNeighbor:			/*	电表 命令  */
+		buf[index++] = 0x10;
+		break;
+	case PowerCmd_ReadSubNodeRoute:		/*	集中器 命令  */
+		buf[index++] = 0x92;
+		break;
+	case PowerCmd_ReadAllMeterDoc:
+		buf[index++] = 0x88;
+		break;
+
+	//-------------------------------------------  节点控制		-------------
+	
+	case PowerCmd_SetSerialCom:			/*	集中器/电表 命令  */
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_SetChanelGrp:
+		buf[index++] = 0x01;
+		break;
+	case PowerCmd_SetRssiThreshold:
+		buf[index++] = 0x02;
+		break;
+	case PowerCmd_SetSendPower:
+		buf[index++] = 0x03;
+		break;
+	case PowerCmd_DeviceReboot:
+		buf[index++] = 0x05;
+		break;
+	case PowerCmd_ParamsInit:			/*	集中器 命令  */
+		buf[index++] = 0x90;
+		break;
+	case PowerCmd_StartNwkBuild:
+		buf[index++] = 0x91;
+		break;
+	case PowerCmd_StartNwkMaintain:
+		buf[index++] = 0x9A;
+		break;
+	case PowerCmd_BroadClearNeighbor:
+		buf[index++] = 0x97;
+		break;
+	case PowerCmd_BroadSetSendPower:
+		buf[index++] = 0x98;
+		break;
+	case PowerCmd_ClearNeighbor:		/*	电表 命令  */
+		buf[index++] = 0x97;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_ChangeCollect2Addr:
+		buf[index++] = 0x96;
+		break;
+	case PowerCmd_ForceJoinNwkRequest:
+		buf[index++] = 0x99;
+		break;
+
+	case PowerCmd_ReadReportData:		/*	单向水表 命令  */
+		buf[index++] = 0x0A;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_ClearReportData:
+		buf[index++] = 0x97;
+		buf[index++] = 0x01;
+		break;
+	case PowerCmd_QueryBindedWaterMeter:
+		buf[index++] = 0xFA;
+		buf[index++] = 0x00;
+		buf[index++] = 0x00;
+		break;
+	case PowerCmd_AddBindedWaterMeter:
+		buf[index++] = 0xFA;
+		buf[index++] = 0x01;
+		break;
+	case PowerCmd_DelBindedWaterMeter:
+		buf[index++] = 0xFA;
+		buf[index++] = 0x02;
+		break;
+	
+	default:
+		break;
+	}
+	
+	return ret;
+}
+
 
 // --------------------------------  参数配置/读取  -----------------------------------------
 
@@ -618,6 +895,7 @@ void ElectricSubNodeFunc(void)
 	_GuiLisStruEx menuList;
 	_GuiInputBoxStru inputBox;
 	uint8 inputBuff[20] = {0};
+	uint8 *buf;
 	int inputLen;
 	int index;
 
@@ -647,7 +925,7 @@ void ElectricSubNodeFunc(void)
 	inputBox.type = 1;		// 数字
 	inputBox.datelen = 12;	// 最大长度
 	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 0;
+	inputBox.IsClear = 1;
 	_SetInputMode(1); 		//设置输入方式 
 	_DisInputMode(0);		//输入法是否允许切换
 
@@ -672,7 +950,7 @@ void ElectricSubNodeFunc(void)
 			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, 1);	
 			_Printfxy(0, 2*16, "地址:", 0);
-			_Printfxy(0, 8*16, "返回            确定", 0);
+			_Printfxy(0, 8*16, "  返回        确定  ", 0);
 
 			while(1)
 			{
@@ -723,11 +1001,55 @@ void ElectricSubNodeFunc(void)
 			break;
 			
 		case 3:		// " 645-07抄表 ";
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			
+			CurrCmd = PowerCmd_ReadMeter_645_07;
+			_Printfxy(0, 0, ">> 645-07抄表", 0);
+			/*---------------------------------------------*/
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			_Printfxy(0, 2*16, "地址:", 0);
+			_Printfxy(0, 8*16, "  返回        确定  ", 0);
 
-			//sprintf(tmp, "总包数: %d\0", totalCnt);
-			//_Printfxy(0, 5*16, &tmp[0], 0);
+			while(1)
+			{
+				key = _InputBox(&inputBox);
+				if (key == KEY_CANCEL)
+					break;
+
+				inputLen = strlen(inputBox.context);
+				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+					_Printfxy(0, 4*16, "请输入有效地址", 0);
+				}else{
+					_Printfxy(0, 4*16, "                ", 0);
+				}
+				StringPadLeft(inputBox.context, 12, '0');
+				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+				
+				index = 0;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[index];
+				index += 6;
+				Args.buf[index] = 0;
+				Args.items[1] = &Args.buf[index];
+				index += 1;
+				Args.cnt = 2;
+				
+				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
+				_Printfxy(0, 3*16, "命令发送...        ", 0);
+
+				RxLen = _GetComStr(RxBuf, 50, 50);	// recv , 500ms timeout
+				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
+				{
+					_Printfxy(0, 3*16, "接收超时！       ", 0);
+					continue;
+				}
+				
+				_Printfxy(0, 3*16, "读数:", 0);
+				_Printfxy(3 * 16, 3*16, Disps.items[0], 0);
+
+				_ReadKey();
+				continue;
+			}
 
 			
 			break;
