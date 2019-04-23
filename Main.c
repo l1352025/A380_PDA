@@ -16,6 +16,9 @@ uint8 DstAddr[7];
 uint8 CurrCmd;
 ParamsBuf Args;
 ParamsBuf Disps;
+uint8 InputBuff_1[20] = {0};
+uint8 InputBuff_2[20] = {0};
+
 
 //---------------------------------  通用方法  -------------------------------------
 /*
@@ -142,7 +145,7 @@ int StringTrimStart(const char * srcStr, char trimChar)
 			pr++;
 			pw++;
 		}
-		*(pw + 1) = 0x00;
+		*pw = 0x00;
 	}
 
 	return (srcStrLen - i);
@@ -399,11 +402,10 @@ uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, 
 	// aps layer
 	buf[index++] = 0x09;	// aps ctrl 
 	buf[index++] = apsFsn;	// aps Fsn
-	buf[index++] = 0x06;	// expand : "SR2019"
+	buf[index++] = 0x05;	// expand : "SR19"
+	buf[index++] = 0x53;
 	buf[index++] = 0x53;
 	buf[index++] = 0x52;
-	buf[index++] = 0x32;
-	buf[index++] = 0x30;
 	buf[index++] = 0x31;
 	buf[index++] = 0x39;
 	apsCmdStart = index;
@@ -478,7 +480,7 @@ uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, 
 		buf[index++] = 0x00;
 		crc16 = GetCrc16(&buf[dltStart + 1], index - dltStart, CRC16_Seed);
 		buf[index++] = (uint8)(crc16 & 0xFF);	// header crc16 : length --> addr
-		buf[index++] = (uint8)(crc16 >> 4);
+		buf[index++] = (uint8)(crc16 >> 8);
 		buf[index++] = 0x05;	// data filed
 		buf[index++] = 0x01;
 		buf[index++] = 0x01;
@@ -489,7 +491,7 @@ uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, 
 		buf[index++] = 0x00;
 		crc16 = GetCrc16(&buf[dltStart + 1], index - dltStart, CRC16_Seed);
 		buf[index++] = (uint8)(crc16 & 0xFF);	// frame crc16 : length --> data filed
-		buf[index++] = (uint8)(crc16 >> 4);
+		buf[index++] = (uint8)(crc16 >> 8);
 		buf[index++] = 0x16;	// end
 		break;
 	//-------------------------------------------  参数读取	 -------------
@@ -637,7 +639,7 @@ uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, 
 	buf[3] = buf[0] ^ buf[1] ^ buf[2];
 	crc16 = GetCrc16(buf, index, CRC16_Seed);
 	buf[index++] = (uint8)(crc16 & 0xFF);
-	buf[index++] = (uint8)(crc16 >> 4);
+	buf[index++] = (uint8)(crc16 >> 8);
 	
 	return index;
 }
@@ -661,14 +663,24 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 	// 缓冲区多包中查找
 	while(1){
 
-		index += 3;
-
-		// length check
 		if(rxlen < index + 35){
+			disps->cnt = 1;
+			sprintf(&disps->buf[0], "未应答");
+			disps->items[0] = &disps->buf[0];
 			return false;
 		}
+
+		if(buf[index] == 0x55 && buf[index + 1] == 0xAA){
+			index += 3;
+		}else{
+			index++;
+			continue;
+		}
+		
+		// length check
 		if(index + buf[index] + 3 > rxlen){
-			return false;
+			index += buf[index] + 3;
+			continue;
 		}	
 
 		// dstaddr check
@@ -678,28 +690,31 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 		}
 
 		// crc16 check
-		crc16 = buf[buf[index] + 1] + buf[buf[index] + 2] * 256;
-		if(GetCrc16(&buf[index], buf[index] + 1, CRC16_Seed) != crc16){
+		len = buf[index];
+		crc16 = GetCrc16(&buf[index], len + 1, CRC16_Seed);
+		if(crc16 !=  (uint16)((buf[index + len + 2] << 8) + buf[index + len + 1])){
+			disps->cnt = 1;
+			sprintf(&disps->buf[0], "CRC错误");
+			disps->items[0] = &disps->buf[0];
 			return false;
 		}
 
 		break;
 	}
 
-
 	// mac layer
 	index += 21;
 	// nwk layer
-	nwkCtrl = buf[index];
-	index += 13;
-	radius = buf[index++] & 0x0F;
+	nwkCtrl = buf[index++];			// nwk ctrl
+	index += 12;
+	radius = buf[index++] & 0x0F;	// nwk radius
 	index += (radius > 1 ? (radius - 1) * 6 + 3 : 0);
 
 	// aps layer
 	if(nwkCtrl == 0x3C || nwkCtrl == 0xBC){
 		apsCtrl = buf[index++];	// aps ctrl
 		index++;				// aps Fsn
-		if(apsCtrl == 0x09){
+		if((apsCtrl & 0x08) > 0){
 			index += buf[index] + 1;
 		}
 	}
@@ -710,34 +725,33 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 	//-------------------------------------------  抄表		-------------
 	case PowerCmd_ReadMeter_645_97:
 		index++;					// skip 0x00
-		if(rxlen > index + 17 
+		if(index + 15 < rxlen
 			&& buf[index] == 0x68 && buf[index + 7] == 0x68
-			&& buf[index + 8] == 0x91)
+			&& (buf[index + 8] == 0x81 || buf[index + 8] == 0xA1))
 		{
 			ret = true;
 			
+			buf[index + 12] -= 0x33;
+			buf[index + 13] -= 0x33;
 			buf[index + 14] -= 0x33;
 			buf[index + 15] -= 0x33;
-			buf[index + 16] -= 0x33;
-			buf[index + 17] -= 0x33;
-			GetStringHexFromBytes(&disps->buf[0], buf, index + 15, 3, 0, true);
-			len = StringTrimStart(&disps->buf[0], '0');
-			if(disps->buf[0] == 0x00){
-				disps->buf[len++] = '0';
-			}
-			disps->buf[len++] = '.';
-			GetStringHexFromBytes(&disps->buf[len], buf, index + 14, 1, 0, true);
-			len++;
-			disps->buf[len++] = 'k';
-			disps->buf[len++] = 'W';
-			disps->buf[len++] = 'h';                                   
+			
 			disps->cnt = 1;
+			GetStringHexFromBytes(&TmpBuf[0], buf, index + 13, 3, 0, true);
+			len = StringTrimStart(&TmpBuf[0], '0');
+			if(TmpBuf[0] == 0x00){
+				TmpBuf[0] = '0';
+				TmpBuf[1] = '\0';
+			}
+			GetStringHexFromBytes(&TmpBuf[20], buf, index + 12, 1, 0, false);
+
+			sprintf(&disps->buf[0], "读数：%s.%s kWh", &TmpBuf[0], &TmpBuf[20]);
 			disps->items[0] = &disps->buf[0];
 		}
 		break;
 	case PowerCmd_ReadMeter_645_07:
 		index++;					// skip 0x00
-		if(rxlen > index + 17 
+		if(index + 17 < rxlen
 			&& buf[index] == 0x68 && buf[index + 7] == 0x68
 			&& buf[index + 8] == 0x91 && buf[index + 9] == 0x08)
 		{
@@ -747,24 +761,23 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 			buf[index + 15] -= 0x33;
 			buf[index + 16] -= 0x33;
 			buf[index + 17] -= 0x33;
-			GetStringHexFromBytes(&disps->buf[0], buf, index + 15, 3, 0, true);
-			len = StringTrimStart(&disps->buf[0], '0');
-			if(disps->buf[0] == 0x00){
-				disps->buf[len++] = '0';
-			}
-			disps->buf[len++] = '.';
-			GetStringHexFromBytes(&disps->buf[len], buf, index + 14, 1, 0, true);
-			len++;
-			disps->buf[len++] = 'k';
-			disps->buf[len++] = 'W';
-			disps->buf[len++] = 'h';
-			disps->items[0] = &disps->buf[0];
+
 			disps->cnt = 1;
+			GetStringHexFromBytes(&TmpBuf[0], buf, index + 15, 3, 0, true);
+			len = StringTrimStart(&TmpBuf[0], '0');
+			if(TmpBuf[0] == 0x00){
+				TmpBuf[0] = '0';
+				TmpBuf[1] = '\0';
+			}
+			GetStringHexFromBytes(&TmpBuf[20], buf, index + 14, 1, 0, false);
+
+			sprintf(&disps->buf[0], "读数：%s.%s kWh", &TmpBuf[0], &TmpBuf[20]);
+			disps->items[0] = &disps->buf[0];
+			
 		}
 		break;
 	case PowerCmd_ReadMeter_698:
 		index++;
-		dltStart = index;
 		if(buf[index] == 0x68 
 			&& buf[index + 1] == 0x34 && buf[index + 2] == 0x00	// length
 			&& buf[index + 3] == 0xC3 		// ctrl
@@ -772,21 +785,47 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 			){
 			// 抄读成功，暂不解析
 			ret = true;
+
+			disps->cnt = 1;
+			sprintf(&disps->buf[0], "暂不解析");
+			disps->items[0] = &disps->buf[0];
 		}
 		break;
 	//-------------------------------------------  参数读取	 -------------
 	
 	case PowerCmd_ReadNodeInfo:		/*	集中器/电表 命令  */
-		buf[index++] = 0x04;
+		if(index + 27 < rxlen && buf[index] == 0x04){
+
+			ret = true;
+			disps->cnt = 1;
+			sprintf(&disps->buf[0], "%s", &buf[index + 2]);
+			disps->items[0] = &disps->buf[0];
+		}
 		break;
 	case PowerCmd_ReadNwkStatus:
 		buf[index++] = 0x93;
 		break;
 	case PowerCmd_ReadSendPower:
-		buf[index++] = 0x94;
+		if(index + 1 < rxlen && buf[index] == 0x94){
+
+			ret = true;
+			disps->cnt = 1;
+			sprintf(&disps->buf[0], "%d dBm", buf[index + 1]);
+			disps->items[0] = &disps->buf[0];
+		}
 		break;
 	case PowerCmd_ReadVerInfo:
-		buf[index++] = 0x95;
+		if(index + 30 < rxlen && buf[index] == 0x95){
+
+			ret = true;
+			disps->cnt = 4;
+			sprintf(&disps->buf[0], "版本信息: %s", &buf[index + 2]);
+			disps->items[0] = &disps->buf[0];
+			disps->items[1] = &disps->buf[20];
+			disps->items[2] = &disps->buf[40];
+			sprintf(&disps->buf[60], "strlen: %d", strlen(&disps->buf[0]));
+			disps->items[3] = &disps->buf[60];
+		}
 		break;
 	case PowerCmd_ReadNeighbor:			/*	电表 命令  */
 		buf[index++] = 0x10;
@@ -891,10 +930,9 @@ void ElectricMainNodeFunc(void)
 
 void ElectricSubNodeFunc(void)
 {
-	uint8 key, menuItemNo, tryCnt = 0;
+	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
 	_GuiInputBoxStru inputBox;
-	uint8 inputBuff[20] = {0};
 	uint8 *buf;
 	int inputLen;
 	int index;
@@ -921,7 +959,7 @@ void ElectricSubNodeFunc(void)
 	inputBox.width = 7 * 16;
 	inputBox.hight = 16;
 	inputBox.caption = "";
-	inputBox.context = inputBuff;
+	inputBox.context = InputBuff_1;
 	inputBox.type = 1;		// 数字
 	inputBox.datelen = 12;	// 最大长度
 	inputBox.keyUpDown = 1; 
@@ -946,67 +984,12 @@ void ElectricSubNodeFunc(void)
 
 		switch(menuItemNo){
 		case 1:		// " 读取软件版本 ";
+			CurrCmd = PowerCmd_ReadVerInfo;
 			_Printfxy(0, 0, ">> 读取软件版本", 0);
 			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, 1);	
 			_Printfxy(0, 2*16, "地址:", 0);
-			_Printfxy(0, 8*16, "  返回        确定  ", 0);
-
-			while(1)
-			{
-				key = _InputBox(&inputBox);
-				if (key == KEY_CANCEL)
-					break;
-
-				inputLen = strlen(inputBox.context);
-				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-					_Printfxy(0, 4*16, "请输入有效地址", 0);
-				}else{
-					_Printfxy(0, 4*16, "                ", 0);
-				}
-				StringPadLeft(inputBox.context, 12, '0');
-
-
-				index = GetBytesFromStringHex(TxBuf, 5, inputBox.context, 0, 1);
-				TxLen += index;
-				
-				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-				_SendComStr(TxBuf, TxLen);
-				_Printfxy(0, 3*16, "数据发送...        ", 0);
-
-				
-				RxLen = _GetComStr(RxBuf, 50, 50);	// recv , 500ms timeout
-				if(RxLen < 30 || strncmp(&RxBuf[9], "SRWF-", 5) != 0)
-				{
-					_Printfxy(0, 3*16, "接收超时！       ", 0);
-					continue;
-				}
-				
-				sprintf(&TxBuf[20], "版本信息:");
-				_Printfxy(0, 3*16, &TxBuf[0], 0);
-				_Printfxy(0, 4*16, &TxBuf[20], 0);
-
-				_ReadKey();
-				continue;
-			}
-			break;
-
-		case 2:		// " 读取节点配置 "
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-
-			//sprintf(RxBuf, "文件: %s\0", fileName);
-			_Printfxy(0, 5*16, &RxBuf[0], 0);
-			_Printfxy(0, 6*16, &RxBuf[20], 0);
-
-			break;
-			
-		case 3:		// " 645-07抄表 ";
-			CurrCmd = PowerCmd_ReadMeter_645_07;
-			_Printfxy(0, 0, ">> 645-07抄表", 0);
-			/*---------------------------------------------*/
-			_GUIHLine(0, 1*16 + 4, 160, 1);	
-			_Printfxy(0, 2*16, "地址:", 0);
-			_Printfxy(0, 8*16, "  返回        确定  ", 0);
+			_Printfxy(0, 8*16, "返回            确定", 0);
 
 			while(1)
 			{
@@ -1022,7 +1005,116 @@ void ElectricSubNodeFunc(void)
 				}
 				StringPadLeft(inputBox.context, 12, '0');
 				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
 				
+				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
+				_Printfxy(0, 9*16, "    命令发送...   ", 0);
+
+				RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
+				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
+				{
+					_Printfxy(0, 9*16, "    失败:", 0);
+					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
+					continue;
+				}
+				else{
+					_Printfxy(0, 9*16, "      命令成功     ", 0);
+				}
+				
+				// 结果
+				for(i = 0; i < Disps.cnt; i++){
+					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
+				}
+
+				_ReadKey();
+				continue;
+			}
+			break;
+
+		case 2:		// " 读取节点配置 "
+			CurrCmd = PowerCmd_ReadNodeInfo;
+			_Printfxy(0, 0, ">> 读取节点配置", 0);
+			/*---------------------------------------------*/
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			_Printfxy(0, 2*16, "地址:", 0);
+			_Printfxy(0, 8*16, "返回            确定", 0);
+			
+			while(1)
+			{
+				key = _InputBox(&inputBox);
+				if (key == KEY_CANCEL)
+					break;
+
+				inputLen = strlen(inputBox.context);
+				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+					_Printfxy(0, 4*16, "请输入有效地址", 0);
+				}else{
+					_Printfxy(0, 4*16, "                ", 0);
+				}
+				StringPadLeft(inputBox.context, 12, '0');
+				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				
+				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
+				_Printfxy(0, 9*16, "    命令发送...   ", 0);
+
+				RxLen = _GetComStr(RxBuf, 100, 50);	// recv , 500ms timeout
+				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
+				{
+					_Printfxy(0, 9*16, "    失败:", 0);
+					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
+					_ReadKey();
+					continue;
+				}
+				else{
+					_Printfxy(0, 9*16, "      命令成功     ", 0);
+				}
+				
+				// 结果
+				for(i = 0; i < Disps.cnt; i++){
+					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
+				}
+
+				_ReadKey();
+				continue;
+			}
+
+			break;
+			
+		case 3:		// " 645-07抄表 ";
+			CurrCmd = PowerCmd_ReadMeter_645_07;
+			_Printfxy(0, 0, ">> 645-07抄表", 0);
+			/*---------------------------------------------*/
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			_Printfxy(0, 2*16, "地址:", 0);
+			_Printfxy(0, 8*16, "返回            确定", 0);
+			
+			while(1)
+			{
+				key = _InputBox(&inputBox);
+				if (key == KEY_CANCEL)
+					break;
+
+				inputLen = strlen(inputBox.context);
+				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+					_Printfxy(0, 4*16, "请输入有效地址", 0);
+				}else{
+					_Printfxy(0, 4*16, "                ", 0);
+				}
+				StringPadLeft(inputBox.context, 12, '0');
+				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+
+				Args.cnt = 2;
 				index = 0;
 				memcpy(Args.buf, DstAddr, 6);
 				Args.items[0] = &Args.buf[index];
@@ -1030,28 +1122,32 @@ void ElectricSubNodeFunc(void)
 				Args.buf[index] = 0;
 				Args.items[1] = &Args.buf[index];
 				index += 1;
-				Args.cnt = 2;
 				
 				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
 				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
 				_SendComStr(TxBuf, TxLen);
-				_Printfxy(0, 3*16, "命令发送...        ", 0);
+				_Printfxy(0, 9*16, "    命令发送...   ", 0);
 
-				RxLen = _GetComStr(RxBuf, 50, 50);	// recv , 500ms timeout
+				RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
 				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
 				{
-					_Printfxy(0, 3*16, "接收超时！       ", 0);
+					_Printfxy(0, 9*16, "    失败:", 0);
+					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
+					_ReadKey();
 					continue;
 				}
+				else{
+					_Printfxy(0, 9*16, "      命令成功     ", 0);
+				}
 				
-				_Printfxy(0, 3*16, "读数:", 0);
-				_Printfxy(3 * 16, 3*16, Disps.items[0], 0);
+				// 结果
+				for(i = 0; i < Disps.cnt; i++){
+					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
+				}
 
 				_ReadKey();
 				continue;
 			}
-
-			
 			break;
 
 			default: 
