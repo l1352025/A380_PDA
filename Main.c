@@ -3,6 +3,7 @@
 //#include "dbf.h"
 #include "stdio.h"
 #include "main.h"
+#include "common.h"
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
@@ -18,312 +19,13 @@ ParamsBuf Args;
 ParamsBuf Disps;
 uint8 InputBuff_1[20] = {0};
 uint8 InputBuff_2[20] = {0};
-
-
-//---------------------------------  通用方法  -------------------------------------
-/*
-* 函数名：IndexOf
-* 描  述：在数组中查找，可指定查找的起始位置和范围
-* 参  数：srcArray - 源数组地址， srcLen - 源数组长度
-		  dstBytes - 目的数组地址， dstLen - 目的数组长度 
-		  startIndex - 源数组查找的起始位置，offset - 查找的范围
-* 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
-*/
-int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset)
-{
-    int index = -1, i, j;
-	
-    if (dstBytes == NULL || dstLen == 0) return index;
-
-    if(offset > (srcLen - startIndex))
-    {
-        offset = (srcLen - startIndex);
-    }
-
-    for (i = startIndex; i <= (startIndex + offset - dstLen); i++)
-    {
-        if (srcArray[i] == dstBytes[0])
-        {
-            for (j = 0; j < dstLen; j++)
-            {
-                if (srcArray[i + j] != dstBytes[j])
-                {
-                    break;
-                }
-            }
-
-            if (j == dstLen)
-            {
-                index = i;
-                break;
-            }
-        }
-    }
-
-    return index;
-}
-
-/*
-* 函数名：ShowProgressBar
-* 描  述：显示进度条
-* 参  数：y - 进度条y坐标，将显示在(0,y)位置，固定宽度为160，固定高度为16,黑色填充
-		  maxValue - 进度条最大值
-		  currValue - 进度条当前值
-* 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
-*/
-void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
-{
-	uint32 width = (currValue >= maxValue? 160 : 160*currValue/maxValue);
-	_GUIRectangleFill(0, y, width, y + 16, 1);
-}
-
-/*
-* 函数名：StringPadLeft
-* 描  述：字符串左侧填充
-* 参  数：srcStr - 原字符串
-		  totalLen - 总字符长度：原字符+左侧填充的字符（若原字符长度>=总长度，则无需填充）
-		  padChar - 填充的字符
-* 返回值：void
-*/
-void StringPadLeft(const char * srcStr, int totalLen, char padChar)
-{
-	uint32 srcStrLen, i = 0;
-	char *pr, *pw;
-
-	srcStrLen = strlen(srcStr);
-	if(srcStrLen >= totalLen || padChar == 0x00){
-		return;
-	}
-
-	pr = srcStr + srcStrLen - 1;
-	pw = srcStr + totalLen - 1;
-	*(pw + 1) = 0x00;
-	
-	for(i = 0; i < srcStrLen; i++){
-		*pw = *pr;
-		pr--;
-		pw--;
-	}
-
-	while(i < totalLen){
-		*pw = padChar;
-		pw--;
-		i++;
-	}
-
-}
-
-/*
-* 函数名：StringTrimStart
-* 描  述：字符串头部裁剪
-* 参  数：srcStr - 字符串起始地址
-		  trimChar - 裁剪的字符
-* 返回值：int 裁剪后的字符串长度
-*/
-int StringTrimStart(const char * srcStr, char trimChar)
-{
-	uint32 srcStrLen, i = 0;
-	char *pr, *pw;
-
-	srcStrLen = strlen(srcStr);
-	if(srcStrLen == 0 || trimChar == 0x00){
-		return 0;
-	}
-
-	pr = srcStr;
-	pw = srcStr;
-	
-	for(i = 0; i < srcStrLen; i++){
-		if(*pr != trimChar){
-			break;
-		}
-		pr++;
-	}
-	if(pr != srcStr){
-		while(pr < srcStr + srcStrLen){
-			*pw = *pr;
-			pr++;
-			pw++;
-		}
-		*pw = 0x00;
-	}
-
-	return (srcStrLen - i);
-}
-
-
-/*
-* 函数名：HexToChar
-* 描  述：16进制数转换成对应的字符
-*/
-char HexToChar(uint8 b)
-{
-	char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
-	
-	if(b < 16){
-		return decHex[b];
-	}else{
-		return '\0';
-	}
-}
-/*
-* 函数名：CharToHex
-* 描  述：字符转换成对应的16进制数
-*/
-uint8 CharToHex(char c)
-{
-	uint8 hex;
-	
-	if(c >= '0' && c <= '9'){
-		hex = c - '0';
-	}else if(c >= 'A' && c <= 'F'){
-		hex = c - 'A' + 10;
-	}else if(c >= 'a' && c <= 'f'){
-		hex = c - 'a' + 10;
-	}else{
-		hex = 0xFF;
-	}
-
-	return hex;
-}
-
-/*
-* 函数名：GetStringHexFromBytes
-* 描  述：将字节数组转换成16进制字符串
-* 参  数：strHex - 目的字符串缓冲区地址
-		  bytes - 源字节数组
-		  iStart - 数组中需要转换的起始索引
-		  iLength - 需要转换的长度
-		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
-* 返回值：int - 转换后的字符数：0 - 转换失败
-*/
-int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse)
-{
-	uint8 aByte;
-	int iLoop, index = 0;
-   
-	if(iLength == 0 || iStart < 0){
-		strHex[index] = 0;
-		return 0;
-	}
-	
-	for (iLoop = 0; iLoop < iLength; iLoop++)
-	{
-		if (reverse){
-			aByte = bytes[iStart + iLength - 1 - iLoop];
-		}
-		else{
-			aByte = bytes[iStart + iLoop];
-		}
-		strHex[index++] = HexToChar(aByte >> 4);
-		strHex[index++] = HexToChar(aByte & 0x0F);
-		if(separate != 0){
-			strHex[index++] = separate;
-		}
-	}
-	strHex[index++] = 0;
-
-	return index;
-}
-/*
-* 函数名：GetBytesFromStringHex
-* 描  述：将16进制字符串转换成字节数组
-* 参  数：bytes - 目的字节数组
-		  iStart - 数组中保存的起始索引
-		  strHex - 源字符串缓冲区地址
-		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
-* 返回值：int - 转换后的字节数：0 - 转换失败
-*/
-int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char separate, bool reverse)
-{
-	int iLoop = 0, index = 0;
-	int bytesLen, strHexLen;
-	uint8 aByte;
-  
-	strHexLen = strlen(strHex);
-	if(separate != 0){
-		bytesLen = (strHexLen + 1) / 3;
-	}else{
-		bytesLen = (strHexLen + 1) / 2;
-	}
-
-	if(bytesLen == 0 || iStart < 0){
-		return 0;
-	}
-
-	while (iLoop < strHexLen - 1)
-	{
-		aByte = (CharToHex(strHex[iLoop]) << 4) | (CharToHex(strHex[iLoop + 1]) & 0x0F);
-		iLoop += 2;
-
-		if (reverse){
-			bytes[iStart + bytesLen - 1 - index] = aByte;
-		}
-		else{
-			bytes[iStart + index] = aByte;
-		}
-	
-		if(separate != 0){
-			iLoop++;
-		}
-		index++;
-	}
-
-	return index;
-}
-
-/*
-* 函数名：GetCrc16
-* 描  述：计算CRC16
-* 参  数：Buf - 数据缓存起始地址
-		  Len - 计算的总长度
-		  Seed - 如电力/水力固定使用 0x8408
-* 返回值：uint16 CRC16值
-*/
-uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
-{
-    uint16 crc = 0xFFFF;
-    uint8 i;
-
-	while (Len--){
-        crc ^= * Buf++;
-        for(i = 0; i < 8; i++){
-            if (crc & 0x0001){
-                crc >>= 1;
-                crc ^= Seed;
-            }
-            else{
-                crc >>= 1;
-            }
-        }
-    }
-    crc ^= 0xFFFF;
-
-    return crc;
-}
-
-/*
-* 函数名：GetSum8
-* 描  述：计算8位累加和
-* 参  数：Buf - 数据缓存起始地址
-		  Len - 计算的总长度
-* 返回值：uint8 累加和
-*/
-uint8 GetSum8(uint8 *buf, uint16 len)
-{
-    uint8 sum = 0;
-
-	while(len-- > 0){
-		sum += *buf++;
-	}
-	
-    return sum;
-}
+uint8 InputBuff_Tmp1[20] = {0};
+uint8 InputBuff_Tmp2[20] = {0};
 
 
 //---------------------------------  命令发送	-----------------------------------------
+
+
 
 /*
 * 函数名：PackElectricRequestFrame
@@ -656,7 +358,7 @@ uint8 PackElectricRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, 
 bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAddr, uint8 cmdId, ParamsBuf * disps)
 {
 	uint8 index = 0, len = 0, radius;
-	uint8 nwkCtrl, apsCtrl, dltStart, i;
+	uint8 nwkCtrl, apsCtrl;
 	bool ret = false;
 	uint16 crc16;
 
@@ -810,21 +512,17 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 
 			ret = true;
 			disps->cnt = 1;
-			sprintf(&disps->buf[0], "%d dBm", buf[index + 1]);
+			sprintf(&disps->buf[0], "发射功率: %d dBm", buf[index + 1]);
 			disps->items[0] = &disps->buf[0];
 		}
 		break;
 	case PowerCmd_ReadVerInfo:
 		if(index + 30 < rxlen && buf[index] == 0x95){
-
 			ret = true;
-			disps->cnt = 4;
+			disps->cnt = 1;
+			buf[index + 2 + buf[index + 1] ] = '\0';
 			sprintf(&disps->buf[0], "版本信息: %s", &buf[index + 2]);
 			disps->items[0] = &disps->buf[0];
-			disps->items[1] = &disps->buf[20];
-			disps->items[2] = &disps->buf[40];
-			sprintf(&disps->buf[60], "strlen: %d", strlen(&disps->buf[0]));
-			disps->items[3] = &disps->buf[60];
 		}
 		break;
 	case PowerCmd_ReadNeighbor:			/*	电表 命令  */
@@ -933,23 +631,23 @@ void ElectricSubNodeFunc(void)
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
 	_GuiInputBoxStru inputBox;
-	uint8 *buf;
 	int inputLen;
-	int index;
+	uint8 * ptr;
 
 	_ClearScreen();
 
 	// 菜单
 	menuList.title = ">> 电力子节点通信 ";
-	menuList.no = 3;
-	menuList.MaxNum = 3;
+	menuList.no = 4;
+	menuList.MaxNum = 4;
 	menuList.isRt = 0;
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
 	menuList.str[0] = "  1. 读取软件版本";
 	menuList.str[1] = "  2. 读取节点配置";
-	menuList.str[2] = "  3. 645-07抄表";
+	menuList.str[2] = "  3. 读取发射功率";
+	menuList.str[3] = "  4. 645-07抄表";
 	menuList.defbar = 1;
 	//_GUIHLine(0, 4*16 + 8, 160, 1);
 
@@ -959,7 +657,7 @@ void ElectricSubNodeFunc(void)
 	inputBox.width = 7 * 16;
 	inputBox.hight = 16;
 	inputBox.caption = "";
-	inputBox.context = InputBuff_1;
+	inputBox.context = InputBuff_Tmp1;
 	inputBox.type = 1;		// 数字
 	inputBox.datelen = 12;	// 最大长度
 	inputBox.keyUpDown = 1; 
@@ -980,179 +678,120 @@ void ElectricSubNodeFunc(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
-		_ClearScreen();
 
-		switch(menuItemNo){
-		case 1:		// " 读取软件版本 ";
-			CurrCmd = PowerCmd_ReadVerInfo;
-			_Printfxy(0, 0, ">> 读取软件版本", 0);
+		while(1){
+			
+			_ClearScreen();
+
+			// 公共部分 :  界面显示/输入处理
+			ptr = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, ">> %s",&ptr[5]);
+			_Printfxy(0, 0, TmpBuf, 0);
 			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, 1);	
 			_Printfxy(0, 2*16, "地址:", 0);
 			_Printfxy(0, 8*16, "返回            确定", 0);
 
-			while(1)
-			{
-				key = _InputBox(&inputBox);
-				if (key == KEY_CANCEL)
-					break;
-
-				inputLen = strlen(inputBox.context);
-				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-					_Printfxy(0, 4*16, "请输入有效地址", 0);
-				}else{
-					_Printfxy(0, 4*16, "                ", 0);
-				}
-				StringPadLeft(inputBox.context, 12, '0');
-				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
-
-				Args.cnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				
-				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
-				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-				_SendComStr(TxBuf, TxLen);
-				_Printfxy(0, 9*16, "    命令发送...   ", 0);
-
-				RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
-				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
-				{
-					_Printfxy(0, 9*16, "    失败:", 0);
-					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
-					continue;
-				}
-				else{
-					_Printfxy(0, 9*16, "      命令成功     ", 0);
-				}
-				
-				// 结果
-				for(i = 0; i < Disps.cnt; i++){
-					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
-				}
-
-				_ReadKey();
-				continue;
+			if(InputBuff_1[0] != '\0'){
+				memcpy(inputBox.context, InputBuff_1, 20);
 			}
-			break;
-
-		case 2:		// " 读取节点配置 "
-			CurrCmd = PowerCmd_ReadNodeInfo;
-			_Printfxy(0, 0, ">> 读取节点配置", 0);
-			/*---------------------------------------------*/
-			_GUIHLine(0, 1*16 + 4, 160, 1);	
-			_Printfxy(0, 2*16, "地址:", 0);
-			_Printfxy(0, 8*16, "返回            确定", 0);
-			
-			while(1)
-			{
-				key = _InputBox(&inputBox);
-				if (key == KEY_CANCEL)
-					break;
-
-				inputLen = strlen(inputBox.context);
-				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-					_Printfxy(0, 4*16, "请输入有效地址", 0);
-				}else{
-					_Printfxy(0, 4*16, "                ", 0);
-				}
-				StringPadLeft(inputBox.context, 12, '0');
-				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
-
-				Args.cnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				
-				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
-				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-				_SendComStr(TxBuf, TxLen);
-				_Printfxy(0, 9*16, "    命令发送...   ", 0);
-
-				RxLen = _GetComStr(RxBuf, 100, 50);	// recv , 500ms timeout
-				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
-				{
-					_Printfxy(0, 9*16, "    失败:", 0);
-					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
-					_ReadKey();
-					continue;
-				}
-				else{
-					_Printfxy(0, 9*16, "      命令成功     ", 0);
-				}
-				
-				// 结果
-				for(i = 0; i < Disps.cnt; i++){
-					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
-				}
-
-				_ReadKey();
-				continue;
-			}
-
-			break;
-			
-		case 3:		// " 645-07抄表 ";
-			CurrCmd = PowerCmd_ReadMeter_645_07;
-			_Printfxy(0, 0, ">> 645-07抄表", 0);
-			/*---------------------------------------------*/
-			_GUIHLine(0, 1*16 + 4, 160, 1);	
-			_Printfxy(0, 2*16, "地址:", 0);
-			_Printfxy(0, 8*16, "返回            确定", 0);
-			
-			while(1)
-			{
-				key = _InputBox(&inputBox);
-				if (key == KEY_CANCEL)
-					break;
-
-				inputLen = strlen(inputBox.context);
-				if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-					_Printfxy(0, 4*16, "请输入有效地址", 0);
-				}else{
-					_Printfxy(0, 4*16, "                ", 0);
-				}
-				StringPadLeft(inputBox.context, 12, '0');
-				GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
-
-				Args.cnt = 2;
-				index = 0;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[index];
-				index += 6;
-				Args.buf[index] = 0;
-				Args.items[1] = &Args.buf[index];
-				index += 1;
-				
-				TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
-				_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-				_SendComStr(TxBuf, TxLen);
-				_Printfxy(0, 9*16, "    命令发送...   ", 0);
-
-				RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
-				if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps))
-				{
-					_Printfxy(0, 9*16, "    失败:", 0);
-					_Printfxy(4*16 + 8, 9*16, Disps.items[0], 0);
-					_ReadKey();
-					continue;
-				}
-				else{
-					_Printfxy(0, 9*16, "      命令成功     ", 0);
-				}
-				
-				// 结果
-				for(i = 0; i < Disps.cnt; i++){
-					_Printfxy(0, ( 3 + i ) * 16, Disps.items[i], 0);
-				}
-
-				_ReadKey();
-				continue;
-			}
-			break;
-
-			default: 
+			key = _InputBox(&inputBox);
+			if (key == KEY_CANCEL)
 				break;
+
+			inputLen = strlen(inputBox.context);
+
+			if(inputLen == 0 && InputBuff_1[0] != '\0'){
+				memcpy(inputBox.context, InputBuff_1, 20);
+				inputLen = 12;
+			}
+			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+				_Printfxy(0, 4*16, "请输入有效地址", 0);
+				_ReadKey();
+				continue;
+			}
+			StringPadLeft(inputBox.context, 12, '0');
+			memcpy(InputBuff_1, inputBox.context, 20);
+			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+			PrintfXyMultiLine_VaList(0, 2*16, "地址: %s", InputBuff_1);
+
+			// 命令参数处理
+			switch(menuItemNo){
+			case 1:		// " 读取软件版本 ";
+				CurrCmd = PowerCmd_ReadVerInfo;
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case 2:		// " 读取节点配置 "
+				CurrCmd = PowerCmd_ReadNodeInfo;
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case 3:		// " 读取发射功率" "
+				CurrCmd = PowerCmd_ReadSendPower;
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+			
+			case 4:		// " 645-07抄表 ";
+				CurrCmd = PowerCmd_ReadMeter_645_07;
+				/*---------------------------------------------*/
+				Args.cnt = 2;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				Args.buf[6] = 0;
+				Args.items[1] = &Args.buf[6];
+				break;
+
+				default: 
+					break;
+			}
+
+			if(key != KEY_ENTER){
+			 	if (key == KEY_CANCEL){
+					break;
+				}else{
+					continue;
+				}
+			}
+			
+			// 发送 
+			TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(TxBuf, TxLen);
+			_Printfxy(0, 9*16, "    命令发送...   ", 0);
+
+			// 接收
+			RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
+			if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps)){
+				PrintfXyMultiLine_VaList(0, 9*16, "    失败:%s", Disps.items[0]);
+				_ReadKey();
+				continue;
+			}
+			else{
+				_Printfxy(0, 9*16, "      命令成功     ", 0);
+			}
+			
+			// 显示结果
+			PrintfXyMultiLine(0, 3 * 16, Disps.items[0]);
+
+			key = _ReadKey();
+
+			if (key == KEY_CANCEL){
+				break;
+			}else{
+				continue;
+			}
 		}
+		
 	}
 
 	_CloseCom();

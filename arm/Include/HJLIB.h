@@ -1,3 +1,6 @@
+#ifndef _HJLIB_H
+#define _HJLIB_H
+
 typedef unsigned char  uint8;                
 typedef signed   char  int8;                     
 typedef unsigned short uint16;                  
@@ -615,5 +618,4 @@ DIR  1 为输出，0为输入
 *****/
 extern int _SetIoDir(int pin,int dir);
 
-
-
+#endif
