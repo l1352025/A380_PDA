@@ -618,7 +618,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAd
 
 // --------------------------------  电力主节点通信  -----------------------------------------
 
-void ElectricMainNodeFunc(void)
+void MainNodeFunc(void)
 {
 	
 }
@@ -637,7 +637,7 @@ void ElectricSubNodeFunc(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = ">> 电力子节点通信 ";
+	menuList.title = "<< 电力子节点通信 ";
 	menuList.no = 4;
 	menuList.MaxNum = 4;
 	menuList.isRt = 0;
@@ -685,7 +685,7 @@ void ElectricSubNodeFunc(void)
 
 			// 公共部分 :  界面显示/输入处理
 			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, ">> %s",&ptr[5]);
+			sprintf(TmpBuf, "<< %s",&ptr[5]);
 			_Printfxy(0, 0, TmpBuf, 0);
 			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, 1);	
@@ -799,9 +799,233 @@ void ElectricSubNodeFunc(void)
 
 // --------------------------------  水力子节点通信  -----------------------------------------
 
-void WaterMainNodeFunc(void)
+// 1	常用命令
+void WaterCmdFunc_CommonCmd(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	_GuiLisStruEx menuList;
+	_GuiInputBoxStru inputBox;
+	int inputLen;
+	uint8 * ptr;
+
+	_ClearScreen();
+
+	// 菜单
+	menuList.title = "<< 水表常用命令";
+	menuList.no = 4;
+	menuList.MaxNum = 4;
+	menuList.isRt = 0;
+	menuList.x = 0;
+	menuList.y = 0;
+	menuList.with = 10 * 16;
+	menuList.str[0] = "  1. 读取用户用量";
+	menuList.str[1] = "  2. 读取冻结正转数据";
+	menuList.str[2] = "  3. 开阀";
+	menuList.str[3] = "  4. 强制开阀";
+	menuList.defbar = 1;
+	//_GUIHLine(0, 4*16 + 8, 160, 1);
+
+	// 输入框
+	inputBox.top = 2 * 16;
+	inputBox.left = 3 * 16;
+	inputBox.width = 7 * 16;
+	inputBox.hight = 16;
+	inputBox.caption = "";
+	inputBox.context = InputBuff_Tmp1;
+	inputBox.type = 1;		// 数字
+	inputBox.datelen = 14;	// 最大长度
+	inputBox.keyUpDown = 1; 
+	inputBox.IsClear = 1;
+	_SetInputMode(1); 		//设置输入方式 
+	_DisInputMode(0);		//输入法是否允许切换
+
+	_CloseCom();
+	_ComSetTran(3);
+	_ComSet((uint8 *)"19200,E,8,1", 2);
+
+	while(1){
+
+		_ClearScreen();
+		menuItemNo = _ListEx(&menuList);
+
+		if (menuItemNo == 0){
+			break;
+		}
+		menuList.defbar = menuItemNo;
+
+		while(1){
+			
+			_ClearScreen();
+
+			// 公共部分 :  界面显示/输入处理
+			ptr = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			_Printfxy(0, 0, TmpBuf, 0);
+			/*---------------------------------------------*/
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			_Printfxy(0, 2*16, "地址:", 0);
+			_Printfxy(0, 8*16, "返回            确定", 0);
+
+			if(InputBuff_1[0] != '\0'){
+				memcpy(inputBox.context, InputBuff_1, 20);
+			}
+			key = _InputBox(&inputBox);
+			if (key == KEY_CANCEL)
+				break;
+
+			inputLen = strlen(inputBox.context);
+
+			if(inputLen == 0 && InputBuff_1[0] != '\0'){
+				memcpy(inputBox.context, InputBuff_1, 20);
+				inputLen = 14;
+			}
+			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
+				_Printfxy(0, 4*16, "请输入有效地址", 0);
+				_ReadKey();
+				continue;
+			}
+			StringPadLeft(inputBox.context, 14, '0');
+			memcpy(InputBuff_1, inputBox.context, 20);
+			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
+			PrintfXyMultiLine_VaList(0, 2*16, "地址: %s", InputBuff_1);
+
+			// 命令参数处理
+			CurrCmd = (0x10 + menuItemNo);
+			switch(CurrCmd){
+			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 7);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case WaterCmd_ReadFrozenData:		// " 读取节点配置 "
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case WaterCmd_OpenValve:		// " 读取发射功率" "
+				/*---------------------------------------------*/
+				Args.cnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+			
+			case WaterCmd_OpenValveForce:		// " 645-07抄表 ";
+				/*---------------------------------------------*/
+				Args.cnt = 2;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				Args.buf[6] = 0;
+				Args.items[1] = &Args.buf[6];
+				break;
+
+				default: 
+					break;
+			}
+
+			if(key != KEY_ENTER){
+			 	if (key == KEY_CANCEL){
+					break;
+				}else{
+					continue;
+				}
+			}
+			
+			// 发送 
+			TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(TxBuf, TxLen);
+			_Printfxy(0, 9*16, "    命令发送...   ", 0);
+
+			// 接收
+			RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
+			if(false == ExplainElectricResponseFrame(RxBuf, RxLen, DstAddr, CurrCmd, &Disps)){
+				PrintfXyMultiLine_VaList(0, 9*16, "    失败:%s", Disps.items[0]);
+				_ReadKey();
+				continue;
+			}
+			else{
+				_Printfxy(0, 9*16, "      命令成功     ", 0);
+			}
+			
+			// 显示结果
+			PrintfXyMultiLine(0, 3 * 16, Disps.items[0]);
+
+			key = _ReadKey();
+
+			if (key == KEY_CANCEL){
+				break;
+			}else{
+				continue;
+			}
+		}
+		
+	}
+
+	_CloseCom();
+}
+
+// 2	测试命令
+void WaterCmdFunc_TestCmd(void)
+{
+
+}
+
+// 3	程序升级
+void WaterCmdFunc_Upgrade(void)
+{
+
+}
+
+// 4	预缴用量
+void WaterCmdFunc_PrepaiedVal(void)
+{
+
+}
+
+// 5	工作参数
+void WaterCmdFunc_WorkingParams(void)
+{
+
+}
+
+// 6	其他操作
+void WaterCmdFunc_Other(void)
+{
+
+}
+
+void WaterCmdFunc(void)
 {
+	_GuiMenuStru menu;
 	
+	menu.left=0;
+	menu.top=0;
+	menu.no=6;
+	menu.title= "<< 水表通信 ";
+	menu.str[0]=" 集中器通信 ";
+	menu.str[1]=" 水表通信 ";
+	menu.str[2]=" 电表通信 ";
+	menu.str[3]=" 透传模块升级 ";
+	menu.str[4]=" 电表通信 ";
+	menu.str[5]=" 透传模块升级 ";
+	menu.key[0]="1";
+	menu.key[1]="2";
+	menu.key[2]="3";
+	menu.key[3]="4";
+	menu.key[4]="5";
+	menu.key[5]="6";
+	menu.Function[0]=WaterCmdFunc_CommonCmd;
+	menu.Function[1]=WaterCmdFunc_TestCmd;
+	menu.Function[2]=WaterCmdFunc_Upgrade;
+	menu.Function[3]=WaterCmdFunc_PrepaiedVal;
+	menu.Function[4]=WaterCmdFunc_WorkingParams;
+	menu.Function[5]=WaterCmdFunc_Other;
+	menu.FunctionEx=0;
+	_Menu(&menu);	
 }
 
 // --------------------------------  透传模块设置  -----------------------------------------
@@ -817,7 +1041,7 @@ void TransParentModuleFunc(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = ">> 透传模块升级 ";
+	menuList.title = "<< 透传模块升级 ";
 	menuList.no = 3;
 	menuList.MaxNum = 3;
 	menuList.isRt = 0;
@@ -987,18 +1211,18 @@ int main(void)
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=4;
-	MainMenu.title= "  桑锐手持机  ";
-	MainMenu.str[0]=" 电力主节点通信 ";
-	MainMenu.str[1]=" 电力子节点通信 ";
-	MainMenu.str[2]=" 水力子节点通信 ";
+	MainMenu.title= "   桑锐手持机  ";
+	MainMenu.str[0]=" 集中器通信 ";
+	MainMenu.str[1]=" 水表通信 ";
+	MainMenu.str[2]=" 电表通信 ";
 	MainMenu.str[3]=" 透传模块升级 ";
 	MainMenu.key[0]="1";
 	MainMenu.key[1]="2";
 	MainMenu.key[2]="3";
 	MainMenu.key[3]="4";
-	MainMenu.Function[0]=ElectricMainNodeFunc;
-	MainMenu.Function[1]=ElectricSubNodeFunc;
-	MainMenu.Function[2]=WaterMainNodeFunc;
+	MainMenu.Function[0]=MainNodeFunc;
+	MainMenu.Function[1]=WaterCmdFunc;
+	MainMenu.Function[2]=ElectricSubNodeFunc;
 	MainMenu.Function[3]=TransParentModuleFunc;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
