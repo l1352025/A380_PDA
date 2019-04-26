@@ -1,6 +1,7 @@
 #ifndef WaterMeter_H
 #define WaterMeter_H
 
+#include "Common.h"
 
 //----------------------------------------  表端命令  ------------------------
 /*
@@ -117,7 +118,7 @@ typedef enum{
 	WaterCmd_ReadRxdAndTxdChanel,
 	WaterCmd_SetRxdAndTxdChanel, 
 	WaterCmd_SetOperatorNumber,
-	WaterCmd_SetDefinedRoute,
+	WaterCmd_SetDefinedRoute
 }WaterCmdDef;
 
 
@@ -190,268 +191,385 @@ typedef enum{
 	CenterCmd_OpenValve,
 	CenterCmd_CloseValve,
 	CenterCmd_ReadEnableState,
-	CenterCmd_ClearException,
+	CenterCmd_ClearException
 
 }CenterCmdDef;
 
 
-//----------------------------------------------------------------
+
+//---------------------------------------		6009 解析函数	-------------------------------------
+
 /*
-* 函数名：PackWaterRequestFrame
-* 描  述：打包水表命令请求帧
-* 参  数：buf - 数据缓存起始地址
-		  dstAddr - 目的地址
+* 描  述：获取6009水表读数类型名
+* 参  数：typeId	- 类型ID
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrValueType(uint8 typeId)
+{
+	char * str = NULL;
+	
+	switch(typeId){
+	case 0:   
+		str = "实时";
+		break;
+	case 1:
+		str = "定量上传";
+		break;
+	case 2:
+		str = "定时上传";
+		break;
+	case 3:
+		str = "报警上传";
+		break;
+	case 4:
+		str = "冻结";
+		break;
+
+	default:
+		str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：解析6009水表-告警状态字1
+* 参  数：status	- 状态字
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrAlarmStatus1(uint8 status)
+{
+	char * str = NULL;
+	uint8 mask = 1, i;
+
+	for(i = 0; i < 8; i++){
+
+		mask = (1 << i);
+		
+		switch(status & mask){
+		case 0x01:   
+			str = " 干簧管故障 ";
+			break;
+		case 0x02:
+			str = " 阀到位故障 ";
+			break;
+		case 0x04:
+			str = " 传感器线断开 ";
+			break;
+		case 0x08:
+			str = " 电池欠压 ";
+			break;
+		case 0x10:
+			str = " 光电表，一组光管坏 ";
+			break;
+		case 0x20:
+			str = " 磁干扰标志 ";
+			break;
+		case 0x40:
+			str = " 光电表，多组光管坏";
+			break;
+		case 0x80:
+			str = " 光电表，正强光干扰";
+			break;
+		default:
+			break;
+		}
+
+		if(str != NULL){
+			break;
+		}
+	}
+
+	if(str == NULL){
+		str = "  ";
+	}
+
+	return str;
+}
+
+/*
+* 描  述：解析6009水表-告警状态字2
+* 参  数：status	- 状态字
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrAlarmStatus2(uint8 status)
+{
+	char * str = NULL;
+	uint8 mask = 1, i;
+
+	for(i = 0; i < 6; i++){
+
+		mask = (1 << i);
+		
+		switch(status & mask){
+		case 0x01:   
+			str = " 水表反转 ";
+			break;
+		case 0x02:
+			str = " 水表被拆卸 ";
+			break;
+		case 0x04:
+			str = " 水表被垂直安装 ";
+			break;
+		case 0x08:
+			str = " EEPROM异常 ";
+			break;
+		case 0x10:
+			str = " 煤气泄漏 ";
+			break;
+		case 0x20:
+			str = " 欠费标志 ";
+			break;
+		default:
+			break;
+		}
+
+		if(str != NULL){
+			break;
+		}
+	}
+
+	if(str == NULL){
+		str = "  ";
+	}
+	
+	return str;
+}
+
+/*
+* 描  述：获取6009水表 阀门状态
+* 参  数：status	- 状态
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrValveStatus(uint8 status)
+{
+	char * str = NULL;
+	
+	switch(status){
+	case 0:   
+		str = "故障";
+		break;
+	case 1:
+		str = "开";
+		break;
+	case 2:
+		str = "关";
+		break;
+		
+	default:
+		str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+
+//-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
+
+
+/*
+* 函数名：PackWater6009RequestFrame
+* 描  述：打包6009水表命令请求帧
+* 参  数：buf	- 数据缓存起始地址
+		  addrs - 地址域：源地址、中继地址、目的地址
 		  cmdId - 命令字
+		  args	- 数据域参数
 		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
 * 返回值：uint8 帧总长度
 */
-uint8 PackWaterRequestFrame(uint8 * buf, const uint8 * dstAddr, uint8 cmdId, uint8 *args[], uint8 retryCnt)
+uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
-	static uint8 macFsn = 0xFF, nwkFsn = 0xFF, apsFsn = 0xFF, index = 0;
-	uint8 macCmdStart, nwkCmdStart, apsCmdStart, dltStart, i, relayCnt;
-	uint16 crc16;
+	static uint8 Fsn = 0xFF, index = 0;
+	uint8 i, relayCnt;
 	uint8 crc8;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
 	}
 
-	// mac layer
 	index = 0;
-	buf[index++] = 0x00;	// length		- skip
-	buf[index++] = 0x00;	// channel
-	buf[index++] = 0x01;	// ver
-	buf[index++] = 0x00;	// xor(0~2) check	- skip
-	buf[index++] = 0x41;	// mac ctrl 
-	buf[index++] = 0xCD;
-	macFsn++;
-	buf[index++] = macFsn;	// mac fsn
-	buf[index++] = 0xFF;	// panid
-	buf[index++] = 0xFF;
-	memcpy(&buf[index], dstAddr, 6);
-	index += 6; 			// mac dst addr - skip
-	memcpy(&buf[index], LocalAddr, 6);
-	index += 6; 			// mac src addr
-	macCmdStart = index;
-
-	// nwk layer
-	buf[index++] = 0x3C;	// nwk ctrl
-	memcpy(&buf[index], dstAddr, 6);
-	index += 6; 			// nwk dst addr - skip
-	memcpy(&buf[index], LocalAddr, 6);
-	index += 6; 			// nwk src addr
-	nwkFsn++;
-	buf[index++] = (nwkFsn << 4) | 0x01;	// nwk fsn|radius - fixed
-	
-	// 若带路由，添加中继地址
-	if(cmdId == PowerCmd_ReadMeter_645_97
-		|| cmdId == PowerCmd_ReadMeter_645_07
-		|| cmdId == PowerCmd_ReadMeter_698){
-
-		// args[0] - 电表地址
-		// args[1] - 中继总数
-		// args[2-n] - 地址列表
-		relayCnt = *args[1];
-		if(relayCnt > 0){	
-			// 修改mac层目的地址
-			memcpy(&buf[9], args[2], 6);
-			// 修改网络半径
-			buf[index - 1] = (nwkFsn << 4) | ((relayCnt & 0x07) + 1);
-			// 中继总数bit4-0 , 中继索引 bit9-5 , 中继地址模式 bit23-10, 2位 * 7 ：10 - 短地址， 11 - 长地址
-			buf[index++] = ((relayCnt & 0x07) << 5) + (relayCnt & 0x1F);
-			buf[index++] = (relayCnt >> 3)+ 0xFC;
-			buf[index++] = 0xFF;
-			// 中继列表
-			for(i = 0; i < relayCnt; i++){
-				memcpy(&buf[index], args[2 + i], 6);
-				index += 6;
-			}
-		}
-	}
-	nwkCmdStart = index;
-
-	// aps layer
-	buf[index++] = 0x09;	// aps ctrl 
-	buf[index++] = apsFsn;	// aps Fsn
-	buf[index++] = 0x05;	// expand : "SR19"
-	buf[index++] = 0x53;
-	buf[index++] = 0x53;
-	buf[index++] = 0x52;
-	buf[index++] = 0x31;
-	buf[index++] = 0x39;
-	apsCmdStart = index;
-	
-	// cmd case
-	switch(cmdId){
-
-	//-------------------------------------------  抄表		-------------
-	
-	//-------------------------------------------  参数读取	 -------------
-	
-	case PowerCmd_ReadNodeInfo:		/*	集中器/电表 命令  */
-		apsFsn++;
-		buf[index++] = 0x04;
-		break;
-	case PowerCmd_ReadNwkStatus:
-		apsFsn++;
-		buf[index++] = 0x93;
-		break;
-	case PowerCmd_ReadSendPower:
-		apsFsn++;
-		buf[index++] = 0x94;
-		break;
-	case PowerCmd_ReadVerInfo:
-		apsFsn++;
-		buf[index++] = 0x95;
-		break;
-	case PowerCmd_ReadNeighbor:			/*	电表 命令  */
-		index = nwkCmdStart;
-		buf[macCmdStart] = 0x3D;	// nwk ctrl
-		buf[index++] = 0x10;
-		break;
-	case PowerCmd_ReadSubNodeRoute:		/*	集中器 命令  */
-		apsFsn++;
-		buf[index++] = 0x92;
-		memcpy(&buf[index], args[0], 6);
+	buf[index++] = 0xD3;		// 帧头同步码： 固定为 D3 91
+	buf[index++] = 0x91;
+	buf[index++] = 0x00;		// 长度： 报文标识 --> 结束符16
+	buf[index++] = 0x00;	
+	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1, 其他位为0
+	Fsn++;
+	buf[index++] = Fsn;			// 任务号： mac fsn 发起方自累加
+	buf[index++] = *args->items[0];		// 命令字
+	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， 10 - 冷水表， 11 - GPRS水表
+	buf[index++] = 0x0F;		// 生命周期
+	buf[index++] = addrs->cnt & 0x0F;	// 路径信息:  当前位置|路径长度
+	// 地址域
+	for(i = 0; i < (addrs->cnt & 0x0F); i++){
+		memcpy(&buf[index], addrs->items[i], 6);
 		index += 6;
-		break;
-
-
-	//-------------------------------------------  节点控制		-------------
-	
-	case PowerCmd_SetSerialCom:			/*	集中器/电表 命令  */
-		apsFsn++;
-		buf[index++] = 0x00;
-		buf[index++] = *args[0];
-		buf[index++] = *args[1];
-		break;
-
-
-	case PowerCmd_ParamsInit:			/*	集中器 命令  */
-		apsFsn++;
-		buf[index++] = 0x90;
-		break;
-	
-	default:
-		break;
 	}
 
-	// calc length / crc16
-	buf[0] = index - 1;
-	buf[3] = buf[0] ^ buf[1] ^ buf[2];
-	crc16 = GetCrc16(buf, index, CRC16_Seed);
-	buf[index++] = (uint8)(crc16 & 0xFF);
-	buf[index++] = (uint8)(crc16 >> 8);
+	// 数据域
+	memcpy(&buf[index], &args->items[args->cnt -1], args->len - 1);
+	index += args->cnt;
+
+	buf[index++] = 0x00;		// 下行场强
+	buf[index++] = 0x00;		// 上行场强
+	crc8 = GetCrc8(&buf[2], index - 2);
+	buf[index++] = crc8;		// crc8 校验
+	buf[index++] = 0x16;		// 结束符
+
+	// 长度计算
+	buf[2] = (uint8)((index - 2) & 0x16);	
+	buf[3] = (uint8)((index - 2) >> 8);		
+
+	if(cmdId < 0x40 || cmdId == 0x70 || cmdId == 0x74){
+		buf[index++] = 0x1E;	// 导言长度标识
+		buf[index++] = 0x03;	// 表端APP时 发送信道
+		buf[index++] = 0x19;	// 表端APP时 接收信道
+	}else if(cmdId > 0x70 && cmdId < 0x74){
+		buf[index++] = 0x1E;	// 导言长度标识
+		buf[index++] = 0x03;	// 表端Boot时 发送信道
+		buf[index++] = 0x19;	// 表端Boot时 接收信道
+	}else{
+		buf[index++] = 0x00;	// 导言长度标识
+		buf[index++] = 0x19;	// 集中器 发送信道
+		buf[index++] = 0x03;	// 集中器 接收信道
+	}
 	
 	return index;
 }
 
 /*
-* 函数名：ExplainWaterResponseFrame
+* 函数名：ExplainWater6009ResponseFrame
 * 描  述：解析水表命令响应帧
-* 参  数：buf - 接收缓存起始地址
-		  srcAddr - 源地址
-		  cmdId - 命令字
-		  disp - 解析的显示数据
+* 参  数：buf 	- 接收缓存起始地址
+*		  rxlen	- 接收的长度
+*		  dstAddr - 目的地址，判断接收的目的地址是否是自己
+*		  cmdId - 命令字
+*		  disp - 解析的显示数据
 * 返回值：bool 解析结果：fasle - 失败 ， true - 成功
 */
-bool ExplainWaterResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * srcAddr, uint8 cmdId, ParamsBuf * disps)
+bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint8 cmdId, ParamsBuf * disps)
 {
-	uint8 index = 0, len = 0, radius;
-	uint8 nwkCtrl, apsCtrl;
 	bool ret = false;
-	uint16 crc16;
+	uint8 crc8, addrsCnt, cmd;
+	uint16 index = 0,length, u16Tmp;
+	uint8 *ptr, dispIdx;
+	uint32 u32Tmp;
 
 	// 缓冲区多包中查找
 	while(1){
 
-		if(rxlen < index + 35){
+		if(rxlen < index + 30){
 			disps->cnt = 1;
 			sprintf(&disps->buf[0], "未应答");
 			disps->items[0] = &disps->buf[0];
 			return false;
 		}
 
-		if(buf[index] == 0x55 && buf[index + 1] == 0xAA){
-			index += 3;
+		// start check
+		if(buf[index] == 0xD3 && buf[index + 1] == 0x91){
+			index += 2;
 		}else{
 			index++;
 			continue;
 		}
 		
 		// length check
-		if(index + buf[index] + 3 > rxlen){
-			index += buf[index] + 3;
+		length = (uint16)((buf[index + 1] << 8) + buf[index]);
+		if((index + length) > rxlen){
+			index += length;
 			continue;
 		}	
 
 		// dstaddr check
-		if(strncmp(&buf[index + 9], LocalAddr, 6) != 0){
-			index += buf[index] + 3;
+		addrsCnt = buf[index + 7];
+		if(memcmp(&buf[index + 8 + (addrsCnt - 1) * 6], dstAddr, 6) != 0){
+			index += length;
 			continue;
 		}
 
-		// crc16 check
-		len = buf[index];
-		crc16 = GetCrc16(&buf[index], len + 1, CRC16_Seed);
-		if(crc16 !=  (uint16)((buf[index + len + 2] << 8) + buf[index + len + 1])){
+		// crc8 check
+		crc8 = GetCrc8(&buf[index], length);
+		if(crc8 !=  buf[index + length - 2]){
 			disps->cnt = 1;
 			sprintf(&disps->buf[0], "CRC错误");
 			disps->items[0] = &disps->buf[0];
 			return false;
 		}
 
+		// pass
 		break;
 	}
 
-	// mac layer
-	index += 21;
-	// nwk layer
-	nwkCtrl = buf[index++];			// nwk ctrl
-	index += 12;
-	radius = buf[index++] & 0x0F;	// nwk radius
-	index += (radius > 1 ? (radius - 1) * 6 + 3 : 0);
+	// 命令字
+	cmd = buf[index + 4];
 
-	// aps layer
-	if(nwkCtrl == 0x3C || nwkCtrl == 0xBC){
-		apsCtrl = buf[index++];	// aps ctrl
-		index++;				// aps Fsn
-		if((apsCtrl & 0x08) > 0){
-			index += buf[index] + 1;
-		}
-	}
-	
-	// cmd case
+	// 跳过 长度 --> 路径信息
+	index += 8;
+	// 跳过 地址域
+	index += addrsCnt * 6;
+
+	// 数据域解析
 	switch(cmdId){
 
 	//-------------------------------------------  抄表		-------------
-	case PowerCmd_ReadMeter_698:
-		index++;
-		if(buf[index] == 0x68 
-			&& buf[index + 1] == 0x34 && buf[index + 2] == 0x00	// length
-			&& buf[index + 3] == 0xC3 		// ctrl
-			&& buf[index + 4] == 0x05
-			){
-			// 抄读成功，暂不解析
-			ret = true;
-
-			disps->cnt = 1;
-			sprintf(&disps->buf[0], "暂不解析");
-			disps->items[0] = &disps->buf[0];
+	case WaterCmd_ReadRealTimeData:
+		ret = true;
+		dispIdx = 0;
+		// 类型
+		ptr = Water6009_GetStrValueType((buf[index++] >> 4));
+		dispIdx += sprintf(&disps->buf[dispIdx], "类型: %s\n", ptr);
+		// 正转用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&disps->buf[dispIdx], "正转: %d.%d ", u32Tmp, u16Tmp);
+		// 反转用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&disps->buf[dispIdx], "反转: %d.%d\n", u32Tmp, u16Tmp);
+		//告警状态字1
+		ptr = Water6009_GetStrAlarmStatus1(buf[index++]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "告警: %s", ptr);
+		//告警状态字2
+		ptr = Water6009_GetStrAlarmStatus2(buf[index++]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "%s\n", ptr);
+		//阀门状态 
+		ptr = Water6009_GetStrAlarmStatus2(buf[index++]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s", ptr);
+		//电池电压
+		dispIdx += sprintf(&disps->buf[dispIdx], "电压: %c.%c\n", 
+			HexToChar(buf[index] >> 4), HexToChar(buf[index] & 0x0F));
+		index += 1;
+		//环境温度
+		if((buf[index] & 0x80) > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d", (buf[index] & 0x7F));
+		}else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d", (buf[index] & 0x7F));
 		}
+		//SNR 噪音比
+		dispIdx += sprintf(&disps->buf[dispIdx], "SNR: %d\n", buf[index++]);
+		//tx|rx信道、协议版本 跳过
+		index += 2;
 		break;
 	//-------------------------------------------  参数读取	 -------------
+	case WaterCmd_OpenValve:
 
+		break;
+		
 	default:
 		break;
 	}
+
+	//下行/上行 信号强度
+	dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d, 上行: %d\n", buf[index], buf[index + 1]);
+	disps->items[0] = &disps->buf[0];
+	disps->cnt = 1;
 	
 	return ret;
 }
-
-
-
-
-
 
 #endif
