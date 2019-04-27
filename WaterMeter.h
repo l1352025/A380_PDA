@@ -381,9 +381,9 @@ char * Water6009_GetStrValveStatus(uint8 status)
 */
 uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
-	static uint8 Fsn = 0xFF, index = 0;
-	uint8 i, relayCnt;
-	uint8 crc8;
+	static uint8 Fsn = 0;
+       static uint16 index = 0;
+	uint8 i, crc8;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
@@ -394,32 +394,33 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 	buf[index++] = 0x91;
 	buf[index++] = 0x00;		// 长度： 报文标识 --> 结束符16
 	buf[index++] = 0x00;	
-	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1, 其他位为0
-	Fsn++;
-	buf[index++] = Fsn;			// 任务号： mac fsn 发起方自累加
+	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1
+	buf[index++] = Fsn++;	// 任务号： mac fsn 发起方自累加
 	buf[index++] = *args->items[0];		// 命令字
 	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， 10 - 冷水表， 11 - GPRS水表
 	buf[index++] = 0x0F;		// 生命周期
-	buf[index++] = addrs->cnt & 0x0F;	// 路径信息:  当前位置|路径长度
+	buf[index++] = addrs->itemCnt & 0x0F;	// 路径信息:  当前位置|路径长度
 	// 地址域
-	for(i = 0; i < (addrs->cnt & 0x0F); i++){
+	for(i = 0; i < (addrs->itemCnt & 0x0F); i++){
 		memcpy(&buf[index], addrs->items[i], 6);
 		index += 6;
 	}
 
 	// 数据域
-	memcpy(&buf[index], &args->items[args->cnt -1], args->len - 1);
-	index += args->cnt;
+	memcpy(&buf[index], args->items[args->itemCnt -1], args->lastItemLen);
+	index += args->lastItemLen;
 
 	buf[index++] = 0x00;		// 下行场强
 	buf[index++] = 0x00;		// 上行场强
+        // 长度计算
+	buf[2] = (uint8)(index & 0xFF);	
+	buf[3] = (uint8)(index >> 8);	
+    
 	crc8 = GetCrc8(&buf[2], index - 2);
 	buf[index++] = crc8;		// crc8 校验
 	buf[index++] = 0x16;		// 结束符
 
-	// 长度计算
-	buf[2] = (uint8)((index - 2) & 0x16);	
-	buf[3] = (uint8)((index - 2) >> 8);		
+		
 
 	if(cmdId < 0x40 || cmdId == 0x70 || cmdId == 0x74){
 		buf[index++] = 0x1E;	// 导言长度标识
@@ -460,9 +461,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	while(1){
 
 		if(rxlen < index + 30){
-			disps->cnt = 1;
-			sprintf(&disps->buf[0], "未应答");
+			disps->itemCnt = 1;
 			disps->items[0] = &disps->buf[0];
+                      sprintf(disps->items[0], "未应答");
 			return false;
 		}
 
@@ -489,11 +490,11 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 
 		// crc8 check
-		crc8 = GetCrc8(&buf[index], length);
+		crc8 = GetCrc8(&buf[index], length - 2);
 		if(crc8 !=  buf[index + length - 2]){
-			disps->cnt = 1;
-			sprintf(&disps->buf[0], "CRC错误");
+			disps->itemCnt = 1;
 			disps->items[0] = &disps->buf[0];
+                      sprintf(disps->items[0], "CRC错误");
 			return false;
 		}
 
@@ -524,32 +525,33 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 4;
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
-		dispIdx += sprintf(&disps->buf[dispIdx], "正转: %d.%d ", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&disps->buf[dispIdx], "正转: %d.%03d\n", u32Tmp, u16Tmp);
 		// 反转用量
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		index += 4;
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
-		dispIdx += sprintf(&disps->buf[dispIdx], "反转: %d.%d\n", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&disps->buf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
 		//告警状态字1
 		ptr = Water6009_GetStrAlarmStatus1(buf[index++]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "告警: %s", ptr);
+		dispIdx += sprintf(&disps->buf[dispIdx], "告警: %s ", ptr);
 		//告警状态字2
 		ptr = Water6009_GetStrAlarmStatus2(buf[index++]);
 		dispIdx += sprintf(&disps->buf[dispIdx], "%s\n", ptr);
 		//阀门状态 
-		ptr = Water6009_GetStrAlarmStatus2(buf[index++]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s", ptr);
+		ptr = Water6009_GetStrValveStatus(buf[index++]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s  ", ptr);
 		//电池电压
-		dispIdx += sprintf(&disps->buf[dispIdx], "电压: %c.%c\n", 
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%c\n", 
 			HexToChar(buf[index] >> 4), HexToChar(buf[index] & 0x0F));
 		index += 1;
 		//环境温度
 		if((buf[index] & 0x80) > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d", (buf[index] & 0x7F));
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d  ", (buf[index] & 0x7F));
 		}else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d", (buf[index] & 0x7F));
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d  ", (buf[index] & 0x7F));
 		}
+              index += 1;
 		//SNR 噪音比
 		dispIdx += sprintf(&disps->buf[dispIdx], "SNR: %d\n", buf[index++]);
 		//tx|rx信道、协议版本 跳过
@@ -567,7 +569,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	//下行/上行 信号强度
 	dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d, 上行: %d\n", buf[index], buf[index + 1]);
 	disps->items[0] = &disps->buf[0];
-	disps->cnt = 1;
+	disps->itemCnt = 1;
 	
 	return ret;
 }

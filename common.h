@@ -3,6 +3,7 @@
 
 
 // --------------------------------		类型定义	-----------------------------------------
+
 typedef unsigned char bool;
 #ifndef true
 #define true    1
@@ -11,11 +12,17 @@ typedef unsigned char bool;
 #define false   0
 #endif
 
+typedef enum{
+    Color_White     = 0,
+    Color_Black     = 1
+}GUI_COLOR;
+
+
 typedef struct{
 	uint8 buf[200];
-	uint8 len;
 	uint8 *items[10];
-	uint8 cnt;
+	uint8 itemCnt;
+       uint8 lastItemLen;
 }ParamsBuf;
 
 

@@ -397,7 +397,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 	while(1){
 
 		if(rxlen < index + 35){
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			sprintf(&disps->buf[0], "未应答");
 			disps->items[0] = &disps->buf[0];
 			return false;
@@ -426,7 +426,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 		len = buf[index];
 		crc16 = GetCrc16(&buf[index], len + 1, CRC16_Seed);
 		if(crc16 !=  (uint16)((buf[index + len + 2] << 8) + buf[index + len + 1])){
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			sprintf(&disps->buf[0], "CRC错误");
 			disps->items[0] = &disps->buf[0];
 			return false;
@@ -469,7 +469,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 			buf[index + 14] -= 0x33;
 			buf[index + 15] -= 0x33;
 			
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			GetStringHexFromBytes(&TmpBuf[0], buf, index + 13, 3, 0, true);
 			len = StringTrimStart(&TmpBuf[0], '0');
 			if(TmpBuf[0] == 0x00){
@@ -495,7 +495,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 			buf[index + 16] -= 0x33;
 			buf[index + 17] -= 0x33;
 
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			GetStringHexFromBytes(&TmpBuf[0], buf, index + 15, 3, 0, true);
 			len = StringTrimStart(&TmpBuf[0], '0');
 			if(TmpBuf[0] == 0x00){
@@ -519,7 +519,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 			// 抄读成功，暂不解析
 			ret = true;
 
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			sprintf(&disps->buf[0], "暂不解析");
 			disps->items[0] = &disps->buf[0];
 		}
@@ -530,7 +530,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 		if(index + 27 < rxlen && buf[index] == 0x04){
 
 			ret = true;
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			sprintf(&disps->buf[0], "%s", &buf[index + 2]);
 			disps->items[0] = &disps->buf[0];
 		}
@@ -542,7 +542,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 		if(index + 1 < rxlen && buf[index] == 0x94){
 
 			ret = true;
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			sprintf(&disps->buf[0], "发射功率: %d dBm", buf[index + 1]);
 			disps->items[0] = &disps->buf[0];
 		}
@@ -550,7 +550,7 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 	case PowerCmd_ReadVerInfo:
 		if(index + 30 < rxlen && buf[index] == 0x95){
 			ret = true;
-			disps->cnt = 1;
+			disps->itemCnt = 1;
 			buf[index + 2 + buf[index + 1] ] = '\0';
 			sprintf(&disps->buf[0], "版本信息: %s", &buf[index + 2]);
 			disps->items[0] = &disps->buf[0];
