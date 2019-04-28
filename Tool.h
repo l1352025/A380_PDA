@@ -2,6 +2,8 @@
 #define Tool_H
 
 #include <stdarg.h>
+#include "Common.h"
+
 // 引用本文件前 先引用 <HJLIB.H> 和 "string.h"
 extern void _GUIRectangleFill(uint32 x, uint32 y, uint32 x1, uint32 y1, uint8 color);
 extern size_t strlen(const char * /*s*/);
@@ -75,6 +77,136 @@ void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 {
 	uint32 width = (currValue >= maxValue? 160 : 160*currValue/maxValue);
 	_GUIRectangleFill(0, y, width, y + 16, 1);
+}
+
+/*
+* 描  述：显示输入框
+* 参  数：x, y		- 输入框前面的标签的起始坐标
+*		 item		- 输入框属性
+*		 title		- 输入框前面的标签
+*		 text		- 字符串缓冲区
+*		 maxLen		- 最大字符串长度
+*		 width		- 输入框长度
+* 返回值：void
+*/
+void InputBoxShow(InputItem *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width)
+{
+	uint8 x1 = x + strlen(title) * 8;
+
+	item->x = x;
+	item->y = y;
+	item->title = title;
+	item->text = text;
+	item->dataLen = maxLen;
+	item->width = width;
+
+	_Printfxy(x, y, title, Color_White);
+	_Printfxy(x1 + 4, y, text, Color_White);
+}
+
+/*
+* 描  述：获取输入框中的字符串
+* 参  数：x, y		- 输入框前面的标签的起始坐标
+*		 title		- 输入框前面的标签
+*		 text		- 字符串缓冲区
+*		 maxLen		- 最大字符串长度
+*		 length		- 输入框长度
+* 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
+*/
+uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
+{
+	static _GuiInputBoxStru NewInput;
+	static NewInputBuf[TXTBUF_LEN] = {0};
+	uint8 retKey, inputLen;
+	uint8 x1 = x + strlen(title) * 8 + 4;
+	char * ptr;
+
+	memcpy(NewInputBuf, text, TXTBUF_LEN);
+
+	// 输入框设置
+	NewInput.top = y;
+	NewInput.left = x1;
+	NewInput.width = 10 * 16;	// 不显示输入框，设为最大
+	NewInput.hight = 16;
+	NewInput.caption = "";
+	NewInput.context = NewInputBuf;
+	NewInput.type = 1;			// 数字
+	NewInput.datelen = maxLen;	// 最大长度
+	NewInput.keyUpDown = 1; 
+	NewInput.IsClear = 1;
+	_SetInputMode(1); 			//设置输入方式 
+	_DisInputMode(1);			//输入法是否允许切换
+
+	//接收输入
+	retKey = _GetStr(&NewInput);
+
+	inputLen = strlen(NewInput.context);
+
+	if(inputLen == 0 ){
+		_SaveScreenToBuff(Screenbuff);
+		ptr = &Screenbuff[y * 20/ 16 + x1/8] ;
+		if(*ptr != 0x00){
+			PrintfXyMultiLine_VaList(0, 6*16, "%c%c", *(ptr), *(ptr + 1));
+		}
+	}
+
+	if( inputLen != 0){
+
+		if(retKey == KEY_ENTER 
+			|| retKey == KEY_UP
+			|| retKey == KEY_DOWN )
+		{
+			_leftspace(NewInput.context, maxLen, '0');
+		}
+
+		_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
+		memcpy(text, NewInput.context, TXTBUF_LEN);
+	}
+	
+	return retKey;
+}
+
+
+bool ShowUI(InputItemBuf inputList, uint8 initItemNo)
+{
+	bool ret = false;
+	uint8 key;
+	int8 itemNo = initItemNo;
+	InputItem *ptr;
+
+	while(1){
+
+		itemNo = (itemNo >= inputList.cnt ? inputList.cnt -1 : itemNo);
+		itemNo = (itemNo < 0 ? 0 : itemNo);
+
+		ptr = &inputList.items[itemNo];
+
+		key = InputBoxGetStr(ptr->x, ptr->y, ptr->title, ptr->text, ptr->dataLen);
+
+		if(key == KEY_CANCEL){
+			ret = false;
+			break;
+		}
+		if(key == KEY_ENTER){
+			ret = true;
+			break;
+		}
+
+		if(key == KEY_DOWN){
+			itemNo++;
+			continue;
+		}
+		else if(key == KEY_UP){
+			itemNo--;
+			continue;
+		}
+		else{
+			continue;
+		}
+
+	}
+
+	return ret;
 }
 
 /*

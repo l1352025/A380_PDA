@@ -22,12 +22,14 @@ uint8 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
 ParamsBuf Disps;
-uint8 InputBuff_1[20] = {0};
-uint8 InputBuff_2[20] = {0};
-uint8 InputBuff_Tmp1[20] = {0};
-uint8 InputBuff_Tmp2[20] = {0};
-
-_GuiInputBoxStru NewInput;		// 全局可复用得输入框
+uint8 InputBuff_1[TXTBUF_LEN] = {0};
+uint8 InputBuff_2[TXTBUF_LEN] = {0};
+uint8 InputBuff_Tmp1[TXTBUF_LEN] = {0};
+uint8 StrAddr[TXTBUF_LEN] = {0};
+uint8 StrRelay1[TXTBUF_LEN] = {0};
+uint8 StrRelay2[TXTBUF_LEN] = {0};
+uint8 StrRelay3[TXTBUF_LEN] = {0};
+InputItemBuf InputList;
 
 // --------------------------------  集中器模块通信  -----------------------------------------
 // 1	常用命令
@@ -462,6 +464,7 @@ void CenterCmdFunc_RouteSetting(void)
 	_GuiInputBoxStru inputBox;
 	int inputLen;
 	uint8 * ptr;
+	uint8 inputItemNo = 0;
 
 	_ClearScreen();
 
@@ -476,21 +479,6 @@ void CenterCmdFunc_RouteSetting(void)
 	menuList.str[0] = "  1. 读自定义路由";
 	menuList.str[1] = "  2. 设自定义路由";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -516,32 +504,34 @@ void CenterCmdFunc_RouteSetting(void)
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
+			// show UI
+			StrRelay1[0] = 0x00;
+			StrRelay2[0] = 0x00;
+			StrRelay3[0] = 0x00;
+			InputBoxShow(&InputList.items[0], 0, 2*16, "表号 :", StrAddr, 12, 13*8);
+			InputBoxShow(&InputList.items[1], 0, 3*16, "中继1:", StrRelay1, 12, 13*8);
+			InputBoxShow(&InputList.items[2], 0, 4*16, "中继2:", StrRelay2, 12, 13*8);
+			InputBoxShow(&InputList.items[3], 0, 5*16, "中继3:", StrRelay3, 12, 13*8);
+			InputList.cnt = 4;
+			// wait input
+			if(false == ShowUI(InputList, inputItemNo)){
 				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
 			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
+
+			if(StrAddr[0] == 0x00 || strncmp(ZeroAddr, StrAddr, 12) == 0){
+				sprintf(StrAddr, "请先输入表号");
 				continue;
 			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+
+			_Printfxy(0, 7*16, StrAddr, Color_White);
+			_Printfxy(0, 8*16, StrRelay1, Color_White);
+			_ReadKey();
+			continue;
+
+            // 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, StrAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", StrAddr);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
@@ -551,8 +541,8 @@ void CenterCmdFunc_RouteSetting(void)
 				// 地址
 				Addrs.itemCnt = 2;
 				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
+				Addrs.items[1] = &Addrs.buf[6];
+				memcpy(Addrs.items[0], LocalAddr, 6);
 				memcpy(Addrs.items[1], DstAddr, 6);
 				// 命令字、数据域
 				Args.itemCnt = 2;
