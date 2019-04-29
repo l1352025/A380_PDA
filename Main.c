@@ -5,7 +5,7 @@
 
 #include "Common.h"
 #include "Tool.h"
-//#include "PowerMeter.h"
+#include "PowerMeter.h"
 #include "WaterMeter.h"
 
 
@@ -15,21 +15,66 @@ uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
-const char * ZeroAddr = "000000000000";	    // 0 地址，12字符
-const uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
+uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
 uint8 DstAddr[7];
 uint8 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
 ParamsBuf Disps;
-uint8 InputBuff_1[TXTBUF_LEN] = {0};
-uint8 InputBuff_2[TXTBUF_LEN] = {0};
-uint8 InputBuff_Tmp1[TXTBUF_LEN] = {0};
-uint8 StrAddr[TXTBUF_LEN] = {0};
-uint8 StrRelay1[TXTBUF_LEN] = {0};
-uint8 StrRelay2[TXTBUF_LEN] = {0};
-uint8 StrRelay3[TXTBUF_LEN] = {0};
+uint8 StrDstAddr[TXTBUF_LEN] = {0};
+uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN] = {0};
 InputItemBuf InputList;
+
+//--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
+
+bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 timeout, uint8 tryCnt)
+{
+	bool ret;
+	uint8 sendCnt = 0;
+	
+	do{
+		// 发送 
+		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, tryCnt);
+		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
+		_SendComStr(TxBuf, TxLen);
+		sendCnt++;
+		if(sendCnt == 1){
+			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
+		}
+		else{
+			PrintfXyMultiLine_VaList(0, 9*16, "状态: <命令重发 %d>  ", sendCnt);
+		}
+
+		_SoundOn();
+		_Sleep(200);
+		_SoundOff();
+
+		// 接收
+		RxLen = _GetComStr(RxBuf, 1024, (timeout * 85/100) /10);
+
+		_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+		if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
+			PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
+			ret = false;
+		}
+		else{
+			_SoundOn();
+			_Sleep(200);
+			_SoundOff();
+			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+				
+			// 显示结果
+			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
+			PrintfXyMultiLine_VaList(0, 0*16, "表号: %s", StrDstAddr);
+			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
+			ret = true;
+		}
+	}while(sendCnt < tryCnt && ret == false);
+
+	return ret;
+}
+
 
 // --------------------------------  集中器模块通信  -----------------------------------------
 // 1	常用命令
@@ -37,9 +82,11 @@ void CenterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -61,21 +108,6 @@ void CenterCmdFunc_CommonCmd(void)
 	menuList.str[7] = "  8. 集中器初始化";
 	menuList.str[8] = "  9. 读集中器工作模式";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -95,51 +127,31 @@ void CenterCmdFunc_CommonCmd(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -150,90 +162,123 @@ void CenterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -251,9 +296,11 @@ void CenterCmdFunc_DocumentOperation(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -271,21 +318,6 @@ void CenterCmdFunc_DocumentOperation(void)
 	menuList.str[3] = "  4. 删除档案信息";
 	menuList.str[4] = "  5. 修改档案信息";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -305,51 +337,32 @@ void CenterCmdFunc_DocumentOperation(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
 
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -360,90 +373,123 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -461,15 +507,16 @@ void CenterCmdFunc_RouteSetting(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
-	uint8 inputItemNo = 0;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<< 路径设置";
+	menuList.title = "<<路径设置";
 	menuList.no = 2;
 	menuList.MaxNum = 2;
 	menuList.isRt = 0;
@@ -498,53 +545,31 @@ void CenterCmdFunc_RouteSetting(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+			/*---------------------------------------------*/
 
-			// show UI
-			StrRelay1[0] = 0x00;
-			StrRelay2[0] = 0x00;
-			StrRelay3[0] = 0x00;
-			InputBoxShow(&InputList.items[0], 0, 2*16, "表号 :", StrAddr, 12, 13*8);
-			InputBoxShow(&InputList.items[1], 0, 3*16, "中继1:", StrRelay1, 12, 13*8);
-			InputBoxShow(&InputList.items[2], 0, 4*16, "中继2:", StrRelay2, 12, 13*8);
-			InputBoxShow(&InputList.items[3], 0, 5*16, "中继3:", StrRelay3, 12, 13*8);
-			InputList.cnt = 4;
-			// wait input
-			if(false == ShowUI(InputList, inputItemNo)){
-				break;
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-
-			if(StrAddr[0] == 0x00 || strncmp(ZeroAddr, StrAddr, 12) == 0){
-				sprintf(StrAddr, "请先输入表号");
-				continue;
-			}
-
-			_Printfxy(0, 7*16, StrAddr, Color_White);
-			_Printfxy(0, 8*16, StrRelay1, Color_White);
-			_ReadKey();
-			continue;
-
-            // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, StrAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", StrAddr);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-				Addrs.items[1] = &Addrs.buf[6];
-				memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -555,90 +580,123 @@ void CenterCmdFunc_RouteSetting(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -656,9 +714,11 @@ void CenterCmdFunc_CommandTransfer(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -678,21 +738,6 @@ void CenterCmdFunc_CommandTransfer(void)
 	menuList.str[5] = "  6. 读使能";
 	menuList.str[6] = "  7. 清异常";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -712,51 +757,31 @@ void CenterCmdFunc_CommandTransfer(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -767,90 +792,123 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -862,7 +920,6 @@ void CenterCmdFunc_CommandTransfer(void)
 
 	_CloseCom();
 }
-
 
 void CenterCmdFunc(void)
 {
@@ -894,18 +951,19 @@ void CenterCmdFunc(void)
 
 void PowerCmdFunc(void)
 {
-
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
 	return;
 	
-	#if 0
+	#if 1
 
 	// 菜单
 	menuList.title = "<< 电力子节点通信 ";
@@ -920,21 +978,6 @@ void PowerCmdFunc(void)
 	menuList.str[2] = "  3. 读取发射功率";
 	menuList.str[3] = "  4. 645-07抄表";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(0);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -955,36 +998,24 @@ void PowerCmdFunc(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&ptr[5]);
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, 0);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, 1);	
-			_Printfxy(0, 2*16, "表地址:", 0);
-			_Printfxy(0, 8*16, "返回            确定", 0);
-
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			/*---------------------------------------------*/
+			
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, true);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 命令参数处理
 			switch(menuItemNo){
@@ -1033,6 +1064,24 @@ void PowerCmdFunc(void)
 					continue;
 				}
 			}
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
+			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = (Addrs.itemCnt -1) * 300 * 2;		// timeout - ms
 			
 			// 发送 
 			TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
@@ -1041,7 +1090,7 @@ void PowerCmdFunc(void)
 			_Printfxy(0, 9*16, "    命令发送...   ", 0);
 
 			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 100);	// recv , 500ms timeout
+			RxLen = _GetComStr(RxBuf, 100, timeout / 10);	// recv , timeout - ms
 			if(false == ExplainElectricResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
 				PrintfXyMultiLine_VaList(0, 9*16, "    失败:%s", Disps.items[0]);
 				_ReadKey();
@@ -1077,9 +1126,11 @@ void WaterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -1099,21 +1150,6 @@ void WaterCmdFunc_CommonCmd(void)
 	menuList.str[5] = "  6. 强制关阀";
 	menuList.str[6] = "  7. 清异常命令";
 	menuList.defbar = 1;
-	_GUIHLine(0, 1*16, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -1133,45 +1169,32 @@ void WaterCmdFunc_CommonCmd(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
 
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -1182,90 +1205,123 @@ void WaterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 4;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = (Addrs.itemCnt - 1) * 9000;
+
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1283,9 +1339,11 @@ void WaterCmdFunc_TestCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -1306,21 +1364,6 @@ void WaterCmdFunc_TestCmd(void)
 	menuList.str[6] = "  7. 读上报路径";
 	menuList.str[7] = "  8. 设置表号";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -1340,51 +1383,31 @@ void WaterCmdFunc_TestCmd(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -1395,90 +1418,123 @@ void WaterCmdFunc_TestCmd(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1496,9 +1552,11 @@ void WaterCmdFunc_Upgrade(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -1518,21 +1576,6 @@ void WaterCmdFunc_Upgrade(void)
 	menuList.str[5] = "  6. 查询档案";
 	menuList.str[6] = "  7. 升级统计";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -1552,51 +1595,31 @@ void WaterCmdFunc_Upgrade(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -1607,90 +1630,123 @@ void WaterCmdFunc_Upgrade(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1708,9 +1764,11 @@ void WaterCmdFunc_PrepaiedVal(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -1729,21 +1787,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 	menuList.str[4] = "  5. 设关阀限值";
 	menuList.str[5] = "  6. 设报警关阀限值";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -1763,51 +1806,31 @@ void WaterCmdFunc_PrepaiedVal(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[5]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -1818,90 +1841,123 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1919,9 +1975,11 @@ void WaterCmdFunc_WorkingParams(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -1943,20 +2001,6 @@ void WaterCmdFunc_WorkingParams(void)
 	menuList.str[7] = "8. 校表端时钟";
 	menuList.defbar = 1;
 
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
-
 	_CloseCom();
 	_ComSetTran(3);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
@@ -1975,51 +2019,31 @@ void WaterCmdFunc_WorkingParams(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[3]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -2030,90 +2054,123 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -2131,9 +2188,11 @@ void WaterCmdFunc_Other(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	_GuiInputBoxStru inputBox;
-	int inputLen;
-	uint8 * ptr;
+	InputItem * txtItems = &InputList.items[0];
+	uint8 * txtCnt = &InputList.cnt;
+	uint8 * pChar;
+	uint8 currTxtItem = 0;
+	uint16 timeout;
 
 	_ClearScreen();
 
@@ -2151,21 +2210,6 @@ void WaterCmdFunc_Other(void)
 	menuList.str[3] = "4. 设置运营商编号";
 	menuList.str[4] = "5. 路径下发";
 	menuList.defbar = 1;
-	//_GUIHLine(0, 4*16 + 8, 160, 1);
-
-	// 输入框
-	inputBox.top = 2 * 16;
-	inputBox.left = 4 * 16;
-	inputBox.width = 6 * 16;
-	inputBox.hight = 16;
-	inputBox.caption = "";
-	inputBox.context = InputBuff_Tmp1;
-	inputBox.type = 1;		// 数字
-	inputBox.datelen = 12;	// 最大长度
-	inputBox.keyUpDown = 1; 
-	inputBox.IsClear = 1;
-	_SetInputMode(1); 		//设置输入方式 
-	_DisInputMode(1);		//输入法是否允许切换
 
 	_CloseCom();
 	_ComSetTran(3);
@@ -2185,51 +2229,31 @@ void WaterCmdFunc_Other(void)
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示/输入处理
-			ptr = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&ptr[3]);
+			// 公共部分 :  界面显示
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			/*---------------------------------------------*/
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			_Printfxy(0, 2*16, "表地址:", Color_White);
-			//_Printfxy(0, 9*16, "返回            确定", Color_White);
+			/*---------------------------------------------*/
 
-			if(InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			key = _InputBox(&inputBox);
-			if (key == KEY_CANCEL)
-				break;
-
-			inputLen = strlen(inputBox.context);
-
-			if(inputLen == 0 && InputBuff_1[0] != '\0'){
-				memcpy(inputBox.context, InputBuff_1, 20);
-				inputLen = 12;
-			}
-			if(inputLen == 0 || strncmp(ZeroAddr, inputBox.context, inputLen) == 0){
-				_Printfxy(0, 4*16, "请输入有效地址", 0);
-				_ReadKey();
-				continue;
-			}
-			StringPadLeft(inputBox.context, 12, '0');
-			memcpy(InputBuff_1, inputBox.context, 20);
-                      // 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, inputBox.context, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表地址: %s", InputBuff_1);
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*txtCnt) = 0;
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				// 地址
-				Addrs.itemCnt = 2;
-				Addrs.items[0] = &Addrs.buf[0];
-                             Addrs.items[1] = &Addrs.buf[6];
-                             memcpy(Addrs.items[0], LocalAddr, 6);
-				memcpy(Addrs.items[1], DstAddr, 6);
-				// 命令字、数据域
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
 				Args.items[0] = &Args.buf[0];   //命令字
 				Args.items[1] = &Args.buf[1];
@@ -2240,90 +2264,123 @@ void WaterCmdFunc_Other(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+					break;
+				}
 				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
 				break;
 
-				default: 
-					break;
+			default: 
+				break;
 			}
 
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-			
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
 
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, 600);	// recv , 500 X 10ms timeout
-			if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-				_ReadKey();
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] == 0x00 ){
+				sprintf(StrDstAddr, "请先输入表号");
 				continue;
 			}
-			else{
-				_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+
+			// 6009 协议地址填写不用反序
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] != 0x00){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
 			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
-			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表地址: %s", InputBuff_1);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-
+			// 发送、接收、结果显示
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			
+			// 继续 / 返回
 			key = _ReadKey();
-
 			if (key == KEY_CANCEL){
 				break;
 			}else{

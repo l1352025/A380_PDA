@@ -87,7 +87,8 @@ void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 {
 	static uint8 keyBuf[TXTBUF_LEN] = {0};
-	uint8 key, idx, tmp;
+	uint8 key, idx, cleared = false;
+	char keyStr[2] = {0};
 	uint8 x = inputSt->left;
 	uint8 y = inputSt->top;
 
@@ -101,8 +102,18 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 		key = _ReadKey();
 
 		if(key >= KEY_0 && key <= KEY_9){
+
+			if(inputSt->IsClear && cleared == false){
+				memset(keyBuf, 0x00, TXTBUF_LEN);
+				_GUIRectangleFill(inputSt->left, inputSt->top, 
+					(inputSt->left + inputSt->width), 
+					(inputSt->top + inputSt->hight), Color_White);
+				cleared = true;
+			}
+
 			keyBuf[idx] = key;
-			_Printfxy(x, y, &key, Color_White);
+			keyStr[0] = key;
+			_Printfxy(x, y, keyStr, Color_White);
 			if(idx != inputSt->datelen -1){
 				idx++;
 				x += 8;
@@ -114,7 +125,7 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 				x -= 8;
 			}
 		}
-		else if(key == KEY_RIGHT && keyBuf[idx] != 0x00){
+		else if(key == KEY_RIGHT && keyBuf[idx] >= '0' && keyBuf[idx] <= '9'){
 			if(idx != inputSt->datelen - 1){
 				idx++;
 				x += 8;
@@ -149,7 +160,7 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 		_toxy(x, y + inputSt->hight);
 	}
 
-	if(key != KEY_CANCEL){
+	if(key != KEY_CANCEL && keyBuf[0] != 0x00){
 		memcpy(inputSt->context, keyBuf, TXTBUF_LEN);
 	}
 
@@ -194,17 +205,13 @@ void InputBoxShow(InputItem *item, uint8 x, uint8 y, const char * title, char * 
 */
 uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
 {
+	const char * ZeroAddr = "000000000000";
 	static _GuiInputBoxStru NewInput;
-	static NewInputBuf[TXTBUF_LEN] = {0};
-	uint8 retKey, inputLen;
-	uint8 x1 = x + strlen(title) * 8 + 4;
-	char * ptr;
-
-	memcpy(NewInputBuf, text, TXTBUF_LEN);
+	uint8 retKey = 0;
 
 	// 输入框设置
 	NewInput.top = y;
-	NewInput.left = x1;
+	NewInput.left = x + strlen(title) * 8 + 4;
 	NewInput.width = 10 * 16;	// 不显示输入框，设为最大
 	NewInput.hight = 16;
 	NewInput.caption = "";
@@ -216,62 +223,67 @@ uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 ma
 	_SetInputMode(1); 			//设置输入方式 
 	_DisInputMode(1);			//输入法是否允许切换
 
-	//接收输入
-	retKey = GetInputNumStr(&NewInput);
+	do{
+		//接收输入
+		retKey = GetInputNumStr(&NewInput);
 
-	//_SendComStr(NewInputBuf, 20);
-	//memcpy(text, NewInput.context, TXTBUF_LEN);
-	//return KEY_CANCEL;
+		if( NewInput.context[0] >= '0' && NewInput.context[0] <= '9'){
 
-	inputLen = strlen(NewInput.context);
+			if(retKey == KEY_ENTER 
+				|| retKey == KEY_UP
+				|| retKey == KEY_DOWN )
+			{
+				_leftspace(NewInput.context, maxLen, '0');
+			}
 
-	if( NewInput.context[0] != '\0'){
+			if(strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
+				sprintf(NewInput.context, "地址不能为0");
+				retKey = 0xFF;
+			}
 
-		if(retKey == KEY_ENTER 
-			|| retKey == KEY_UP
-			|| retKey == KEY_DOWN )
-		{
-			_leftspace(NewInput.context, maxLen, '0');
+			_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
 		}
-
-		_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
-	}
+		else if(NewInput.context[0] != 0x00){
+			NewInput.context[0] = 0x00;
+		}
+	}while(retKey == 0xFF);
 	
 	return retKey;
 }
 
-
-bool ShowUI(InputItemBuf inputList, uint8 initItemNo)
+/*
+* 描  述：显示多行输入界面 
+* 参  数：inputList	- 多行输入缓存结构
+*		 *itemNo	- 初始化时定位到哪个输入项
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
+*/
+uint8 ShowInputUI(InputItemBuf inputList, uint8 *itemNo)
 {
-	bool ret = false;
 	uint8 key;
-	int8 itemNo = initItemNo;
 	InputItem *ptr;
+
+	(*itemNo) = ((*itemNo) > inputList.cnt -1 ? 0 : (*itemNo));
 
 	while(1){
 
-		itemNo = (itemNo >= inputList.cnt ? inputList.cnt -1 : itemNo);
-		itemNo = (itemNo < 0 ? 0 : itemNo);
-
-		ptr = &inputList.items[itemNo];
+		ptr = &inputList.items[(*itemNo)];
 
 		key = InputBoxGetStr(ptr->x, ptr->y, ptr->title, ptr->text, ptr->dataLen);
 
-		if(key == KEY_CANCEL){
-			ret = false;
-			break;
-		}
-		if(key == KEY_ENTER){
-			ret = true;
+		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
 
 		if(key == KEY_DOWN){
-			itemNo++;
+			if((*itemNo) < inputList.cnt -1){
+				(*itemNo)++;
+			}
 			continue;
 		}
 		else if(key == KEY_UP){
-			itemNo--;
+			if((*itemNo) > 0){
+				(*itemNo)--;
+			}
 			continue;
 		}
 		else{
@@ -280,7 +292,7 @@ bool ShowUI(InputItemBuf inputList, uint8 initItemNo)
 
 	}
 
-	return ret;
+	return key;
 }
 
 /*
@@ -488,12 +500,13 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 * 描  述：将16进制字符串转换成字节数组
 * 参  数：bytes - 目的字节数组
 		  iStart - 数组中保存的起始索引
+		  iLength - 数组中可保存最大长度
 		  strHex - 源字符串缓冲区地址
 		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
 		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
 * 返回值：int - 转换后的字节数：0 - 转换失败
 */
-int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char separate, bool reverse)
+int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse)
 {
 	int iLoop = 0, index = 0;
 	int bytesLen, strHexLen;
@@ -510,7 +523,7 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, const char * strHex, char s
 		return 0;
 	}
 
-	while (iLoop < strHexLen - 1)
+	while (iLoop < strHexLen - 1 && index < iLength)
 	{
 		aByte = (CharToHex(strHex[iLoop]) << 4) | (CharToHex(strHex[iLoop + 1]) & 0x0F);
 		iLoop += 2;

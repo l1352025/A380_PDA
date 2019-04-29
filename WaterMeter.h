@@ -382,7 +382,7 @@ char * Water6009_GetStrValveStatus(uint8 status)
 uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
 	static uint8 Fsn = 0;
-       static uint16 index = 0;
+	static uint16 index = 0;
 	uint8 i, crc8;
 
 	if(retryCnt > 0 && index > 0){
@@ -463,7 +463,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		if(rxlen < index + 30){
 			disps->itemCnt = 1;
 			disps->items[0] = &disps->buf[0];
-                      sprintf(disps->items[0], "Î´Ó¦´ğ");
+            sprintf(disps->items[0], "Î´Ó¦´ğ");
 			return false;
 		}
 
@@ -494,7 +494,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		if(crc8 !=  buf[index + length - 2]){
 			disps->itemCnt = 1;
 			disps->items[0] = &disps->buf[0];
-                      sprintf(disps->items[0], "CRC´íÎó");
+            sprintf(disps->items[0], "CRC´íÎó");
 			return false;
 		}
 
