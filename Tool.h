@@ -80,6 +80,85 @@ void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 }
 
 /*
+* 描  述：获取输入的字符串
+* 参  数：inputSt - 输入框结构指针
+* 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
+*/
+uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
+{
+	static uint8 keyBuf[TXTBUF_LEN] = {0};
+	uint8 key, idx, tmp;
+	uint8 x = inputSt->left;
+	uint8 y = inputSt->top;
+
+	memcpy(keyBuf, inputSt->context, TXTBUF_LEN);
+	_Printfxy(x, y, keyBuf, Color_White);
+	_toxy(x, y + inputSt->hight);
+	_ShowCur();
+	idx = 0;
+
+	while(1){
+		key = _ReadKey();
+
+		if(key >= KEY_0 && key <= KEY_9){
+			keyBuf[idx] = key;
+			_Printfxy(x, y, &key, Color_White);
+			if(idx != inputSt->datelen -1){
+				idx++;
+				x += 8;
+			}
+		}
+		else if(key == KEY_LEFT){
+			if(idx != 0){
+				idx--;
+				x -= 8;
+			}
+		}
+		else if(key == KEY_RIGHT && keyBuf[idx] != 0x00){
+			if(idx != inputSt->datelen - 1){
+				idx++;
+				x += 8;
+			}
+		}
+		else if(key == KEY_DELETE){
+			if(idx == inputSt->datelen -1 && keyBuf[idx] != 0x00){
+				keyBuf[idx] = 0x00;
+				_Printfxy(x, y, " ", Color_White);
+			}
+			else if(idx > 0 && keyBuf[idx] == 0x00){
+				keyBuf[idx -1] = 0x00;
+				_Printfxy(x - 8, y, " ", Color_White);
+				idx--;
+				x -= 8;
+			}
+			else if(idx == 0 && keyBuf[idx] != 0x00){
+				memset(keyBuf, 0x00, TXTBUF_LEN);
+				_GUIRectangleFill(inputSt->left, inputSt->top, 
+					(inputSt->left + inputSt->width), 
+					(inputSt->top + inputSt->hight), Color_White);
+			}
+		}
+		else if(key == KEY_UP || key == KEY_DOWN
+			|| key == KEY_ENTER || key == KEY_CANCEL){
+			break;
+		}
+		else{
+			// do nothing
+		}
+
+		_toxy(x, y + inputSt->hight);
+	}
+
+	if(key != KEY_CANCEL){
+		memcpy(inputSt->context, keyBuf, TXTBUF_LEN);
+	}
+
+	_HideCur();
+
+	return key;
+}
+
+/*
 * 描  述：显示输入框
 * 参  数：x, y		- 输入框前面的标签的起始坐标
 *		 item		- 输入框属性
@@ -129,7 +208,7 @@ uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 ma
 	NewInput.width = 10 * 16;	// 不显示输入框，设为最大
 	NewInput.hight = 16;
 	NewInput.caption = "";
-	NewInput.context = NewInputBuf;
+	NewInput.context = text;
 	NewInput.type = 1;			// 数字
 	NewInput.datelen = maxLen;	// 最大长度
 	NewInput.keyUpDown = 1; 
@@ -138,19 +217,15 @@ uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 ma
 	_DisInputMode(1);			//输入法是否允许切换
 
 	//接收输入
-	retKey = _GetStr(&NewInput);
+	retKey = GetInputNumStr(&NewInput);
+
+	//_SendComStr(NewInputBuf, 20);
+	//memcpy(text, NewInput.context, TXTBUF_LEN);
+	//return KEY_CANCEL;
 
 	inputLen = strlen(NewInput.context);
 
-	if(inputLen == 0 ){
-		_SaveScreenToBuff(Screenbuff);
-		ptr = &Screenbuff[y * 20/ 16 + x1/8] ;
-		if(*ptr != 0x00){
-			PrintfXyMultiLine_VaList(0, 6*16, "%c%c", *(ptr), *(ptr + 1));
-		}
-	}
-
-	if( inputLen != 0){
+	if( NewInput.context[0] != '\0'){
 
 		if(retKey == KEY_ENTER 
 			|| retKey == KEY_UP
@@ -160,7 +235,6 @@ uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 ma
 		}
 
 		_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
-		memcpy(text, NewInput.context, TXTBUF_LEN);
 	}
 	
 	return retKey;
