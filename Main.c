@@ -1,3 +1,4 @@
+
 #include <HJLIB.H>
 #include "string.h"
 //#include "dbf.h"
@@ -23,11 +24,11 @@ ParamsBuf Args;
 ParamsBuf Disps;
 uint8 StrDstAddr[TXTBUF_LEN] = {0};
 uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN] = {0};
-InputItemBuf InputList;
+UI_ItemList UiList;
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
 
-bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 timeout, uint8 tryCnt)
+bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
 	bool ret;
 	uint8 sendCnt = 0;
@@ -45,23 +46,25 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			PrintfXyMultiLine_VaList(0, 9*16, "状态: <命令重发 %d>  ", sendCnt);
 		}
 
-		_SoundOn();
-		_Sleep(200);
-		_SoundOff();
-
 		// 接收
-		RxLen = _GetComStr(RxBuf, 1024, (timeout * 85/100) /10);
-
-		_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+		RxLen = 0;
+		PrintfXyMultiLine_VaList(0, 7*16, "接收进度 %d/%d", RxLen, ackLen);
+		RxLen = _GetComStr(RxBuf, ackLen, timeout/10);
+		PrintfXyMultiLine_VaList(0, 7*16, "接收进度 %d/%d", RxLen, ackLen);
+		_SoundOn();
+		_Sleep(50);
+		_SoundOff();
 
 		if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
 			PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
 			ret = false;
+			_Sleep(50);
+			_SoundOn();
+			_Sleep(50);
+			_SoundOff();
 		}
 		else{
-			_SoundOn();
-			_Sleep(200);
-			_SoundOff();
+			
 			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
 				
 			// 显示结果
@@ -82,11 +85,11 @@ void CenterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -138,18 +141,18 @@ void CenterCmdFunc_CommonCmd(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -162,7 +165,7 @@ void CenterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -175,7 +178,7 @@ void CenterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -188,7 +191,7 @@ void CenterCmdFunc_CommonCmd(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -201,7 +204,7 @@ void CenterCmdFunc_CommonCmd(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -214,7 +217,7 @@ void CenterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -227,7 +230,7 @@ void CenterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -275,7 +278,7 @@ void CenterCmdFunc_CommonCmd(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -296,11 +299,11 @@ void CenterCmdFunc_DocumentOperation(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -349,18 +352,18 @@ void CenterCmdFunc_DocumentOperation(void)
 				sprintf(StrRelayAddr[i], " <可选> ");
 			}
 
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -373,7 +376,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -386,7 +389,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -399,7 +402,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -412,7 +415,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -425,7 +428,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -438,7 +441,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -486,7 +489,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -507,11 +510,11 @@ void CenterCmdFunc_RouteSetting(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -556,18 +559,18 @@ void CenterCmdFunc_RouteSetting(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -580,7 +583,7 @@ void CenterCmdFunc_RouteSetting(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -593,7 +596,7 @@ void CenterCmdFunc_RouteSetting(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -606,7 +609,7 @@ void CenterCmdFunc_RouteSetting(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -619,7 +622,7 @@ void CenterCmdFunc_RouteSetting(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -632,7 +635,7 @@ void CenterCmdFunc_RouteSetting(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -645,7 +648,7 @@ void CenterCmdFunc_RouteSetting(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -693,7 +696,7 @@ void CenterCmdFunc_RouteSetting(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -714,11 +717,11 @@ void CenterCmdFunc_CommandTransfer(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -768,18 +771,18 @@ void CenterCmdFunc_CommandTransfer(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -792,7 +795,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -805,7 +808,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -818,7 +821,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -831,7 +834,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -844,7 +847,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -857,7 +860,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -905,7 +908,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -953,11 +956,11 @@ void PowerCmdFunc(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -1008,11 +1011,11 @@ void PowerCmdFunc(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
@@ -1126,11 +1129,11 @@ void WaterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -1177,48 +1180,56 @@ void WaterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 
 			for(i = 0; i < RELAY_MAX; i++){
-				StrRelayAddr[i][0] = 0x00;
-				sprintf(StrRelayAddr[i], " <可选> ");
+				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+					StrRelayAddr[i][0] = 0x00;
+					sprintf(StrRelayAddr[i], " <可选> ");
+				}
 			}
 
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
+				Args.items[0] = &Args.buf[0];   // 命令字	01
+				Args.items[1] = &Args.buf[1];	// 数据域
                 *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				ackLen = 21;					// 应答长度 21	
+				i = 0;		
+				*Args.items[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i;
 				break;
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "冻结数据序号0-9:", &TmpBuf[0], 1, 2*8);
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
+				Args.itemCnt = 3;
+				Args.items[0] = &Args.buf[0];   // 命令字	02
+				Args.items[1] = &Args.buf[1];	// 数据格式 02
+				Args.items[2] = &Args.buf[2];	// 时间
+				Args.items[3] = &Args.buf[9];	// 冻结数据序号
+                *Args.items[0] = 0x02;			
+				*Args.items[1] = 0x02;	
+
 				Args.lastItemLen = 1;
 				break;
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1231,7 +1242,7 @@ void WaterCmdFunc_CommonCmd(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1244,7 +1255,7 @@ void WaterCmdFunc_CommonCmd(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1257,7 +1268,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1270,7 +1281,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1315,13 +1326,19 @@ void WaterCmdFunc_CommonCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = (Addrs.itemCnt - 1) * 9000;
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
 
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
+			// 其他键 - 保持结果界面
+			do{
+				key = _ReadKey();
+			}
+			while(key != KEY_CANCEL && key != KEY_ENTER);
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1339,11 +1356,11 @@ void WaterCmdFunc_TestCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -1394,18 +1411,18 @@ void WaterCmdFunc_TestCmd(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1418,7 +1435,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1431,7 +1448,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1444,7 +1461,7 @@ void WaterCmdFunc_TestCmd(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1457,7 +1474,7 @@ void WaterCmdFunc_TestCmd(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1470,7 +1487,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1483,7 +1500,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1531,7 +1548,7 @@ void WaterCmdFunc_TestCmd(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -1552,11 +1569,11 @@ void WaterCmdFunc_Upgrade(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -1606,18 +1623,18 @@ void WaterCmdFunc_Upgrade(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1630,7 +1647,7 @@ void WaterCmdFunc_Upgrade(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1643,7 +1660,7 @@ void WaterCmdFunc_Upgrade(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1656,7 +1673,7 @@ void WaterCmdFunc_Upgrade(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1669,7 +1686,7 @@ void WaterCmdFunc_Upgrade(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1682,7 +1699,7 @@ void WaterCmdFunc_Upgrade(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1695,7 +1712,7 @@ void WaterCmdFunc_Upgrade(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1743,7 +1760,7 @@ void WaterCmdFunc_Upgrade(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -1764,11 +1781,11 @@ void WaterCmdFunc_PrepaiedVal(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -1817,18 +1834,18 @@ void WaterCmdFunc_PrepaiedVal(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1841,7 +1858,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1854,7 +1871,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1867,7 +1884,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1880,7 +1897,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1893,7 +1910,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1906,7 +1923,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -1954,7 +1971,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -1975,11 +1992,11 @@ void WaterCmdFunc_WorkingParams(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -2030,18 +2047,18 @@ void WaterCmdFunc_WorkingParams(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2054,7 +2071,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2067,7 +2084,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2080,7 +2097,7 @@ void WaterCmdFunc_WorkingParams(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2093,7 +2110,7 @@ void WaterCmdFunc_WorkingParams(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2106,7 +2123,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2119,7 +2136,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2167,7 +2184,7 @@ void WaterCmdFunc_WorkingParams(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();
@@ -2188,11 +2205,11 @@ void WaterCmdFunc_Other(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
-	InputItem * txtItems = &InputList.items[0];
-	uint8 * txtCnt = &InputList.cnt;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pChar;
-	uint8 currTxtItem = 0;
-	uint16 timeout;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_ClearScreen();
 
@@ -2240,18 +2257,18 @@ void WaterCmdFunc_Other(void)
 				StrRelayAddr[i][0] = 0x00;
 			}
 			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*txtCnt) = 0;
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			InputBoxShow(&txtItems[(*txtCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2264,7 +2281,7 @@ void WaterCmdFunc_Other(void)
 
 			case WaterCmd_ReadFrozenData:		// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2277,7 +2294,7 @@ void WaterCmdFunc_Other(void)
 
 			case WaterCmd_OpenValve:			// "  "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2290,7 +2307,7 @@ void WaterCmdFunc_Other(void)
 			
 			case WaterCmd_OpenValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2303,7 +2320,7 @@ void WaterCmdFunc_Other(void)
 
             case WaterCmd_CloseValve:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2316,7 +2333,7 @@ void WaterCmdFunc_Other(void)
 
 			case WaterCmd_CloseValveForce:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2329,7 +2346,7 @@ void WaterCmdFunc_Other(void)
 
 			case WaterCmd_ClearException:		// "  ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowInputUI(InputList, &currTxtItem))){
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 				Args.itemCnt = 2;
@@ -2377,7 +2394,7 @@ void WaterCmdFunc_Other(void)
 			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
 			
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, timeout, tryCnt);
+			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			// 继续 / 返回
 			key = _ReadKey();

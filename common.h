@@ -14,6 +14,7 @@ typedef unsigned char bool;
 
 #define TXTBUF_LEN	20  // 文本输入最大字符数
 #define RELAY_MAX   3   // 最大中继个数
+#define UI_MAX      10
 
 typedef enum{
     Color_White     = 0,
@@ -27,19 +28,37 @@ typedef struct{
     uint8 lastItemLen;
 }ParamsBuf;
 
-typedef struct{
-    uint8 x;
-    uint8 y;
-    char *title;
-    char *text;
-    uint8 dataLen;
-    uint8 width;
-}InputItem;
+typedef enum{
+    UI_TxtBox,
+    UI_CombBox
+}UI_Type;
 
 typedef struct{
-    InputItem items[8];
+    
+    uint8 x;        // title position
+    uint8 y;
+    char *title;
+    uint8 x1;       // text position
+    uint8 y1;
+    char *text;
+    uint8 width;    // text width
+    UI_Type type;
+
+    struct{
+		uint8 cnt;
+		uint8 currIdx;
+	}combox;
+
+	struct {
+		uint8 dataLen;
+	}txtbox;
+}UI_Item;
+
+typedef struct{
+    uint8 uiBuf[200];
+    UI_Item items[UI_MAX];
     uint8 cnt;
-}InputItemBuf;
+}UI_ItemList;
 
 
 //---------------------------------		函数声明	 -----------------------------------------
@@ -54,9 +73,9 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
-void InputBoxShow(InputItem *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width);
-uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen);
-uint8 ShowInputUI(InputItemBuf inputList, uint8 *itemNo);
+void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width);
+uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen);
+uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf);
 

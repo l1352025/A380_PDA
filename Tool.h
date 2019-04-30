@@ -103,7 +103,7 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 
 		if(key >= KEY_0 && key <= KEY_9){
 
-			if(inputSt->IsClear && cleared == false){
+			if(inputSt->IsClear && cleared == false && idx == 0){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
 				_GUIRectangleFill(inputSt->left, inputSt->top, 
 					(inputSt->left + inputSt->width), 
@@ -160,7 +160,7 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 		_toxy(x, y + inputSt->hight);
 	}
 
-	if(key != KEY_CANCEL && keyBuf[0] != 0x00){
+	if(key != KEY_CANCEL){
 		memcpy(inputSt->context, keyBuf, TXTBUF_LEN);
 	}
 
@@ -170,40 +170,36 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 }
 
 /*
-* 描  述：显示输入框
-* 参  数：x, y		- 输入框前面的标签的起始坐标
-*		 item		- 输入框属性
-*		 title		- 输入框前面的标签
+* 描  述：创建输入框
+* 参  数：x, y		- UI组件前面的标签的起始坐标
+*		 item		- UI组件属性
+*		 title		- UI组件前面的标签
 *		 text		- 字符串缓冲区
 *		 maxLen		- 最大字符串长度
 *		 width		- 输入框长度
 * 返回值：void
 */
-void InputBoxShow(InputItem *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width)
+void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width)
 {
-	uint8 x1 = x + strlen(title) * 8;
-
 	item->x = x;
 	item->y = y;
 	item->title = title;
+	item->x1 = x + strlen(title) * 8;
+	item->y1 = y;
 	item->text = text;
-	item->dataLen = maxLen;
 	item->width = width;
-
-	_Printfxy(x, y, title, Color_White);
-	_Printfxy(x1 + 4, y, text, Color_White);
+	item->txtbox.dataLen = maxLen;
 }
 
 /*
 * 描  述：获取输入框中的字符串
-* 参  数：x, y		- 输入框前面的标签的起始坐标
-*		 title		- 输入框前面的标签
+* 参  数：x, y		- UI组件前面的标签的起始坐标
+*		 title		- UI组件前面的标签
 *		 text		- 字符串缓冲区
 *		 maxLen		- 最大字符串长度
-*		 length		- 输入框长度
 * 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
 */
-uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
+uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
 {
 	const char * ZeroAddr = "000000000000";
 	static _GuiInputBoxStru NewInput;
@@ -236,46 +232,55 @@ uint8 InputBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 ma
 				_leftspace(NewInput.context, maxLen, '0');
 			}
 
-			if(strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
+			if(maxLen == 12 && strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
 				sprintf(NewInput.context, "地址不能为0");
 				retKey = 0xFF;
 			}
 
 			_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
 		}
-		else if(NewInput.context[0] != 0x00){
-			NewInput.context[0] = 0x00;
-		}
 	}while(retKey == 0xFF);
-	
+
 	return retKey;
 }
 
 /*
-* 描  述：显示多行输入界面 
-* 参  数：inputList	- 多行输入缓存结构
+* 描  述：显示UI界面 
+* 参  数：uiList	- UI组件列表结构
 *		 *itemNo	- 初始化时定位到哪个输入项
 * 返回值：uint8  - 界面退出时的按键值：确认键，取消键
 */
-uint8 ShowInputUI(InputItemBuf inputList, uint8 *itemNo)
+uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 {
 	uint8 key;
-	InputItem *ptr;
+	uint8 i;
+	UI_Item *ptr;
 
-	(*itemNo) = ((*itemNo) > inputList.cnt -1 ? 0 : (*itemNo));
+	for(i = 0; i < uiList.cnt; i++){
+		ptr = &uiList.items[i];
+		_Printfxy(ptr->x, ptr->y, ptr->title, Color_White);
+		_Printfxy(ptr->x1 + 4, ptr->y1, ptr->text, Color_White);
+	}
+
+	(*itemNo) = ((*itemNo) > uiList.cnt -1 ? 0 : (*itemNo));
 
 	while(1){
 
-		ptr = &inputList.items[(*itemNo)];
+		ptr = &uiList.items[(*itemNo)];
 
-		key = InputBoxGetStr(ptr->x, ptr->y, ptr->title, ptr->text, ptr->dataLen);
+		if(ptr->type == UI_TxtBox){
+			key = TextBoxGetStr(ptr->x, ptr->y, ptr->title, ptr->text, ptr->txtbox.dataLen);
+		}
+		else if(ptr->type == UI_CombBox){
+
+		}
 
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
 
 		if(key == KEY_DOWN){
-			if((*itemNo) < inputList.cnt -1){
+			if((*itemNo) < uiList.cnt -1){
 				(*itemNo)++;
 			}
 			continue;
@@ -290,6 +295,11 @@ uint8 ShowInputUI(InputItemBuf inputList, uint8 *itemNo)
 			continue;
 		}
 
+	}
+
+	// set the not-number str to null when back
+	if(ptr->text[0] > '9' || ptr->text[0] < '0'){
+		ptr->text[0] = 0x00;
 	}
 
 	return key;
