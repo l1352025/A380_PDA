@@ -1,10 +1,11 @@
 #include <HJLIB.H>
 #include "string.h"
-//#include "dbf.h"
+#include "dbf.h"
 #include "stdio.h"
 //A350 ÓÃµÄ
 //uint8 Screenbuff[5000];
 //A3480
+
 
 char Screenbuff[160 * (160 / 3 + 1) * 2];
 /*
@@ -267,40 +268,73 @@ int DispOneFiled(int row, int col, char *FieldTile, int8 fieldNum) //ÏÔÊ¾Ò»¸öÌõ¼
 	_ReadField(fieldNum, Field);
 
 	_Printfxy(x + tmp, y, Field, 0);
-	return _strlen(Field);
+
+	return (_strlen(FieldTile) + _strlen(Field) + 2);
 }
+
 void dbf(void)
 {
-	// char tmp[50];
-	// int rec=0,recount=0;
-	// _ClearScreen();
-	// _Select(1);
-	// _Use("test.dbf");
-	// _Go(10);
-	//  rec=_Recno();
-	// recount= _Reccount();
-	// sprintf(tmp,"¼ÇÂ¼:%d/%d", rec,recount);
-	// _Printfxy(0,0,tmp,0);
-	//  DispOneFiled(1,0,"»§Ãû:",TEST_NAME);
-	// _Skip(1);
-	//  DispOneFiled(2,0,"»§Ãû:",TEST_NAME);
-	// _Skip(-2);
-	//  _Replace(TEST_NAME,"ÕÅÈý");
-	//  DispOneFiled(3,0,"»§Ãû:",TEST_NAME);
-	//  _Del();
-	//  _Pack();
-	//    DispOneFiled(4,0,"»§Ãû:",TEST_NAME);
-	//_Go(1);
+	char tmp[50];
+	int rec = 0, recount = 0, cnt = 0, start = 0;
+	int len = 0;
 
-	//if (_Bof())  _Printfxy(0,5*16,"µÚÒ»Ìõ¼ÇÂ¼",0);
-	//_Go(_Reccount());
-	//if (_Eof())  _Printfxy(0,6*16,"×îºóµÄ¼ÇÂ¼",0);
-	//_App();
-	//_Replace(TEST_NAME,"ÕÅËÄ");
-	//_ReadKey();
-	// //_Zap();
-	//  _Use("");
-	//
+	_ClearScreen();
+	_Select(1);
+	_Use("test.dbf");
+	_Go(2);
+	rec = _Recno();
+	recount = _Reccount();
+	sprintf(tmp, "¼ÇÂ¼:%d/%d", rec, recount);
+	_Printfxy(0, 0, tmp, 0);
+	len = DispOneFiled(1, 0, "ID:", TEST_ID);
+	DispOneFiled(1, len, "»§Ãû:", TEST_Name);
+	_Skip(1);
+	len = DispOneFiled(2, 0, "ID:", TEST_ID);
+	DispOneFiled(2, len, "»§Ãû:", TEST_Name);
+
+
+	// _Skip(-2);
+	// _Replace(TEST_Name, "ÕÅÈý");
+	// len = DispOneFiled(3, 0, "ID:", TEST_ID);
+	// DispOneFiled(3, len, "»§Ãû:", TEST_Name);
+	// _Del();
+	// _Pack();
+	// len = DispOneFiled(4, 0, "ID:", TEST_ID);
+	// DispOneFiled(4, len, "»§Ãû:", TEST_Name);
+	// _Go(1);
+	// if (_Bof())
+	// 	_Printfxy(0, 5 * 16, "µÚÒ»Ìõ¼ÇÂ¼", 0);
+	// _Go(_Reccount());
+	// if (_Eof())
+	// 	_Printfxy(0, 6 * 16, "×îºóµÄ¼ÇÂ¼", 0);
+	// _App();
+	// _Replace(TEST_Name, "ÕÅËÄ");
+
+	cnt = 4;
+	start = 1;
+	while(start < 12){
+		if(_Locate((uint8)TEST_Name, '=', "ÕÅÈý", start, 12, 0) > 0){
+			len = DispOneFiled(cnt, 0, "ID:", TEST_ID);
+			DispOneFiled(cnt, len, "»§Ãû:", TEST_Name);
+			start = _Recno();
+			cnt++;
+		}
+		start++;
+	}
+	
+	start = 1;
+	while(start < 12){
+		if(_Locate((uint8)TEST_Name, '=', "ÍõÎå", start, 12, 1) > 0){
+			len = DispOneFiled(cnt, 0, "ID:", TEST_ID);
+			DispOneFiled(cnt, len, "»§Ãû:", TEST_Name);
+			start = _Recno();
+			cnt++;
+		}
+		start++;
+	}
+	_ReadKey();
+	//_Zap();
+	_Use("");
 }
 /*****************************************
 extern void    _GetTime(char *time,char div);
@@ -752,8 +786,7 @@ void DispComponents(void)
 {
 	char byds[20] = {0};
 	uint8 key, i;
-	char filed[20][50] = {{"1.ÕÅÑ§ÓÑ"}, {"2.ÖÜÐÇ³Û"}, {"3.ÁõµÂ»ªÁõµÂ»ªÁõµÂ»ª"}, {"4.ÀèÃ÷"},
-		{"5.¹ù¸»³É"}, {"6.ÐíÖ¾°²"}, {"7.¹Å¾Þ»ù"}, {"8.³ÂÞÈÑ¸"}, {"9.²àÌï"}, {"10.ÕÅ¹úÈÙ"}};
+	char filed[20][50] = {{"1.ÕÅÑ§ÓÑ"}, {"2.ÖÜÐÇ³Û"}, {"3.ÁõµÂ»ªÁõµÂ»ªÁõµÂ»ª"}, {"4.ÀèÃ÷"}, {"5.¹ù¸»³É"}, {"6.ÐíÖ¾°²"}, {"7.¹Å¾Þ»ù"}, {"8.³ÂÞÈÑ¸"}, {"9.²àÌï"}, {"10.ÕÅ¹úÈÙ"}};
 
 	_GuiInputBoxStru inputbox;
 	_GuiLisStru ThisList;
@@ -788,7 +821,7 @@ void DispComponents(void)
 	ThisList.no = 10;
 	ThisList.MaxNum = 6;
 	ThisList.x = 0;
-	ThisList.y = 2*16;
+	ThisList.y = 2 * 16;
 	ThisList.with = 16 * 10;
 	for (i = 0; i < ThisList.no; i++)
 		ThisList.str[i] = filed[i];
@@ -796,7 +829,7 @@ void DispComponents(void)
 
 	if (i == 0)
 		return;
-	
+
 	_Printfxy(0, 9 * 16, "Ñ¡ÔñÁË:", 1);
 	_Printfxy(60, 9 * 16, filed[i - 1], 1);
 	_ReadKey();
