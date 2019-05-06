@@ -931,7 +931,7 @@ void CenterCmdFunc(void)
 	menu.left=0;
 	menu.top=0;
 	menu.no=4;
-	menu.title= "<< 集中器通信 ";
+	menu.title= "<<集中器操作 ";
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 档案操作 ";
 	menu.str[2]=" 路径设置 ";
@@ -2424,7 +2424,7 @@ void WaterCmdFunc(void)
 	menu.left=0;
 	menu.top=0;
 	menu.no=6;
-	menu.title= "<< 水表通信 ";
+	menu.title= "<<表端操作 ";
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 测试命令 ";
 	menu.str[2]=" 程序升级 ";
@@ -2621,6 +2621,76 @@ void TransParentModuleFunc(void)
 	_CloseCom();
 }
 
+//-----------------------------------	主菜单	---------------------------
+// 读取用户用量
+void MainFuncReadRealTimeData(void)
+{
+
+}
+
+// 读取冻结数据
+void MainFuncReadFrozenData(void)
+{
+
+}
+
+// 读取表端时钟
+void MainFuncReadMeterTime(void)
+{
+
+}
+
+// 设置表端时钟
+void MainFuncSetMeterTime(void)
+{
+
+}
+
+// 清异常命令
+void MainFuncClearException(void)
+{
+
+}
+
+// 开阀
+void MainFuncOpenValve(void)
+{
+
+}
+
+// 关阀
+void MainFuncCloseValve(void)
+{
+
+}
+
+// 批量抄表
+void MainFuncBatchMeterReading(void)
+{
+
+}
+
+// 工程调试		------------------------------
+void MainFuncEngineerDebuging(void)
+{
+	_GuiMenuStru menu;
+
+	menu.top = 0;
+	menu.left = 0;
+	menu.no = 3;
+	menu.title = "<<工程调试";
+	menu.str[0] = "";
+	menu.str[1] = "";
+	menu.str[2] = "";
+	menu.key[0] = "1";
+	menu.key[1] = "2";
+	menu.key[2] = "3";
+	menu.Function[0] = WaterCmdFunc;
+	menu.Function[1] = CenterCmdFunc;
+	menu.Function[2] = ;
+	menu.FunctionEx = 0;
+	_Menu(&menu);
+}
 
 // --------------------------------   主函数   -----------------------------------------------
 int main(void)
@@ -2629,20 +2699,35 @@ int main(void)
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
-	MainMenu.no=2;
-	MainMenu.title= "   桑锐手持机  ";
-	MainMenu.str[0]=" 集中器通信 ";
-	MainMenu.str[1]=" 水表通信 ";
-	//MainMenu.str[2]=" 电表通信 ";
-	//MainMenu.str[3]=" 透传模块升级 ";
-	MainMenu.key[0]="1";
-	MainMenu.key[1]="2";
-	MainMenu.key[2]="3";
-	MainMenu.key[3]="4";
-	MainMenu.Function[0]=CenterCmdFunc;
-	MainMenu.Function[1]=WaterCmdFunc;
-	//MainMenu.Function[2]=PowerCmdFunc;
-	//MainMenu.Function[3]=TransParentModuleFunc;
+	MainMenu.no=9;
+	MainMenu.title = "   桑锐手持机  ";
+	MainMenu.str[0] = " 读取用户用量 ";
+	MainMenu.str[1] = " 读取冻结数据 ";
+	MainMenu.str[2] = " 读取表端时钟 ";
+	MainMenu.str[3] = " 设置表端时钟 ";
+	MainMenu.str[4] = " 清异常命令 ";
+	MainMenu.str[5] = " 开阀 ";
+	MainMenu.str[6] = " 关阀 ";
+	MainMenu.str[7] = " 批量抄表 ";
+	MainMenu.str[8] = " 工程调试 ";
+	MainMenu.key[0] = "1";
+	MainMenu.key[1] = "2";
+	MainMenu.key[2] = "3";
+	MainMenu.key[3] = "4";
+	MainMenu.key[4] = "5";
+	MainMenu.key[5] = "6";
+	MainMenu.key[6] = "7";
+	MainMenu.key[7] = "8";
+	MainMenu.key[8] = "9";
+	MainMenu.Function[0] = MainFuncReadMeterTime;
+	MainMenu.Function[1] = MainFuncReadFrozenData;
+	MainMenu.Function[2] = MainFuncReadMeterTime;
+	MainMenu.Function[3] = MainFuncSetMeterTime;
+	MainMenu.Function[4] = MainFuncClearException;
+	MainMenu.Function[5] = MainFuncOpenValve;
+	MainMenu.Function[6] = MainFuncCloseValve;
+	MainMenu.Function[7] = MainFuncBatchMeterReading;
+	MainMenu.Function[8] = MainFuncEngineerDebuging;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

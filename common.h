@@ -12,13 +12,17 @@ typedef unsigned char bool;
 #define false   0
 #endif
 
-#define TXTBUF_LEN	20  // 文本输入最大字符数
-#define RELAY_MAX   3   // 最大中继个数
+#define VERSION_Name    "桑锐6009手持机"     // 程序名
+#define VERSION_RevNo   "1.0"               // 版本号
+#define VERSION_Date    "2019-5-9"          // 版本日期
+
+#define TXTBUF_LEN	20      // 文本输入最大字符数
+#define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10
 
 typedef enum{
-    Color_White     = 0,
-    Color_Black     = 1
+    Color_White = 0,
+    Color_Black = 1
 }GUI_COLOR;
 
 typedef struct{
