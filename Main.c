@@ -1193,103 +1193,109 @@ void WaterCmdFunc_CommonCmd(void)
 			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
+			i = 0;	
+			Args.itemCnt = 2;
+			Args.items[0] = &Args.buf[0];   // 命令字
+			Args.items[1] = &Args.buf[1];	// 数据域
 			CurrCmd = (0x10 + menuItemNo);
+
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   // 命令字	01
-				Args.items[1] = &Args.buf[1];	// 数据域
-                *Args.items[0] = 0x01;
-				ackLen = 21;					// 应答长度 21	
-				i = 0;		
-				*Args.items[i++] = 0x00;		// 数据格式 00	
-				Args.lastItemLen = i;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
 				/*---------------------------------------------*/
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "冻结数据序号0-9:", &TmpBuf[0], 1, 2*8);
+				sprintf(TmpBuf, "0");
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 3;
-				Args.items[0] = &Args.buf[0];   // 命令字	02
-				Args.items[1] = &Args.buf[1];	// 数据格式 02
-				Args.items[2] = &Args.buf[2];	// 时间
-				Args.items[3] = &Args.buf[9];	// 冻结数据序号
-                *Args.items[0] = 0x02;			
-				*Args.items[1] = 0x02;	
-
-				Args.lastItemLen = 1;
+				if(TmpBuf[0] > '9' || TmpBuf[0] < '0'){
+					PrintfXyMultiLine_VaList(0, 6*16, "数据序号: <0~9有效>");
+					continue;
+				}
+				Args.buf[i++] = 0x01;		// 命令字	02
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x02;				// 数据格式 02
+				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = _GetYear()%100;		
+				Args.buf[i++] = _GetMonth();		
+				Args.buf[i++] = _GetDay();			
+				Args.buf[i++] = _GetHour();			
+				Args.buf[i++] = _GetMin();			
+				Args.buf[i++] = _GetSec();			
+				Args.buf[i++] = TmpBuf[0] - '0';	// 冻结数据序号	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_OpenValve:			// " 开阀 "
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	02
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x02;		// 数据格式 02
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_OpenValveForce:		// " 强制开阀 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_CloseValve:		// " 关阀 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// "  ";
+			case WaterCmd_CloseValveForce:		// " 强制关阀 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearException:		// "  ";
+			case WaterCmd_ClearException:		// " 清异常命令 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 

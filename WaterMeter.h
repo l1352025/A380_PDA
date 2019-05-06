@@ -249,28 +249,28 @@ char * Water6009_GetStrAlarmStatus1(uint8 status)
 		
 		switch(status & mask){
 		case 0x01:   
-			str = " 干簧管故障 ";
+			str = "干簧管故障";
 			break;
 		case 0x02:
-			str = " 阀到位故障 ";
+			str = "阀到位故障";
 			break;
 		case 0x04:
-			str = " 传感器线断开 ";
+			str = "传感器线断开";
 			break;
 		case 0x08:
-			str = " 电池欠压 ";
+			str = "电池欠压";
 			break;
 		case 0x10:
-			str = " 光电表，一组光管坏 ";
+			str = "光电表，一组光管坏";
 			break;
 		case 0x20:
-			str = " 磁干扰标志 ";
+			str = "磁干扰标志";
 			break;
 		case 0x40:
-			str = " 光电表，多组光管坏";
+			str = "光电表，多组光管坏";
 			break;
 		case 0x80:
-			str = " 光电表，正强光干扰";
+			str = "光电表，正强光干扰";
 			break;
 		default:
 			break;
@@ -282,7 +282,7 @@ char * Water6009_GetStrAlarmStatus1(uint8 status)
 	}
 
 	if(str == NULL){
-		str = "  ";
+		str = " ";
 	}
 
 	return str;
@@ -304,22 +304,22 @@ char * Water6009_GetStrAlarmStatus2(uint8 status)
 		
 		switch(status & mask){
 		case 0x01:   
-			str = " 水表反转 ";
+			str = "水表反转";
 			break;
 		case 0x02:
-			str = " 水表被拆卸 ";
+			str = "水表被拆卸";
 			break;
 		case 0x04:
-			str = " 水表被垂直安装 ";
+			str = "水表被垂直安装";
 			break;
 		case 0x08:
-			str = " EEPROM异常 ";
+			str = "EEPROM异常";
 			break;
 		case 0x10:
-			str = " 煤气泄漏 ";
+			str = "煤气泄漏";
 			break;
 		case 0x20:
-			str = " 欠费标志 ";
+			str = "欠费标志";
 			break;
 		default:
 			break;
@@ -331,7 +331,7 @@ char * Water6009_GetStrAlarmStatus2(uint8 status)
 	}
 
 	if(str == NULL){
-		str = "  ";
+		str = " ";
 	}
 	
 	return str;
