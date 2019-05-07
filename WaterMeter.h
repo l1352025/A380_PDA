@@ -581,7 +581,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	if(index == startIdx + length - 4)
 	{
 		//下行/上行 信号强度
-		dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d, 上行: %d\n", buf[index], buf[index + 1]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;
 		disps->items[0] = &disps->buf[0];
 		disps->itemCnt = 1;

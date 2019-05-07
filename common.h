@@ -20,6 +20,21 @@ typedef unsigned char bool;
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10
 
+/*  串口物理端口： NO.1 / NO.2 / NO.3
+        物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
+        物理NO.2 (TP_COM_TXD / TP_COM_RXD)
+        物理NO.3 (TP_SCAN_TXD / TP_SCAN_RXD) 
+
+    串口逻辑端口：1.串口 / 2.普通红外 / 3.高速红外
+        _ComSetTran(logicPort)
+        （使用前先设置有效的物理端口 NO.1 / NO.2 / No.3）
+        如使用”高速红外“,则先选择物理端口NO.1 或 No.3： 
+            系统设置->模块设置->红外设置->高速红外->
+*/
+#define Trans_Scom          1   // 扫描端口
+#define Trans_IR            2   // 普通红外 
+#define Trans_IR_Quick      3   // 高速红外
+
 typedef enum{
     Color_White = 0,
     Color_Black = 1

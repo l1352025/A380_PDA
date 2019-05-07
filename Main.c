@@ -2625,7 +2625,104 @@ void TransParentModuleFunc(void)
 // 读取用户用量
 void MainFuncReadRealTimeData(void)
 {
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
+	_CloseCom();
+	_ComSetTran(3);
+	_ComSet((uint8 *)"9600,E,8,1", 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = 0x11;
+
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x01;		// 命令字	01
+		ackLen = 21;				// 应答长度 21	
+		// 数据域
+		Args.buf[i++] = 0x00;				// 数据格式 00	
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		// 其他键 - 保持结果界面
+		do{
+			key = _ReadKey();
+		}
+		while(key != KEY_CANCEL && key != KEY_ENTER);
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
 }
 
 // 读取冻结数据
@@ -2679,15 +2776,15 @@ void MainFuncEngineerDebuging(void)
 	menu.left = 0;
 	menu.no = 3;
 	menu.title = "<<工程调试";
-	menu.str[0] = "";
-	menu.str[1] = "";
-	menu.str[2] = "";
+	menu.str[0] = "表端操作";
+	menu.str[1] = "集中器操作";
+	menu.str[2] = "版本信息";
 	menu.key[0] = "1";
 	menu.key[1] = "2";
 	menu.key[2] = "3";
 	menu.Function[0] = WaterCmdFunc;
 	menu.Function[1] = CenterCmdFunc;
-	menu.Function[2] = ;
+	menu.Function[2] = CenterCmdFunc;
 	menu.FunctionEx = 0;
 	_Menu(&menu);
 }
@@ -2699,7 +2796,7 @@ int main(void)
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
-	MainMenu.no=9;
+	MainMenu.no=8;
 	MainMenu.title = "   桑锐手持机  ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
@@ -2708,8 +2805,8 @@ int main(void)
 	MainMenu.str[4] = " 清异常命令 ";
 	MainMenu.str[5] = " 开阀 ";
 	MainMenu.str[6] = " 关阀 ";
-	MainMenu.str[7] = " 批量抄表 ";
-	MainMenu.str[8] = " 工程调试 ";
+	//MainMenu.str[7] = " 批量抄表 ";
+	MainMenu.str[7] = " 工程调试 ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -2718,16 +2815,16 @@ int main(void)
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
 	MainMenu.key[7] = "8";
-	MainMenu.key[8] = "9";
-	MainMenu.Function[0] = MainFuncReadMeterTime;
+	//MainMenu.key[8] = "9";
+	MainMenu.Function[0] = MainFuncReadRealTimeData;
 	MainMenu.Function[1] = MainFuncReadFrozenData;
 	MainMenu.Function[2] = MainFuncReadMeterTime;
 	MainMenu.Function[3] = MainFuncSetMeterTime;
 	MainMenu.Function[4] = MainFuncClearException;
 	MainMenu.Function[5] = MainFuncOpenValve;
 	MainMenu.Function[6] = MainFuncCloseValve;
-	MainMenu.Function[7] = MainFuncBatchMeterReading;
-	MainMenu.Function[8] = MainFuncEngineerDebuging;
+	//MainMenu.Function[7] = MainFuncBatchMeterReading;
+	MainMenu.Function[7] = MainFuncEngineerDebuging;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

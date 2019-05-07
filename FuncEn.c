@@ -659,6 +659,8 @@ void COMTEST(void)
 	uint32 key = 0, Send = 1;
 	uint8 disp[3][20] = {{"   串口测试    "}, {"普通红外测试"}, {"高速红外测试"}};
 	_GuiMenuStru MainMenu;
+	uint8 tran = 1, com  = 1;
+
 	MainMenu.left = 0;
 	MainMenu.top = 0;
 	MainMenu.no = 2;
@@ -698,30 +700,53 @@ void COMTEST(void)
 		key = 0;
 		while (1)
 		{
-			switch (key)
-			{
-			case '1':
-				_CloseCom();
-				_ComSetTran(1);
-				_ComSet((uint8 *)"115200,N,8,1", 1);
-				_Printfxy(0, 0, disp[0], 1);
-				break; //串口
-			case '2':
-				_CloseCom();
-				_ComSetTran(2);
-				_ComSet((uint8 *)"4800,N,8,1", 2);
-				_Printfxy(0, 0, disp[1], 1);
-				break; //普通红外
-			case '3':
-				_CloseCom();
-				_ComSetTran(3);
-				_ComSet((uint8 *)"4800,N,8,1", 2);
-				_Printfxy(0, 0, disp[2], 1);
-				break; //高速红外
-			case 'C':
-				break;
-				;
+			// switch (key)
+			// {
+			// case '1':
+			// 	_CloseCom();
+			// 	_ComSetTran(1);
+			// 	_ComSet((uint8 *)"115200,N,8,1", 1);
+			// 	_Printfxy(0, 0, disp[0], 1);
+			// 	break; //串口
+			// case '2':
+			// 	_CloseCom();
+			// 	_ComSetTran(2);
+			// 	_ComSet((uint8 *)"4800,N,8,1", 2);
+			// 	_Printfxy(0, 0, disp[1], 1);
+			// 	break; //普通红外
+			// case '3':
+			// 	_CloseCom();
+			// 	_ComSetTran(3);
+			// 	_ComSet((uint8 *)"4800,N,8,1", 2);
+			// 	_Printfxy(0, 0, disp[2], 1);
+			// 	break; //高速红外
+			// case 'C':
+			// 	break;
+			// 	;
+			// }
+
+			key = _ReadKey();
+			_CloseCom();
+			_ComSetTran(tran);
+			_ComSet((uint8 *)"9600,E,8,1", com);
+			sprintf(&tmp1[0], "tran %d  com %d", tran, com);
+			_Printfxy(0, 7*16, &tmp1[0], 0);
+
+			com++;
+			if(com > 2) {
+				com = 1;
+				tran++;
+				if(tran > 6){
+					tran = 0;
+				}
 			}
+			
+			if (key == 'C')
+				break;
+
+			_SendComStr(tmp, 10);
+			continue;
+
 			if (key == 'C')
 				break;
 			if (key == 'E' && Send == 1)
