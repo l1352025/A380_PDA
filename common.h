@@ -98,10 +98,13 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * t
 uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
-void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf);
+void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
+uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern uint8 TmpBuf[];
 extern uint8 LocalAddr[];
+extern uint8 DstAddr[];
+extern uint8 StrDstAddr[];
 
 #endif

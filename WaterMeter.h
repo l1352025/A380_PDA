@@ -504,14 +504,15 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 /*
 * 函数名：ExplainWater6009ResponseFrame
 * 描  述：解析水表命令响应帧
-* 参  数：buf 	- 接收缓存起始地址
-*		  rxlen	- 接收的长度
-*		  dstAddr - 目的地址，判断接收的目的地址是否是自己
-*		  cmdId - 命令字
-*		  disp - 解析的显示数据
+* 参  数：buf		- 接收缓存起始地址
+*		  rxlen		- 接收的长度
+*		  dstAddr	- 目的地址，判断接收的目的地址是否是自己
+*		  cmdId		- 命令字
+*		  ackLen	- 应答长度
+*		  disp 		- 解析的显示数据
 * 返回值：bool 解析结果：fasle - 失败 ， true - 成功
 */
-bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint8 cmdId, ParamsBuf * disps)
+bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint8 cmdId, uint16 ackLen, ParamsBuf * disps)
 {
 	bool ret = false;
 	uint8 crc8, addrsCnt, cmd;
@@ -522,7 +523,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 缓冲区多包中查找
 	while(1){
 
-		if(rxlen < index + 30){
+		if(rxlen < index + ackLen){
 			disps->itemCnt = 1;
 			disps->items[0] = &disps->buf[0];
             sprintf(disps->items[0], "未应答");
@@ -574,6 +575,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 跳过 地址域
 	index += addrsCnt * 6;
 
+	// 显示表号
+	dispIdx = 0;
+	dispIdx += sprintf(&disps->buf[dispIdx], "表号: %s", StrDstAddr);
 
 	// 数据域解析
 	switch(cmdId){
@@ -585,7 +589,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
+		
 		// 类型
 		ptr = Water6009_GetStrValueType((buf[index] >> 4));
 		dispIdx += sprintf(&disps->buf[dispIdx], "类型: %s\n", ptr);
@@ -636,7 +640,6 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
 
 		break;
 
@@ -648,7 +651,6 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
 		// 命令状态
 		if(buf[index] == 0xAD){
 			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
@@ -666,7 +668,6 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
 		// 命令状态
 		if(buf[index] == 0xAA){
 			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
@@ -685,7 +686,6 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
 		// 命令状态
 		if(buf[index] == 0xAA){
 			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
@@ -703,7 +703,6 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		dispIdx = 0;
 		// 命令状态
 		if(buf[index] == 0xAA){
 			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");

@@ -306,16 +306,90 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 }
 
 /*
+* 描  述：获取在屏幕x坐标开始显示多行字符串的行数
+* 参  数：x			- 屏幕中显示的x坐标
+		  buf		- 字符串起始地址
+		  lines		- 每行的起始地址
+* 返回值：uint8	 字符串总行数
+*/
+uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
+{
+	uint8 lineCnt = 0, col = 0; 
+	uint8 * pr = buf;
+
+	// first line
+	lines[lineCnt] = pr;
+	lineCnt++;
+
+	// next lines
+	while(*pr != '\0'){
+		if(*pr == '\n' || (x + col * 8) >= 160){
+			lines[lineCnt] = pr;
+			lineCnt++;
+			col = 0;
+			x = 0;
+			pr = (*pr == '\n' ? pr + 1 : pr);
+		}
+		pr++;
+		col++;
+	}
+
+	return lineCnt;
+}
+
+/*
+* 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
+* 参  数：x, y		- 屏幕中坐标
+		  buf		- 字符串起始地址
+		  maxLines	- 最多能显示的行数
+* 返回值：void
+*/
+void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
+{
+	uint8 lineCnt = 0, col = 0; 
+	uint8 * pr = buf;
+
+	// first line
+	_Printfxy(x, y, pr, Color_White);
+	lineCnt++;
+	
+	// next lines
+	while(*pr != '\0'){
+		if(*pr == '\n' || (x + col * 8) >= 160){
+			lineCnt++;
+			if(lineCnt > maxLines){
+				break;
+			}
+			col = 0;
+			pr = (*pr == '\n' ? pr + 1 : pr);
+			x = 0;
+			y += 16;
+			_Printfxy(x, y, pr, Color_White);
+		}
+		pr++;
+		col++;
+	}
+}
+
+/*
 * 函数名：PrintfXyMultiLine_VaList
 * 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
 * 参  数：x, y		- 屏幕中坐标
 		  format	- 字符串格式
+		  ... 		- 可变参数
 * 返回值：void
 */
-void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf)
+void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
+	static uint8 buf[512] = {0};
 	uint16 len; 
-	uint8 * pr = buf;
+	uint8 *pr = buf;
+	va_list ap;
+
+	va_start(ap, format);
+	len = vsprintf(buf, format, ap);
+	buf[len] = '\0';
+	va_end(ap);
 
 	// first line
 	_Printfxy(x, y, pr, 0);
@@ -333,28 +407,6 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf)
 		pr++;
 		len++;
 	}
-}
-
-/*
-* 函数名：PrintfXyMultiLine_VaList
-* 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
-* 参  数：x, y		- 屏幕中坐标
-		  format	- 字符串格式
-		  ... 		- 可变参数
-* 返回值：void
-*/
-void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
-{
-	static uint8 buf[512] = {0};
-	uint16 len; 
-	va_list ap;
-
-	va_start(ap, format);
-	len = vsprintf(buf, format, ap);
-	buf[len] = '\0';
-	va_end(ap);
-
-	PrintfXyMultiLine(x, y, buf);
 }
 /*
 * 函数名：StringPadLeft

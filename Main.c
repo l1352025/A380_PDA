@@ -28,13 +28,15 @@ UI_ItemList UiList;
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
 
-bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
-	bool ret;
-	uint8 sendCnt = 0;
+	uint8 sendCnt = 0, key, cmdResult;
 	uint16 waitTime = 0;
+	char * lines[30];
+	uint8 lineStep = 3, lineMax = 7;
+	int8 lineCnt = 0, currLine = 0;
 
-	_GUIRectangleFill(0, 3*16, 160, 9*16, Color_White);
+	_GUIRectangleFill(0, 2*16, 160, 9*16, Color_White);
 	
 	do{
 		// 发送 
@@ -68,26 +70,57 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_Sleep(50);
 		_SoundOff();
 
-		if(RxLen < ackLen || false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
+		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, &Disps);
+		if(false == cmdResult){
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-			ret = false;
 			_Sleep(50);
 			_SoundOn();
 			_Sleep(50);
 			_SoundOff();
 		}
 		else{
-			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
-				
 			// 显示结果
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine_VaList(0, 0*16, "表号: %s", StrDstAddr);
-			PrintfXyMultiLine(0, 1 * 16, Disps.items[0]);
-			ret = true;
+			lineCnt = GetPrintLines(0, Disps.items[0], lines);
+			PrintfXyMultiLine(0, 1 * 16 + 8, lines[currLine], lineMax);
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
 		}
-	}while(sendCnt < tryCnt && ret == false);
+	}while(sendCnt < tryCnt && cmdResult == false);
 
-	return ret;
+	// 上下滚动显示
+	while(1){
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+		else if(key == KEY_UP){
+			currLine -= lineStep;
+			if(currLine < 0){
+				currLine = 0;
+			}
+		}
+		else if(key == KEY_DOWN){
+			currLine += lineStep;
+			if(currLine > lineCnt - lineMax){
+				currLine = lineCnt - lineMax;
+			}
+		}
+		else{
+			continue;
+		}
+
+		if(lineCnt > lineMax){
+			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
+			PrintfXyMultiLine(0, 1 * 16 + 8, lines[currLine], lineMax);
+		}
+	}
+
+	return key;
 }
 
 
@@ -1116,7 +1149,7 @@ void PowerCmdFunc(void)
 			}
 			
 			// 显示结果
-			PrintfXyMultiLine(0, 3 * 16, Disps.items[0]);
+			PrintfXyMultiLine_VaList(0, 3 * 16, Disps.items[0]);
 
 			key = _ReadKey();
 
@@ -1352,13 +1385,8 @@ void WaterCmdFunc_CommonCmd(void)
 			timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
 
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
-			// 其他键 - 保持结果界面
-			do{
-				key = _ReadKey();
-			}
-			while(key != KEY_CANCEL && key != KEY_ENTER);
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
