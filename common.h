@@ -35,6 +35,8 @@ typedef unsigned char bool;
 #define Trans_IR            2   // 普通红外 
 #define Trans_IR_Quick      3   // 高速红外
 
+#define RfPort  Trans_IR_Quick  // RF透传模块使用的通信端口
+
 typedef enum{
     Color_White = 0,
     Color_Black = 1

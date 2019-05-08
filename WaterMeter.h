@@ -364,6 +364,68 @@ char * Water6009_GetStrValveStatus(uint8 status)
 
 	return str;
 }
+/*
+* 描  述：获取6009水表 集中器错误码
+* 参  数：status	- 状态
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrErrorMsg(uint8 errorCode)
+{
+	char * str = NULL;
+
+	switch(errorCode){
+	case 0xAA:
+		str = "操作成功";
+		break;
+	case 0xAB:
+	    str = "操作失败";
+		break;
+	case 0xAC:
+	    str = "通讯失败";
+		break;
+	case 0xAD:
+	    str = "命令下达成功";
+		break;
+	case 0xAE:
+	    str = "格式错误";
+		break;
+	case 0xAF:
+	    str = "预留";
+		break;
+	case 0xBA:
+	    str = "对象不存在";
+		break;
+	case 0xBB:
+	    str = "对象重复";
+		break;
+	case 0xBC:
+		str = "对象已满";
+		break;
+	case 0xCC:
+	    str = "超时错误";
+		break;
+	case 0xCD:
+	    str = "单论运行超时";
+		break;
+	case 0xCE:
+	    str = "正在执行";
+		break;
+	case 0xCF:
+	    str = "操作已处理";
+		break;
+	case 0xD0:
+	    str = "已应答";
+		break;
+	case 0xD1:
+	    str = "抄表错误";
+		break;
+	case 0xD2:
+	    str = "无此功能";
+		break;
+	}
+
+	return str;
+}
 
 
 //-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
@@ -517,9 +579,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	switch(cmdId){
 
 	//-------------------------------------------  抄表		-------------
-	case WaterCmd_ReadRealTimeData:
+	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 
-		if(rxlen < index + 21){
+		if(rxlen < index + 21 && cmd != 0x01){
 			break;
 		}
 		ret = true;
@@ -568,9 +630,90 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		//tx|rx信道、协议版本 跳过
 		index += 2;
 		break;
-	//-------------------------------------------  参数读取	 -------------
-	case WaterCmd_OpenValve:
 
+	case WaterCmd_ReadFrozenData:	// 读取冻结数据
+		if(rxlen < index + 21 && cmd != 0x02){
+			break;
+		}
+		ret = true;
+		dispIdx = 0;
+
+		break;
+
+	case WaterCmd_OpenValve:		// 开阀
+	case WaterCmd_OpenValveForce:	// 强制开阀
+	case WaterCmd_CloseValve:		// 关阀
+	case WaterCmd_CloseValveForce:	// 强制关阀
+		if(rxlen < index + 3 && cmd != 0x03){
+			break;
+		}
+		ret = true;
+		dispIdx = 0;
+		// 命令状态
+		if(buf[index] == 0xAD){
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
+		}
+		index += 1;
+		break;
+
+	case WaterCmd_ClearException:	// 清异常命令 
+		if(rxlen < index + 1 && cmd != 0x05){
+			break;
+		}
+		ret = true;
+		dispIdx = 0;
+		// 命令状态
+		if(buf[index] == 0xAA){
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
+		}
+		index += 1;
+		break;
+
+	//-------------------------------------------------		测试命令	---------------------
+	case WaterCmd_RebootDevice:	// 表端重启
+		if(rxlen < index + 21 && cmd != 0x07){
+			break;
+		}
+		ret = true;
+		dispIdx = 0;
+		// 命令状态
+		if(buf[index] == 0xAA){
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
+		}
+		index += 1;
+		break;
+
+	case WaterCmd_ReadTemperature:	// 读表温度
+		if(rxlen < index + 21 && cmd != 0x07){
+			break;
+		}
+		ret = true;
+		dispIdx = 0;
+		// 命令状态
+		if(buf[index] == 0xAA){
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
+		}
+		index += 1;
 		break;
 		
 	default:

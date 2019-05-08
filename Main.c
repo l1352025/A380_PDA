@@ -32,6 +32,9 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 {
 	bool ret;
 	uint8 sendCnt = 0;
+	uint16 waitTime = 0;
+
+	_GUIRectangleFill(0, 3*16, 160, 9*16, Color_White);
 	
 	do{
 		// 发送 
@@ -48,14 +51,24 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 		// 接收
 		RxLen = 0;
-		PrintfXyMultiLine_VaList(0, 7*16, "接收进度 %d/%d", RxLen, ackLen);
-		RxLen = _GetComStr(RxBuf, ackLen, timeout/10);
-		PrintfXyMultiLine_VaList(0, 7*16, "接收进度 %d/%d", RxLen, ackLen);
+		PrintfXyMultiLine_VaList(0, 6*16, "等待应答 %d s  ", (timeout / 1000));
+		PrintfXyMultiLine_VaList(0, 7*16, "当前接收 %d/%d  ", RxLen, ackLen);
+
+		do{
+			RxLen += _GetComStr(&RxBuf[RxLen], ackLen - RxLen, 10);	// 100ms 检测接收
+			if(KEY_CANCEL == _GetKeyExt()){
+				_Printfxy(0, 9*16, "状态: <命令取消>    ", Color_White);
+				return false;
+			}
+			waitTime += 100;
+		}while(RxLen < ackLen && waitTime < timeout);
+
+		PrintfXyMultiLine_VaList(0, 7*16, "当前接收 %d/%d  ", RxLen, ackLen);
 		_SoundOn();
 		_Sleep(50);
 		_SoundOff();
 
-		if(false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
+		if(RxLen < ackLen || false == ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
 			PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
 			ret = false;
 			_Sleep(50);
@@ -64,7 +77,6 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			_SoundOff();
 		}
 		else{
-			
 			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
 				
 			// 显示结果
@@ -94,7 +106,7 @@ void CenterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<< 常用命令";
+	menuList.title = "<<常用命令";
 	menuList.no = 9;
 	menuList.MaxNum = 9;
 	menuList.isRt = 0;
@@ -113,7 +125,7 @@ void CenterCmdFunc_CommonCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -323,7 +335,7 @@ void CenterCmdFunc_DocumentOperation(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -531,7 +543,7 @@ void CenterCmdFunc_RouteSetting(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -743,7 +755,7 @@ void CenterCmdFunc_CommandTransfer(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -983,7 +995,7 @@ void PowerCmdFunc(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"19200,E,8,1", 2);
 
 	while(1){
@@ -1155,7 +1167,7 @@ void WaterCmdFunc_CommonCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -1243,10 +1255,11 @@ void WaterCmdFunc_CommonCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	02
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
 				// 数据域
-				Args.buf[i++] = 0x02;		// 数据格式 02
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
 			
@@ -1255,10 +1268,11 @@ void WaterCmdFunc_CommonCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1267,10 +1281,11 @@ void WaterCmdFunc_CommonCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1279,10 +1294,11 @@ void WaterCmdFunc_CommonCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1291,10 +1307,10 @@ void WaterCmdFunc_CommonCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x05;		// 命令字	05
+				ackLen = 1;					// 应答长度 1	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.buf[i++] = 0x00;		// 命令选项 00	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1389,7 +1405,7 @@ void WaterCmdFunc_TestCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -1426,7 +1442,43 @@ void WaterCmdFunc_TestCmd(void)
 			// 命令参数处理
 			CurrCmd = (0x10 + menuItemNo);
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_RebootDevice:			// "表端重启"
+				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x04;		// 命令选项 04	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ReadTemperature:			// " 读表温度 "
+				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x05;		// 命令选项 05	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ReadVoltage:				// " 读表电压 "
+				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x05;		// 命令选项 05	
+				Args.lastItemLen = i - 1;
+				break;
+			
+			case WaterCmd_ClearPrepaidRefVal:		// " 清预缴参考量 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
@@ -1439,7 +1491,7 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+            case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
@@ -1452,7 +1504,20 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_ReadOperatorNumber:		// " 读运营商编号 ";
+				/*---------------------------------------------*/
+				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+					break;
+				}
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   //命令字
+				Args.items[1] = &Args.buf[1];
+                *Args.items[0] = 0x01;
+				*Args.items[1] = 0x00;
+				Args.lastItemLen = 1;
+				break;
+
+			case WaterCmd_ReadReportRoute:		// " 读上报路径 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
@@ -1465,46 +1530,7 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-            case WaterCmd_CloseValve:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
+			case WaterCmd_SetMeterNumber:		// " 设置表号 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
@@ -1601,7 +1627,7 @@ void WaterCmdFunc_Upgrade(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -1812,7 +1838,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -2025,7 +2051,7 @@ void WaterCmdFunc_WorkingParams(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -2235,7 +2261,7 @@ void WaterCmdFunc_Other(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
@@ -2474,7 +2500,7 @@ void TransParentModuleFunc(void)
 	_GUIHLine(0, 4*16 + 8, 160, 1);
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"19200,E,8,1", 2);
 
 	while(1){
@@ -2632,7 +2658,7 @@ void MainFuncReadRealTimeData(void)
 	uint16 ackLen, timeout;
 
 	_CloseCom();
-	_ComSetTran(3);
+	_ComSetTran(RfPort);
 	_ComSet((uint8 *)"9600,E,8,1", 2);
 
 	while(1){
