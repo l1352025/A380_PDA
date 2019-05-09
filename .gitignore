@@ -1,4 +1,4 @@
-# Prerequisites
+﻿# Prerequisites
 *.d
 
 # Object files
@@ -56,3 +56,8 @@ dkms.conf
 /arm/Include/.vscode
 /Main.L
 /sourceInsight-cfg
+/EditPlus 3/editplus_u.ini
+*.bak
+*.tmp
+*.L
+

@@ -35,6 +35,16 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 	uint8 * lines[30];
 	const uint8 lineStep = 3, lineMax = 7;
 	int8 lineCnt = 0, currLine = 0;
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		fp = _Fopen("system.cfg", "W");
+	}else{
+		fp = _Fopen("system.cfg", "RW");
+	}
+	_Lseek(fp, 0, 0);
+	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
+	_Fclose(fp);
 
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 	
@@ -72,16 +82,16 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 		}while(RxLen < ackLen && waitTime < timeout);
 
 		PrintfXyMultiLine_VaList(0, 6*16, "当前接收 %d/%d  ", RxLen, ackLen);
-		_SoundOn();
-		_Sleep(50);
-		_SoundOff();
+		// _SoundOn();
+		// _Sleep(50);
+		// _SoundOff();
 
 		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, &Disps);
 		if(false == cmdResult){
-			_Sleep(30);
-			_SoundOn();
-			_Sleep(50);
-			_SoundOff();
+			// _Sleep(30);
+			// _SoundOn();
+			// _Sleep(50);
+			// _SoundOff();
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "状态: 命令失败    ", Color_White);
@@ -101,9 +111,7 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 	lineCnt = GetPrintLines(0, Disps.items[0], lines);
 	PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
 
-	PrintfXyMultiLine_VaList(0, 0, "lineCnt/last %d / %X ", lineCnt, lines[lineCnt - 1][0]);
-
-	// 上/下滚动显示
+	// 上/下滚动显示   ▲  ▼  △ ▽
 	while(1){
 
 		key = _ReadKey();
@@ -127,10 +135,8 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 			continue;
 		}
 
-		_GUIRectangleFill(0, 1*16 + 8, 160, 9*16, Color_White);
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
-
-		PrintfXyMultiLine_VaList(0, 0, "currLine/first %d / %X ", currLine, lines[0][0]);
 	}
 
 	return key;
@@ -1241,7 +1247,7 @@ void WaterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "状态: <空闲>    ", Color_White);
+			_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
 
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
@@ -2716,6 +2722,9 @@ void MainFuncReadRealTimeData(void)
 		_Printfxy(0, 0, "<<读取用户用量", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
 
 		for(i = 0; i < RELAY_MAX; i++){
 			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
@@ -2779,13 +2788,8 @@ void MainFuncReadRealTimeData(void)
 		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
 
 		// 发送、接收、结果显示
-		Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
-		// 其他键 - 保持结果界面
-		do{
-			key = _ReadKey();
-		}
-		while(key != KEY_CANCEL && key != KEY_ENTER);
 		
 		// 继续 / 返回
 		if (key == KEY_CANCEL){
@@ -2866,6 +2870,11 @@ void MainFuncEngineerDebuging(void)
 int main(void)
 {
 	_GuiMenuStru MainMenu;
+	int fp;
+
+	fp = _Fopen("system.cfg", "R");
+	_Fread(StrDstAddr, TXTBUF_LEN, fp);
+	_Fclose(fp);
 	
 	MainMenu.left=0;
 	MainMenu.top=0;

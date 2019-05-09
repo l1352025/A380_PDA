@@ -522,6 +522,8 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 
 	// 显示表号
 	dispIdx = 0;
+	disps->items[0] = &disps->buf[0];
+	disps->itemCnt = 1;
 	dispIdx += sprintf(&disps->buf[dispIdx], "表号: %s\n", StrDstAddr);
 
 	// 缓冲区多包中查找
@@ -783,8 +785,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	}
 
 	disps->buf[dispIdx] = '\0';
-	disps->items[0] = &disps->buf[0];
-	disps->itemCnt = 1;
+	
 	
 	return ret;
 }

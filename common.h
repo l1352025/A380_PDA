@@ -19,6 +19,7 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10
+#define LogName     "debug.log"  // 日志文件名
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
         物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
@@ -109,6 +110,7 @@ uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
+void LogToFile(const char * fileName, const char * format, ...);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern uint8 TmpBuf[];

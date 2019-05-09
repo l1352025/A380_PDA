@@ -4,4 +4,4 @@
 *
 */
 #include "SR6009_IR.h"
-#include "main.c"
+#include "main.h"

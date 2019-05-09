@@ -32,8 +32,4 @@ _Zap();
 _Replace(
 #T=_ReadField¶Á×Ö¶Î
 _ReadField( 
- #T=TEST_ID N  2
-TEST_ID
-#T=TEST_Name C  10
-TEST_Name
-#
+ 

@@ -66,6 +66,38 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 }
 
 /*
+* 描  述：打印日志到文件
+* 参  数：fileName	 - 文件名
+		  format	- 字符串格式
+		  ... 		- 可变参数
+* 返回值：void
+*/
+void LogToFile(const char * fileName, const char * format, ...)
+{
+	static uint8 buf[512] = {0};
+	int fp;
+	uint32 len = 0; 
+	va_list ap;
+
+	va_start(ap, format);
+	len += vsprintf(&buf[0], format, ap);
+	buf[len++] = '\n';
+	buf[len++] = '\0';
+	va_end(ap);
+	
+	if(_Access("debug.txt", 0) < 0){
+		fp = _Fopen("debug.txt", "W");
+	}else{
+		fp = _Fopen("debug.txt", "RW");
+	}
+
+	_Lseek(fp, 0, 2);
+	_Fwrite(buf, len, fp);
+	_Fclose(fp);
+
+	//_SendComStr(buf, len);
+}
+/*
 * 函数名：ShowProgressBar
 * 描  述：显示进度条
 * 参  数：y - 进度条y坐标，将显示在(0,y)位置，固定宽度为160，固定高度为16,黑色填充
@@ -353,39 +385,41 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 */
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 {
-	uint8 lineCnt = 0, col = 0; 
-	uint8 * pr = buf;
+	static uint8 dispLine[21] = {0};
+	uint8 row = 0, col = 0; 
+	uint8 * pcol, *prow;
 
-	// first line
-	_Printfxy(x, y, pr, Color_White);
-	lineCnt++;
-	
-	// next lines
-	while(*pr != 0x00){
+	pcol = buf;
 
-		if(lineCnt >= maxLines){
-			break;
-		}
-		
-		if(*pr == '\n' || (x + col * 8) > 160){
-			col = 0;
-			x = 0;
-			y += 16;
-			pr = (*pr == '\n' ? pr + 1 : pr);
+	for(row = 0; row < maxLines; row++){
 
-			if(*pr == 0x00){
+		prow = pcol;
+
+		for(col = x/8; col < 20; col++){
+			if(*pcol == '\n'){
+				pcol++;
 				break;
 			}
-			_Printfxy(x, y, pr, Color_White);
-			lineCnt++;
+			else if(*pcol == 0x00){
+				break;
+			}
+			pcol++;
 		}
-		pr++;
-		col++;
+		memcpy(dispLine, prow, col);
+		dispLine[col] = 0x00;
+		_Printfxy(x, y, dispLine, Color_White);
+
+		if(*pcol == 0x00){
+			break;
+		}
+
+		col = 0;
+		x = 0;
+		y += 16;
 	}
 }
 
 /*
-* 函数名：PrintfXyMultiLine_VaList
 * 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
 * 参  数：x, y		- 屏幕中坐标
 		  format	- 字符串格式
@@ -425,6 +459,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 		col++;
 	}
 }
+
 /*
 * 函数名：StringPadLeft
 * 描  述：字符串左侧填充

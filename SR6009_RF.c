@@ -4,4 +4,4 @@
 *
 */
 #include "SR6009_RF.h"
-#include "main.c"
+#include "main.h"
