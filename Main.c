@@ -32,11 +32,11 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 {
 	uint8 sendCnt = 0, key, cmdResult;
 	uint16 waitTime = 0;
-	char * lines[30];
-	uint8 lineStep = 3, lineMax = 7;
+	uint8 * lines[30];
+	const uint8 lineStep = 3, lineMax = 7;
 	int8 lineCnt = 0, currLine = 0;
 
-	_GUIRectangleFill(0, 2*16, 160, 9*16, Color_White);
+	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 	
 	do{
 		// 发送 
@@ -45,52 +45,65 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 		_SendComStr(TxBuf, TxLen);
 		sendCnt++;
 		if(sendCnt == 1){
-			_Printfxy(0, 9*16, "状态: <命令发送>    ", Color_White);
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "状态: 命令发送    ", Color_White);
 		}
 		else{
-			PrintfXyMultiLine_VaList(0, 9*16, "状态: <命令重发 %d>  ", sendCnt);
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			PrintfXyMultiLine_VaList(0, 9*16, "状态: 命令重发 %d  ", sendCnt);
 		}
 
 		// 接收
 		RxLen = 0;
-		PrintfXyMultiLine_VaList(0, 6*16, "等待应答 %d s  ", (timeout / 1000));
-		PrintfXyMultiLine_VaList(0, 7*16, "当前接收 %d/%d  ", RxLen, ackLen);
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d s  ", (timeout / 1000));
+		PrintfXyMultiLine_VaList(0, 6*16, "当前接收 %d/%d  ", RxLen, ackLen);
 
 		do{
 			RxLen += _GetComStr(&RxBuf[RxLen], ackLen - RxLen, 10);	// 100ms 检测接收
 			if(KEY_CANCEL == _GetKeyExt()){
-				_Printfxy(0, 9*16, "状态: <命令取消>    ", Color_White);
+				//------------------------------------------------------
+				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+				_Printfxy(0, 9*16, "状态: 命令已取消   ", Color_White);
 				return false;
 			}
 			waitTime += 100;
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		PrintfXyMultiLine_VaList(0, 7*16, "当前接收 %d/%d  ", RxLen, ackLen);
+		PrintfXyMultiLine_VaList(0, 6*16, "当前接收 %d/%d  ", RxLen, ackLen);
 		_SoundOn();
 		_Sleep(50);
 		_SoundOff();
 
 		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, &Disps);
 		if(false == cmdResult){
-			//------------------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			PrintfXyMultiLine_VaList(0, 9*16, "状态: <失败，%s>    ", Disps.items[0]);
-			_Sleep(50);
+			_Sleep(30);
 			_SoundOn();
 			_Sleep(50);
 			_SoundOff();
-		}
-		else{
-			// 显示结果
-			lineCnt = GetPrintLines(0, Disps.items[0], lines);
-			PrintfXyMultiLine(0, 1 * 16 + 8, lines[currLine], lineMax);
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "状态: <命令成功>    ", Color_White);
+			_Printfxy(0, 9*16, "状态: 命令失败    ", Color_White);
+		}
+		else{
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "状态: 命令成功    ", Color_White);
 		}
 	}while(sendCnt < tryCnt && cmdResult == false);
 
-	// 上下滚动显示
+	// 显示结果
+	if(cmdResult == true){
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+	}
+
+	lineCnt = GetPrintLines(0, Disps.items[0], lines);
+	PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+
+	PrintfXyMultiLine_VaList(0, 0, "lineCnt/last %d / %X ", lineCnt, lines[lineCnt - 1][0]);
+
+	// 上/下滚动显示
 	while(1){
 
 		key = _ReadKey();
@@ -98,13 +111,13 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
-		else if(key == KEY_UP){
+		else if(key == KEY_UP && lineCnt > lineMax){
 			currLine -= lineStep;
 			if(currLine < 0){
 				currLine = 0;
 			}
 		}
-		else if(key == KEY_DOWN){
+		else if(key == KEY_DOWN && lineCnt > lineMax){
 			currLine += lineStep;
 			if(currLine > lineCnt - lineMax){
 				currLine = lineCnt - lineMax;
@@ -114,10 +127,10 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 			continue;
 		}
 
-		if(lineCnt > lineMax){
-			_GUIRectangleFill(0, 0, 10*16, 8*16, Color_White);
-			PrintfXyMultiLine(0, 1 * 16 + 8, lines[currLine], lineMax);
-		}
+		_GUIRectangleFill(0, 1*16 + 8, 160, 9*16, Color_White);
+		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+
+		PrintfXyMultiLine_VaList(0, 0, "currLine/first %d / %X ", currLine, lines[0][0]);
 	}
 
 	return key;
@@ -158,8 +171,8 @@ void CenterCmdFunc_CommonCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -181,6 +194,9 @@ void CenterCmdFunc_CommonCmd(void)
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
+			//----------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "状态: <空闲>    ", Color_White);
 
 			for(i = 0; i < RELAY_MAX; i++){
 				StrRelayAddr[i][0] = 0x00;
@@ -368,8 +384,8 @@ void CenterCmdFunc_DocumentOperation(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -576,8 +592,8 @@ void CenterCmdFunc_RouteSetting(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -788,8 +804,8 @@ void CenterCmdFunc_CommandTransfer(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -1028,7 +1044,7 @@ void PowerCmdFunc(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
+	_ComSetTran(CurrPort);
 	_ComSet((uint8 *)"19200,E,8,1", 2);
 
 	while(1){
@@ -1200,8 +1216,8 @@ void WaterCmdFunc_CommonCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -1223,6 +1239,9 @@ void WaterCmdFunc_CommonCmd(void)
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
+			//----------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "状态: <空闲>    ", Color_White);
 
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
@@ -1363,7 +1382,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 6009 协议地址填写不用反序
 			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+			PrintfXyMultiLine_VaList(0, 1*16 + 8, "表 号: %s", StrDstAddr);
 
 			// 填充地址
 			Addrs.itemCnt = 0;
@@ -1433,8 +1452,8 @@ void WaterCmdFunc_TestCmd(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -1655,8 +1674,8 @@ void WaterCmdFunc_Upgrade(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -1866,8 +1885,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -2079,8 +2098,8 @@ void WaterCmdFunc_WorkingParams(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -2289,8 +2308,8 @@ void WaterCmdFunc_Other(void)
 	menuList.defbar = 1;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -2528,7 +2547,7 @@ void TransParentModuleFunc(void)
 	_GUIHLine(0, 4*16 + 8, 160, 1);
 
 	_CloseCom();
-	_ComSetTran(RfPort);
+	_ComSetTran(CurrPort);
 	_ComSet((uint8 *)"19200,E,8,1", 2);
 
 	while(1){
@@ -2686,8 +2705,8 @@ void MainFuncReadRealTimeData(void)
 	uint16 ackLen, timeout;
 
 	_CloseCom();
-	_ComSetTran(RfPort);
-	_ComSet((uint8 *)"9600,E,8,1", 2);
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
 		

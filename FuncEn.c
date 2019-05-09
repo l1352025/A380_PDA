@@ -6,6 +6,8 @@
 //uint8 Screenbuff[5000];
 //A3480
 
+#include "common.h"
+
 
 char Screenbuff[160 * (160 / 3 + 1) * 2];
 /*
@@ -654,7 +656,13 @@ extern uint8  _MenuEx(_GuiMenuStru *);
 void COMTEST(void)
 {
 
-	uint8 tmp[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}, tmp1[100], m, m1[10];
+	uint8 tmp[20] = {
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+	uint8 tmp1[100], m, m1[10];
+	uint8 tmp2[20] = {
+		0x55, 0x55, 0x55, 0x55, 0x55, 0x55,0x55, 0x55, 0x55, 0x55,
+		0x55, 0x55, 0x55, 0x55, 0x55, 0x55,0x55, 0x55, 0x55, 0x55};
 	uint32 t1;
 	uint32 key = 0, Send = 1;
 	uint8 disp[3][20] = {{"   串口测试    "}, {"普通红外测试"}, {"高速红外测试"}};
@@ -686,7 +694,7 @@ void COMTEST(void)
 		_ClearScreen();
 
 		_CloseCom();
-		_ComSetTran(1);
+		_ComSetTran(RfPort);
 		_ComSet((uint8 *)"115200,N,8,1", 2);
 		_Printfxy(0, 0, disp[0], 1);
 		if (m == '1')
@@ -728,7 +736,7 @@ void COMTEST(void)
 			key = _ReadKey();
 			_CloseCom();
 			_ComSetTran(tran);
-			_ComSet((uint8 *)"9600,E,8,1", com);
+			_ComSet(CurrBaud, com);
 			sprintf(&tmp1[0], "tran %d  com %d", tran, com);
 			_Printfxy(0, 7*16, &tmp1[0], 0);
 
@@ -744,7 +752,12 @@ void COMTEST(void)
 			if (key == 'C')
 				break;
 
-			_SendComStr(tmp, 10);
+			if(com == 1){
+				_SendComStr(tmp, 20);
+			}else{
+				_SendComStr(tmp2, 20);
+			}
+			
 			continue;
 
 			if (key == 'C')

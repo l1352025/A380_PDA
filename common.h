@@ -35,7 +35,16 @@ typedef unsigned char bool;
 #define Trans_IR            2   // 普通红外 
 #define Trans_IR_Quick      3   // 高速红外
 
-#define RfPort  Trans_IR_Quick  // RF透传模块使用的通信端口
+
+// 当前透传模块使用的通信端口 和 波特率
+
+#if defined(Project_6009_IR)
+	#define CurrPort    Trans_IR                
+	#define CurrBaud    (uint8 *)"4800,E,8,1"	
+#else //defined(Project_6009_RF)
+	#define CurrPort    Trans_IR_Quick          
+	#define CurrBaud    (uint8 *)"9600,E,8,1"	
+#endif
 
 typedef enum{
     Color_White = 0,

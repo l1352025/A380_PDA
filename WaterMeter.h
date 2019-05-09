@@ -515,18 +515,20 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint8 cmdId, uint16 ackLen, ParamsBuf * disps)
 {
 	bool ret = false;
-	uint8 crc8, addrsCnt, cmd;
-	uint16 index = 0, startIdx, length, u16Tmp;
-	uint8 *ptr, dispIdx;
+	uint8 crc8, addrsCnt, cmd, i, u8Tmp;
+	uint16 index = 0, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
+	uint8 *ptr, dispIdx;
+
+	// 显示表号
+	dispIdx = 0;
+	dispIdx += sprintf(&disps->buf[dispIdx], "表号: %s\n", StrDstAddr);
 
 	// 缓冲区多包中查找
 	while(1){
 
 		if(rxlen < index + ackLen){
-			disps->itemCnt = 1;
-			disps->items[0] = &disps->buf[0];
-            sprintf(disps->items[0], "未应答");
+			sprintf(&disps->buf[dispIdx], "失败: 超时，无应答");
 			return false;
 		}
 
@@ -555,9 +557,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		// crc8 check
 		crc8 = GetCrc8(&buf[index], length - 2);
 		if(crc8 !=  buf[index + length - 2]){
-			disps->itemCnt = 1;
-			disps->items[0] = &disps->buf[0];
-            sprintf(disps->items[0], "CRC错误");
+			sprintf(&disps->buf[dispIdx], "失败: 有应答，CRC错误");
 			return false;
 		}
 
@@ -575,11 +575,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 跳过 地址域
 	index += addrsCnt * 6;
 
-	// 显示表号
-	dispIdx = 0;
-	dispIdx += sprintf(&disps->buf[dispIdx], "表号: %s", StrDstAddr);
 
 	// 数据域解析
+	payloadIdx = index;
 	switch(cmdId){
 
 	//-------------------------------------------  抄表		-------------
@@ -629,7 +627,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
         index += 1;
 		//SNR 噪音比
-		dispIdx += sprintf(&disps->buf[dispIdx], "SNR: %d\n", buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
 		//tx|rx信道、协议版本 跳过
 		index += 2;
@@ -640,7 +638,64 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-
+		// 冻结数据类型
+		dispIdx += sprintf(&disps->buf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
+		index += 1;
+		// 冻结数据起始序号
+		u16Tmp = buf[index] * 10;
+		dispIdx += sprintf(&disps->buf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+		index += 1;
+		// 冻结数据起始时间
+		dispIdx += sprintf(&disps->buf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
+			, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
+		index += 5;
+		// 冻结数据方式 ：按天/按月
+		// 冻结数据数量 ：按天最大24条，按月最大30条
+		dispIdx += sprintf(&disps->buf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
+		index += 2;	
+		// 冻结数据时间间隔
+		if(buf[index] == 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "间隔: 每%s冻结1条\n", (buf[index - 2] == 0x01 ? "天" : "月"));
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "间隔: %d%s冻结1条\n", buf[index], (buf[index - 2] == 0x01 ? "小时" : "天"));
+		}
+		index += 1;
+		// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
+		for(i = 0; i < 10; i++){
+			u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+			index += 4;
+			u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+			index += 2;
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d: %d.%03d\n", i, u32Tmp, u16Tmp);
+		}
+		//告警状态字1
+		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "告警: %s ", ptr);
+		index += 1;
+		//告警状态字2
+		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "%s\n", ptr);
+		index += 1;
+		//阀门状态 
+		ptr = Water6009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s  ", ptr);
+		index += 1;
+		//电池电压
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%cV\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		index += 1;
+		//环境温度
+		if((buf[index] & 0x80) > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d  ", (buf[index] & 0x7F));
+		}else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d  ", (buf[index] & 0x7F));
+		}
+        index += 1;
+		//SNR 噪音比
+		dispIdx += sprintf(&disps->buf[dispIdx], "SNR : %d\n", buf[index]);
+		index += 1;
+		//tx|rx信道、协议版本 跳过
+		index += 2;
 		break;
 
 	case WaterCmd_OpenValve:		// 开阀
@@ -725,9 +780,11 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		//下行/上行 信号强度
 		dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;
-		disps->items[0] = &disps->buf[0];
-		disps->itemCnt = 1;
 	}
+
+	disps->buf[dispIdx] = '\0';
+	disps->items[0] = &disps->buf[0];
+	disps->itemCnt = 1;
 	
 	return ret;
 }

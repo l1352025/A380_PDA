@@ -322,13 +322,20 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 	lineCnt++;
 
 	// next lines
-	while(*pr != '\0'){
-		if(*pr == '\n' || (x + col * 8) >= 160){
-			lines[lineCnt] = pr;
-			lineCnt++;
+	while(*pr != 0x00){
+		if(*pr == '\n' || (x + col * 8) > 160){
+			
 			col = 0;
 			x = 0;
 			pr = (*pr == '\n' ? pr + 1 : pr);
+
+			lines[lineCnt] = pr;
+			lineCnt++;
+
+			if(*pr == 0x00){
+				lineCnt--;
+				break;
+			}
 		}
 		pr++;
 		col++;
@@ -354,17 +361,23 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 	lineCnt++;
 	
 	// next lines
-	while(*pr != '\0'){
-		if(*pr == '\n' || (x + col * 8) >= 160){
-			lineCnt++;
-			if(lineCnt > maxLines){
-				break;
-			}
+	while(*pr != 0x00){
+
+		if(lineCnt >= maxLines){
+			break;
+		}
+		
+		if(*pr == '\n' || (x + col * 8) > 160){
 			col = 0;
-			pr = (*pr == '\n' ? pr + 1 : pr);
 			x = 0;
 			y += 16;
+			pr = (*pr == '\n' ? pr + 1 : pr);
+
+			if(*pr == 0x00){
+				break;
+			}
 			_Printfxy(x, y, pr, Color_White);
+			lineCnt++;
 		}
 		pr++;
 		col++;
@@ -383,7 +396,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
 	static uint8 buf[512] = {0};
 	uint16 len; 
-	uint8 *pr = buf;
+	uint8 *pr = buf, col = 0; 
 	va_list ap;
 
 	va_start(ap, format);
@@ -397,15 +410,19 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 	// next lines
 	len = 0;
 	while(*pr != '\0'){
-		if(*pr == '\n' || (x + len) == 20){
-			pr = (*pr == '\n' ? pr + 1 : pr);
-			len = 0;
+		if(*pr == '\n' || (x + col * 8) > 160){
+			col = 0;
 			x = 0;
 			y += 16;
-			_Printfxy(x, y, pr, 0);
+			pr = (*pr == '\n' ? pr + 1 : pr);
+
+			if(*pr == '\0'){
+				break;
+			}
+			_Printfxy(x, y, pr, Color_White);
 		}
 		pr++;
-		len++;
+		col++;
 	}
 }
 /*
