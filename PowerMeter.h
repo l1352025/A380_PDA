@@ -638,5 +638,353 @@ bool ExplainElectricResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAd
 	return ret;
 }
 
+// --------------------------------  电表模块通信  -----------------------------------------
 
+void PowerCmdFunc(void)
+{
+	uint8 key, menuItemNo, i;
+	_GuiLisStruEx menuList;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 * pChar;
+	uint8 currUiItem = 0;
+	uint16 timeout;
+
+	_ClearScreen();
+
+	return;
+	
+	#if 1
+
+	// 菜单
+	menuList.title = "<< 电力子节点通信 ";
+	menuList.no = 4;
+	menuList.MaxNum = 4;
+	menuList.isRt = 0;
+	menuList.x = 0;
+	menuList.y = 0;
+	menuList.with = 10 * 16;
+	menuList.str[0] = "  1. 读取软件版本";
+	menuList.str[1] = "  2. 读取节点配置";
+	menuList.str[2] = "  3. 读取发射功率";
+	menuList.str[3] = "  4. 645-07抄表";
+	menuList.defbar = 1;
+
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet((uint8 *)"19200,E,8,1", 2);
+
+	while(1){
+
+		_ClearScreen();
+		menuItemNo = _ListEx(&menuList);
+
+		if (menuItemNo == 0){
+			break;
+		}
+		menuList.defbar = menuItemNo;
+
+		while(1){
+			
+			_ClearScreen();
+
+			// 公共部分 :  界面显示/输入处理
+			pChar = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			_Printfxy(0, 0, TmpBuf, 0);
+			_GUIHLine(0, 1*16 + 4, 160, 1);	
+			/*---------------------------------------------*/
+			
+			for(i = 0; i < RELAY_MAX; i++){
+				StrRelayAddr[i][0] = 0x00;
+			}
+			sprintf(StrRelayAddr[0], "  有就输入 ");
+			(*pUiCnt) = 0;
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+				break;
+			}
+
+			// 命令参数处理
+			switch(menuItemNo){
+			case 1:		// " 读取软件版本 ";
+				CurrCmd = PowerCmd_ReadVerInfo;
+				/*---------------------------------------------*/
+				Args.itemCnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case 2:		// " 读取节点配置 "
+				CurrCmd = PowerCmd_ReadNodeInfo;
+				/*---------------------------------------------*/
+				Args.itemCnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+
+			case 3:		// " 读取发射功率" "
+				CurrCmd = PowerCmd_ReadSendPower;
+				/*---------------------------------------------*/
+				Args.itemCnt = 1;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				break;
+			
+			case 4:		// " 645-07抄表 ";
+				CurrCmd = PowerCmd_ReadMeter_645_07;
+				/*---------------------------------------------*/
+				Args.itemCnt = 2;
+				memcpy(Args.buf, DstAddr, 6);
+				Args.items[0] = &Args.buf[0];
+				Args.buf[6] = 0;
+				Args.items[1] = &Args.buf[6];
+				break;
+
+				default: 
+					break;
+			}
+
+			if(key != KEY_ENTER){
+			 	if (key == KEY_CANCEL){
+					break;
+				}else{
+					continue;
+				}
+			}
+
+			// 填充地址
+			Addrs.itemCnt = 0;
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+			Addrs.itemCnt++;
+			for(i = 0; i < RELAY_MAX; i++){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+					Addrs.itemCnt++;
+				}
+			}
+			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+			Addrs.itemCnt++;
+
+			timeout = (Addrs.itemCnt -1) * 300 * 2;		// timeout - ms
+			
+			// 发送 
+			TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
+			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(TxBuf, TxLen);
+			_Printfxy(0, 9*16, "    命令发送...   ", 0);
+
+			// 接收
+			RxLen = _GetComStr(RxBuf, 100, timeout / 10);	// recv , timeout - ms
+			if(false == ExplainElectricResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
+				PrintfXyMultiLine_VaList(0, 9*16, "    失败:%s", Disps.items[0]);
+				_ReadKey();
+				continue;
+			}
+			else{
+				_Printfxy(0, 9*16, "      命令成功     ", 0);
+			}
+			
+			// 显示结果
+			PrintfXyMultiLine_VaList(0, 3 * 16, Disps.items[0]);
+
+			key = _ReadKey();
+
+			if (key == KEY_CANCEL){
+				break;
+			}else{
+				continue;
+			}
+		}
+		
+	}
+
+	_CloseCom();
+
+	#endif
+}
+
+// --------------------------------  透传模块设置  -----------------------------------------
+void TransModuleCmdFunc(void)
+{
+	uint8 menuItemNo, tryCnt = 0;
+	_GuiLisStruEx menuList;
+	char *fileName = NULL;
+	char tmp[70];
+	int fileHdl, fileLen, totalCnt, sendCnt;
+	int index;
+	
+	_ClearScreen();
+
+	// 菜单
+	menuList.title = "<< 透传模块升级 ";
+	menuList.no = 3;
+	menuList.MaxNum = 3;
+	menuList.isRt = 0;
+	menuList.x = 0;
+	menuList.y = 0;
+	menuList.with = 10 * 16;
+	menuList.str[0] = "  1. 查看当前版本";
+	menuList.str[1] = "  2. 打开升级文件";
+	menuList.str[2] = "  3. 开始升级";
+	menuList.defbar = 1;
+	_GUIHLine(0, 4*16 + 8, 160, 1);
+
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet((uint8 *)"19200,E,8,1", 2);
+
+	while(1){
+
+		menuItemNo = _ListEx(&menuList);
+
+		if (menuItemNo == 0){
+			break;
+		}
+
+		menuList.defbar = menuItemNo;
+
+		switch(menuItemNo){
+		case 1:	// " 查看当前版本 ";
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+			TxLen = 0;
+			TxBuf[TxLen++] = 0xAA;
+			TxBuf[TxLen++] = 0xBB;
+			TxBuf[TxLen++] = 0x01;
+			TxBuf[TxLen++] = 0x07;
+			TxBuf[TxLen++] = 0xCC;
+			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
+			_SendComStr(TxBuf, TxLen);
+			_Printfxy(0, 5*16, "查询中...", 0);
+
+			sprintf(TxBuf, "当前版本:");
+			RxLen = _GetComStr(&TxBuf[9], 50, 50);	// recv , 500ms timeout
+			if(RxLen < 30 || strncmp(&TxBuf[9], "SRWF-", 5) != 0)
+			{
+				_Printfxy(0, 5*16, "接收超时", 0);
+				break;
+			}
+			_Printfxy(0, 5*16, &TxBuf[0], 0);
+			_Printfxy(0, 6*16, &TxBuf[20], 0);
+			_Printfxy(0, 7*16, &TxBuf[40], 0);
+			break;
+
+		case 2:	// " 打开升级文件 "
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+
+			_SaveScreenToBuff(Screenbuff);
+			_ClearScreen();
+			fileName = _GetFileList("选|\n择|\n升|\n级|\n文|\n件|\n  |\n  |\n", "", "");
+			_ClearScreen();
+			_RestoreBuffToScreen(Screenbuff);
+
+			if (fileName == NULL){
+				break;
+			}
+			
+			sprintf(tmp, "文件: %s\0", fileName);
+			_Printfxy(0, 5*16, &tmp[0], 0);
+			_Printfxy(0, 6*16, &tmp[20], 0);
+
+			fileHdl = _Fopen(fileName, "R");
+			fileLen = _Filelenth(fileHdl);
+			totalCnt = (fileLen + 1023)/1024;
+			sendCnt = 0;
+			_Fread(TxBuf, 1024, fileHdl);
+			_Fclose(fileHdl);
+				
+			index = IndexOf(TxBuf, 1024, "SRWF-", 5, 512, 512);
+			if(index < 0){
+				_Printfxy(0, 7*16, "不是4E88-APP文件", 0);
+				fileName = NULL;
+			}
+			else{
+				sprintf(tmp, "大小:%dK,总包数:%d\0", fileLen/1024, totalCnt);
+				_Printfxy(0, 7*16, &tmp[0], 0);
+			}
+			break;
+			
+		case 3:	// " 开始升级 ";
+			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
+			totalCnt = 200;
+			
+			// 初始化
+			if (fileName == NULL){
+				_Printfxy(0, 5*16, "请先选择升级文件", 0);
+				break;
+			}
+			fileHdl = _Fopen(fileName, "R");
+			sendCnt = 0;
+
+			sprintf(tmp, "总包数: %d\0", totalCnt);
+			_Printfxy(0, 5*16, &tmp[0], 0);
+			sprintf(tmp, "正发送: %d   \0",sendCnt);
+			_Printfxy(0, 6*16, &tmp[0], 0);
+			_Printfxy(0, 9*16, "状态: 升级中...", 0);
+
+			ShowProgressBar(7*16+8, totalCnt, sendCnt);
+
+			// 升级进度
+			while(1){
+
+				if(tryCnt > 3 || sendCnt >= totalCnt){
+					break;
+				}
+				
+				TxLen = _Fread(TxBuf, 1024, fileHdl);
+				_GetComStr(RxBuf, 1024, 1);		// clear , 100ms timeout
+				_SendComStr(TxBuf, TxLen);
+
+				sprintf(tmp, "正发送: %d   \0",sendCnt + 1);
+				_Printfxy(0, 6*16, &tmp[0], 0);
+				if(tryCnt > 0){
+					sprintf(tmp, "重试%d \0",tryCnt);
+					_Printfxy(6*16, 6*16, &tmp[0], 0);
+				}
+				tryCnt++;
+
+				RxLen = _GetComStr(&TxBuf[9], 50, 1);	// recv , 500ms timeout
+				if(RxLen < 10){
+				//	continue;
+				}
+
+				sendCnt++;
+				tryCnt = 0;
+				ShowProgressBar(7*16+8, totalCnt, sendCnt);
+
+			}
+			_Fclose(fileHdl);
+
+			// 升级完成
+			if(tryCnt > 3){
+				_Printfxy(0, 9*16, "状态: 升级失败  ", 0);
+			}else{
+				_Printfxy(0, 9*16, "状态: 升级完成  ", 0);
+			}
+			_SoundOn();
+			_Sleep(500);
+			_SoundOff();
+			_Sleep(300);
+			_SoundOn();
+			_Sleep(500);
+			_SoundOff();
+			break;
+
+			default: 
+				break;
+		}
+	}
+
+	_CloseCom();
+}
 #endif

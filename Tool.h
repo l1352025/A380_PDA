@@ -396,7 +396,10 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 		prow = pcol;
 
 		for(col = x/8; col < 20; col++){
-			if(*pcol == '\n'){
+			if(col == 19 && *(pcol + 1) == '\n'){
+				pcol++;
+			}
+			else if(*pcol == '\n'){
 				pcol++;
 				break;
 			}

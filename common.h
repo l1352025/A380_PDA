@@ -113,9 +113,20 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
 void LogToFile(const char * fileName, const char * format, ...);
 
 //--------------------------------		全局变量	 ---------------------------------------
-extern uint8 TmpBuf[];
-extern uint8 LocalAddr[];
-extern uint8 DstAddr[];
-extern uint8 StrDstAddr[];
+extern char Screenbuff[160*(160/3+1)*2]; 
+extern uint8 TmpBuf[1080];
+extern uint8 TxBuf[1080];
+extern uint8 RxBuf[1080];
+extern uint32 RxLen, TxLen;
+extern uint8 LocalAddr[7];
+extern uint8 DstAddr[7];
+extern uint8 VersionInfo[40];
+extern uint8 StrDstAddr[TXTBUF_LEN];
+extern uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
+extern UI_ItemList UiList;
+extern uint8 CurrCmd;
+extern ParamsBuf Addrs;		
+extern ParamsBuf Args;
+extern ParamsBuf Disps;
 
 #endif

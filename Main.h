@@ -18,6 +18,7 @@ uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
 uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
 uint8 DstAddr[7];
+uint8 VersionInfo[40];
 uint8 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
@@ -46,11 +47,15 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 
+	timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+	tryCnt = 3;
+
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-	
+	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
+
 	do{
 		// 发送 
-		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, tryCnt);
+		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, sendCnt);
 		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
 		_SendComStr(TxBuf, TxLen);
 		sendCnt++;
@@ -66,9 +71,10 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 		}
 
 		// 接收
+		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
-		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d s  ", (timeout / 1000));
-		PrintfXyMultiLine_VaList(0, 6*16, "当前接收 %d/%d  ", RxLen, ackLen);
+		waitTime = 0;
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %d s ", RxLen, ackLen, (timeout / 1000));
 
 		do{
 			RxLen += _GetComStr(&RxBuf[RxLen], ackLen - RxLen, 10);	// 100ms 检测接收
@@ -81,17 +87,17 @@ uint8 Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint1
 			waitTime += 100;
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		PrintfXyMultiLine_VaList(0, 6*16, "当前接收 %d/%d  ", RxLen, ackLen);
-		// _SoundOn();
-		// _Sleep(50);
-		// _SoundOff();
+		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  ", RxLen, ackLen);
+		_SoundOn();
+		_Sleep(50);
+		_SoundOff();
 
 		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, &Disps);
 		if(false == cmdResult){
-			// _Sleep(30);
-			// _SoundOn();
-			// _Sleep(50);
-			// _SoundOff();
+			_Sleep(30);
+			_SoundOn();
+			_Sleep(30);
+			_SoundOff();
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "状态: 命令失败    ", Color_White);
@@ -332,9 +338,9 @@ void CenterCmdFunc_CommonCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -342,13 +348,16 @@ void CenterCmdFunc_CommonCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -543,9 +552,9 @@ void CenterCmdFunc_DocumentOperation(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -553,13 +562,16 @@ void CenterCmdFunc_DocumentOperation(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -750,9 +762,9 @@ void CenterCmdFunc_RouteSetting(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -760,13 +772,16 @@ void CenterCmdFunc_RouteSetting(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -962,9 +977,9 @@ void CenterCmdFunc_CommandTransfer(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -972,13 +987,16 @@ void CenterCmdFunc_CommandTransfer(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1014,179 +1032,6 @@ void CenterCmdFunc(void)
 	menu.FunctionEx=0;
 	_Menu(&menu);	
 	
-}
-
-
-// --------------------------------  电表模块通信  -----------------------------------------
-
-void PowerCmdFunc(void)
-{
-	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
-	UI_Item * pUiItems = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
-	uint8 currUiItem = 0;
-	uint16 ackLen, timeout;
-
-	_ClearScreen();
-
-	return;
-	
-	#if 1
-
-	// 菜单
-	menuList.title = "<< 电力子节点通信 ";
-	menuList.no = 4;
-	menuList.MaxNum = 4;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读取软件版本";
-	menuList.str[1] = "  2. 读取节点配置";
-	menuList.str[2] = "  3. 读取发射功率";
-	menuList.str[3] = "  4. 645-07抄表";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet((uint8 *)"19200,E,8,1", 2);
-
-	while(1){
-
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
-			break;
-		}
-		menuList.defbar = menuItemNo;
-
-		while(1){
-			
-			_ClearScreen();
-
-			// 公共部分 :  界面显示/输入处理
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
-			_Printfxy(0, 0, TmpBuf, 0);
-			_GUIHLine(0, 1*16 + 4, 160, 1);	
-			/*---------------------------------------------*/
-			
-			for(i = 0; i < RELAY_MAX; i++){
-				StrRelayAddr[i][0] = 0x00;
-			}
-			sprintf(StrRelayAddr[0], "  有就输入 ");
-			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
-
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 命令参数处理
-			switch(menuItemNo){
-			case 1:		// " 读取软件版本 ";
-				CurrCmd = PowerCmd_ReadVerInfo;
-				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				break;
-
-			case 2:		// " 读取节点配置 "
-				CurrCmd = PowerCmd_ReadNodeInfo;
-				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				break;
-
-			case 3:		// " 读取发射功率" "
-				CurrCmd = PowerCmd_ReadSendPower;
-				/*---------------------------------------------*/
-				Args.itemCnt = 1;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				break;
-			
-			case 4:		// " 645-07抄表 ";
-				CurrCmd = PowerCmd_ReadMeter_645_07;
-				/*---------------------------------------------*/
-				Args.itemCnt = 2;
-				memcpy(Args.buf, DstAddr, 6);
-				Args.items[0] = &Args.buf[0];
-				Args.buf[6] = 0;
-				Args.items[1] = &Args.buf[6];
-				break;
-
-				default: 
-					break;
-			}
-
-			if(key != KEY_ENTER){
-			 	if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
-			}
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
-
-			timeout = (Addrs.itemCnt -1) * 300 * 2;		// timeout - ms
-			
-			// 发送 
-			TxLen = PackElectricRequestFrame(TxBuf, DstAddr, CurrCmd, Args.items, 0);
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 9*16, "    命令发送...   ", 0);
-
-			// 接收
-			RxLen = _GetComStr(RxBuf, 100, timeout / 10);	// recv , timeout - ms
-			if(false == ExplainElectricResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, &Disps)){
-				PrintfXyMultiLine_VaList(0, 9*16, "    失败:%s", Disps.items[0]);
-				_ReadKey();
-				continue;
-			}
-			else{
-				_Printfxy(0, 9*16, "      命令成功     ", 0);
-			}
-			
-			// 显示结果
-			PrintfXyMultiLine_VaList(0, 3 * 16, Disps.items[0]);
-
-			key = _ReadKey();
-
-			if (key == KEY_CANCEL){
-				break;
-			}else{
-				continue;
-			}
-		}
-		
-	}
-
-	_CloseCom();
-
-	#endif
 }
 
 // --------------------------------  水表模块通信  -----------------------------------------
@@ -1293,10 +1138,10 @@ void WaterCmdFunc_CommonCmd(void)
 					PrintfXyMultiLine_VaList(0, 6*16, "数据序号: <0~9有效>");
 					continue;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	02
-				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 88;				// 应答长度 88	
 				// 数据域
-				Args.buf[i++] = 0x02;				// 数据格式 02
+				Args.buf[i++] = 0x02;				// 数据格式 01/02
 				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
 				Args.buf[i++] = _GetYear()%100;		
 				Args.buf[i++] = _GetMonth();		
@@ -1406,8 +1251,10 @@ void WaterCmdFunc_CommonCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
+			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
-			timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
 
 			// 发送、接收、结果显示
 			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -1493,7 +1340,8 @@ void WaterCmdFunc_TestCmd(void)
 			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
 
 			// 命令参数处理
-			CurrCmd = (0x10 + menuItemNo);
+			CurrCmd = (0x20 + menuItemNo);
+
 			switch(CurrCmd){
 			case WaterCmd_RebootDevice:			// "表端重启"
 				/*---------------------------------------------*/
@@ -1527,7 +1375,7 @@ void WaterCmdFunc_TestCmd(void)
 				Args.buf[i++] = 0x07;		// 命令字	07
 				ackLen = 1;					// 应答长度 1	
 				// 数据域
-				Args.buf[i++] = 0x05;		// 命令选项 05	
+				Args.buf[i++] = 0x07;		// 命令选项 07	
 				Args.lastItemLen = i - 1;
 				break;
 			
@@ -1536,12 +1384,11 @@ void WaterCmdFunc_TestCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x08;		// 命令选项 08	
+				Args.lastItemLen = i - 1;
 				break;
 
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
@@ -1549,12 +1396,11 @@ void WaterCmdFunc_TestCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x09;		// 命令选项 09	
+				Args.lastItemLen = i - 1;
 				break;
 
 			case WaterCmd_ReadOperatorNumber:		// " 读运营商编号 ";
@@ -1562,12 +1408,11 @@ void WaterCmdFunc_TestCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x0A;		// 命令选项 0A	
+				Args.lastItemLen = i - 1;
 				break;
 
 			case WaterCmd_ReadReportRoute:		// " 读上报路径 ";
@@ -1575,25 +1420,33 @@ void WaterCmdFunc_TestCmd(void)
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x0E;		// 命令选项 0E	
+				Args.lastItemLen = i - 1;
 				break;
 			
 			case WaterCmd_SetMeterNumber:		// " 设置表号 ";
 				/*---------------------------------------------*/
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "新表号:", TmpBuf, 12, 13*8);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(VersionInfo[0] == 0x00){
+					_Printfxy(0, 5*16, "请先读取软件版本", Color_White);
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x10;		// 命令选项 10	
+				memcpy(&Args.buf[i], VersionInfo, 40);	
+				i += 40;					// 软件版本号
+				VersionInfo[0] = 0x00;
+				GetBytesFromStringHex(&Args.buf[i], 0, 6, TmpBuf, 0, false);
+				i += 6;						// 新地址
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
@@ -1620,9 +1473,9 @@ void WaterCmdFunc_TestCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -1630,13 +1483,16 @@ void WaterCmdFunc_TestCmd(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -1832,9 +1688,9 @@ void WaterCmdFunc_Upgrade(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -1842,13 +1698,16 @@ void WaterCmdFunc_Upgrade(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -2043,9 +1902,9 @@ void WaterCmdFunc_PrepaiedVal(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -2053,13 +1912,16 @@ void WaterCmdFunc_PrepaiedVal(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -2256,9 +2118,9 @@ void WaterCmdFunc_WorkingParams(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -2266,13 +2128,16 @@ void WaterCmdFunc_WorkingParams(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
@@ -2466,9 +2331,9 @@ void WaterCmdFunc_Other(void)
 			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
 			Addrs.itemCnt++;
 			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] != 0x00){
+				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
 					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(DstAddr, 0, 6, StrRelayAddr[i], 0, false);
+					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
 					Addrs.itemCnt++;
 				}
 			}
@@ -2476,20 +2341,22 @@ void WaterCmdFunc_Other(void)
 			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
 			Addrs.itemCnt++;
 
-			timeout = 3500 + (Addrs.itemCnt - 2) * 3500 * 2;
-			
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
 			// 发送、接收、结果显示
-			Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
 			
 			// 继续 / 返回
-			key = _ReadKey();
 			if (key == KEY_CANCEL){
 				break;
 			}else{
 				continue;
 			}
 		}
-		
 	}
 
 	_CloseCom();
@@ -2526,183 +2393,225 @@ void WaterCmdFunc(void)
 	_Menu(&menu);	
 }
 
-// --------------------------------  透传模块设置  -----------------------------------------
-void TransParentModuleFunc(void)
+//-----------------------------------	主菜单	---------------------------
+// 读取用户用量
+void MainFuncReadRealTimeData(void)
 {
-	uint8 key, menuItemNo, tryCnt = 0;
-	_GuiLisStruEx menuList;
-	char *fileName = NULL;
-	char tmp[70];
-	int fileHdl, fileLen, totalCnt, sendCnt;
-	int index;
-	
-	_ClearScreen();
-
-	// 菜单
-	menuList.title = "<< 透传模块升级 ";
-	menuList.no = 3;
-	menuList.MaxNum = 3;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 查看当前版本";
-	menuList.str[1] = "  2. 打开升级文件";
-	menuList.str[2] = "  3. 开始升级";
-	menuList.defbar = 1;
-	_GUIHLine(0, 4*16 + 8, 160, 1);
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
 	_CloseCom();
 	_ComSetTran(CurrPort);
-	_ComSet((uint8 *)"19200,E,8,1", 2);
+	_ComSet(CurrBaud, 2);
 
 	while(1){
+		
+		_ClearScreen();
 
-		menuItemNo = _ListEx(&menuList);
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
 
-		if (menuItemNo == 0){
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_ReadRealTimeData;	// "读取用户用量"
+
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x01;		// 命令字	01
+		ackLen = 21;				// 应答长度 21	
+		// 数据域
+		Args.buf[i++] = 0x00;				// 数据格式 00	
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
 			break;
 		}
 
-		menuList.defbar = menuItemNo;
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
 
-		switch(menuItemNo){
-		case 1:	// " 查看当前版本 ";
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			TxLen = 0;
-			TxBuf[TxLen++] = 0xAA;
-			TxBuf[TxLen++] = 0xBB;
-			TxBuf[TxLen++] = 0x01;
-			TxBuf[TxLen++] = 0x07;
-			TxBuf[TxLen++] = 0xCC;
-			_GetComStr(RxBuf, 1024, 10);	// clear , 100ms timeout
-			_SendComStr(TxBuf, TxLen);
-			_Printfxy(0, 5*16, "查询中...", 0);
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-			sprintf(TxBuf, "当前版本:");
-			RxLen = _GetComStr(&TxBuf[9], 50, 50);	// recv , 500ms timeout
-			if(RxLen < 30 || strncmp(&TxBuf[9], "SRWF-", 5) != 0)
-			{
-				_Printfxy(0, 5*16, "接收超时", 0);
-				break;
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
 			}
-			_Printfxy(0, 5*16, &TxBuf[0], 0);
-			_Printfxy(0, 6*16, &TxBuf[20], 0);
-			_Printfxy(0, 7*16, &TxBuf[40], 0);
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
 			break;
-
-		case 2:	// " 打开升级文件 "
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-
-			_SaveScreenToBuff(Screenbuff);
-			_ClearScreen();
-			fileName = _GetFileList("选|\n择|\n升|\n级|\n文|\n件|\n  |\n  |\n", "", "");
-			_ClearScreen();
-			_RestoreBuffToScreen(Screenbuff);
-
-			if (fileName == NULL){
-				break;
-			}
-			
-			sprintf(tmp, "文件: %s\0", fileName);
-			_Printfxy(0, 5*16, &tmp[0], 0);
-			_Printfxy(0, 6*16, &tmp[20], 0);
-
-			fileHdl = _Fopen(fileName, "R");
-			fileLen = _Filelenth(fileHdl);
-			totalCnt = (fileLen + 1023)/1024;
-			sendCnt = 0;
-			_Fread(TxBuf, 1024, fileHdl);
-			_Fclose(fileHdl);
-				
-			index = IndexOf(TxBuf, 1024, "SRWF-", 5, 512, 512);
-			if(index < 0){
-				_Printfxy(0, 7*16, "不是4E88-APP文件", 0);
-				fileName = NULL;
-			}
-			else{
-				sprintf(tmp, "大小:%dK,总包数:%d\0", fileLen/1024, totalCnt);
-				_Printfxy(0, 7*16, &tmp[0], 0);
-			}
-			break;
-			
-		case 3:	// " 开始升级 ";
-			_GUIRectangleFill(0, 5 * 16, 160, 9 * 16, 0);
-			totalCnt = 200;
-			
-			// 初始化
-			if (fileName == NULL){
-				_Printfxy(0, 5*16, "请先选择升级文件", 0);
-				break;
-			}
-			fileHdl = _Fopen(fileName, "R");
-			sendCnt = 0;
-
-			sprintf(tmp, "总包数: %d\0", totalCnt);
-			_Printfxy(0, 5*16, &tmp[0], 0);
-			sprintf(tmp, "正发送: %d   \0",sendCnt);
-			_Printfxy(0, 6*16, &tmp[0], 0);
-			_Printfxy(0, 9*16, "状态: 升级中...", 0);
-
-			ShowProgressBar(7*16+8, totalCnt, sendCnt);
-
-			// 升级进度
-			while(1){
-
-				if(tryCnt > 3 || sendCnt >= totalCnt){
-					break;
-				}
-				
-				TxLen = _Fread(TxBuf, 1024, fileHdl);
-				_GetComStr(RxBuf, 1024, 1);		// clear , 100ms timeout
-				_SendComStr(TxBuf, TxLen);
-
-				sprintf(tmp, "正发送: %d   \0",sendCnt + 1);
-				_Printfxy(0, 6*16, &tmp[0], 0);
-				if(tryCnt > 0){
-					sprintf(tmp, "重试%d \0",tryCnt);
-					_Printfxy(6*16, 6*16, &tmp[0], 0);
-				}
-				tryCnt++;
-
-				RxLen = _GetComStr(&TxBuf[9], 50, 1);	// recv , 500ms timeout
-				if(RxLen < 10){
-				//	continue;
-				}
-
-				sendCnt++;
-				tryCnt = 0;
-				ShowProgressBar(7*16+8, totalCnt, sendCnt);
-
-			}
-			_Fclose(fileHdl);
-
-			// 升级完成
-			if(tryCnt > 3){
-				_Printfxy(0, 9*16, "状态: 升级失败  ", 0);
-			}else{
-				_Printfxy(0, 9*16, "状态: 升级完成  ", 0);
-			}
-			_SoundOn();
-			_Sleep(500);
-			_SoundOff();
-			_Sleep(300);
-			_SoundOn();
-			_Sleep(500);
-			_SoundOff();
-			break;
-
-			default: 
-				break;
+		}else{
+			continue;
 		}
 	}
 
 	_CloseCom();
 }
 
-//-----------------------------------	主菜单	---------------------------
-// 读取用户用量
-void MainFuncReadRealTimeData(void)
+// 读取冻结数据
+void MainFuncReadFrozenData(void)
+{
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
+
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<读取冻结正转数据", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
+		/*---------------------------------------------*/
+		sprintf(TmpBuf, "0");
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8);
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		if(TmpBuf[0] > '9' || TmpBuf[0] < '0'){
+			PrintfXyMultiLine_VaList(0, 6*16, "数据序号: <0~9有效>");
+			continue;
+		}
+		Args.buf[i++] = 0x02;		// 命令字	02
+		ackLen = 88;				// 应答长度 88	
+		// 数据域
+		Args.buf[i++] = 0x02;				// 数据格式 01/02
+		Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+		Args.buf[i++] = _GetYear()%100;		
+		Args.buf[i++] = _GetMonth();		
+		Args.buf[i++] = _GetDay();			
+		Args.buf[i++] = _GetHour();			
+		Args.buf[i++] = _GetMin();			
+		Args.buf[i++] = _GetSec();			
+		Args.buf[i++] = TmpBuf[0] - '0';	// 冻结数据序号	
+		Args.lastItemLen = i - 1;
+				
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
+}
+
+// 读取表端时钟
+void MainFuncReadMeterTime(void)
 {
 	uint8 key, tryCnt = 0, i;
 	UI_Item * pUiItems = &UiList.items[0];
@@ -2802,40 +2711,410 @@ void MainFuncReadRealTimeData(void)
 	_CloseCom();
 }
 
-// 读取冻结数据
-void MainFuncReadFrozenData(void)
-{
-
-}
-
-// 读取表端时钟
-void MainFuncReadMeterTime(void)
-{
-
-}
-
 // 设置表端时钟
 void MainFuncSetMeterTime(void)
 {
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = 0x11;
+
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x01;		// 命令字	01
+		ackLen = 21;				// 应答长度 21	
+		// 数据域
+		Args.buf[i++] = 0x00;				// 数据格式 00	
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
 }
 
 // 清异常命令
 void MainFuncClearException(void)
 {
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<清异常命令", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
+		/*---------------------------------------------*/
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x05;		// 命令字	05
+		ackLen = 1;					// 应答长度 1	
+		// 数据域
+		Args.buf[i++] = 0x00;		// 命令选项 00	
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
 }
 
 // 开阀
 void MainFuncOpenValve(void)
 {
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<开阀", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_OpenValve;			// " 开阀 "
+		/*---------------------------------------------*/
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x03;		// 命令字	03
+		ackLen = 3;					// 应答长度 3	
+		// 数据域
+		Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+		Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
 }
 
 // 关阀
 void MainFuncCloseValve(void)
 {
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUiItems = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUiItem = 0;
+	uint16 ackLen, timeout;
 
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<关阀", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "状态: 空闲    ", Color_White);
+
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
+				sprintf(StrRelayAddr[i], " <可选> ");
+			}
+		}
+
+		(*pUiCnt) = 0;
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_CloseValve;		// " 关阀 ";
+		/*---------------------------------------------*/
+		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
+			break;
+		}
+		Args.buf[i++] = 0x03;		// 命令字	03
+		ackLen = 3;					// 应答长度 3	
+		// 数据域
+		Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+		Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+		Args.lastItemLen = i - 1;
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+
+		if(StrDstAddr[0] == 0x00 ){
+			sprintf(StrDstAddr, "请先输入表号");
+			continue;
+		}
+
+		// 6009 协议地址填写不用反序
+		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+		// 填充地址
+		Addrs.itemCnt = 0;
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
+		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
+		Addrs.itemCnt++;
+		for(i = 0; i < RELAY_MAX; i++){
+			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
+				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
+				Addrs.itemCnt++;
+			}
+		}
+		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
+		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
+		Addrs.itemCnt++;
+
+		ackLen += 14 + Addrs.itemCnt * 6;
+		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+
+		// 发送、接收、结果显示
+		key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+
+	_CloseCom();
 }
 
 // 批量抄表

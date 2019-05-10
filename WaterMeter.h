@@ -209,22 +209,11 @@ char * Water6009_GetStrValueType(uint8 typeId)
 	char * str = NULL;
 	
 	switch(typeId){
-	case 0:   
-		str = "实时";
-		break;
-	case 1:
-		str = "定量上传";
-		break;
-	case 2:
-		str = "定时上传";
-		break;
-	case 3:
-		str = "报警上传";
-		break;
-	case 4:
-		str = "冻结";
-		break;
-
+	case 0x00:	str = "实时";	break;
+	case 0x01:	str = "定量上传";	break;
+	case 0x02:	str = "定时上传";	break;
+	case 0x03:	str = "报警上传";	break;
+	case 0x04:	str = "冻结";	break;
 	default:
 		str = "未知";
 		break;
@@ -248,30 +237,14 @@ char * Water6009_GetStrAlarmStatus1(uint8 status)
 		mask = (1 << i);
 		
 		switch(status & mask){
-		case 0x01:   
-			str = "干簧管故障";
-			break;
-		case 0x02:
-			str = "阀到位故障";
-			break;
-		case 0x04:
-			str = "传感器线断开";
-			break;
-		case 0x08:
-			str = "电池欠压";
-			break;
-		case 0x10:
-			str = "光电表，一组光管坏";
-			break;
-		case 0x20:
-			str = "磁干扰标志";
-			break;
-		case 0x40:
-			str = "光电表，多组光管坏";
-			break;
-		case 0x80:
-			str = "光电表，正强光干扰";
-			break;
+		case 0x01:	str = "干簧管故障";	break;
+		case 0x02:	str = "阀到位故障";	break;
+		case 0x04:	str = "传感器线断开";	break;
+		case 0x08:	str = "电池欠压";	break;
+		case 0x10:	str = "光电表，一组光管坏";	break;
+		case 0x20:	str = "磁干扰标志";	break;
+		case 0x40:	str = "光电表，多组光管坏";	break;
+		case 0x80:	str = "光电表，正强光干扰";	break;
 		default:
 			break;
 		}
@@ -303,25 +276,13 @@ char * Water6009_GetStrAlarmStatus2(uint8 status)
 		mask = (1 << i);
 		
 		switch(status & mask){
-		case 0x01:   
-			str = "水表反转";
-			break;
-		case 0x02:
-			str = "水表被拆卸";
-			break;
-		case 0x04:
-			str = "水表被垂直安装";
-			break;
-		case 0x08:
-			str = "EEPROM异常";
-			break;
-		case 0x10:
-			str = "煤气泄漏";
-			break;
-		case 0x20:
-			str = "欠费标志";
-			break;
-		default:
+		case 0x01:	str = "水表反转";	break;
+		case 0x02:	str = "水表被拆卸";	break;
+		case 0x04:	str = "水表被垂直安装";	break;
+		case 0x08:	str = "EEPROM异常";	break;
+		case 0x10:	str = "煤气泄漏";	break;
+		case 0x20:	str = "欠费标志";	break;
+		default:	
 			break;
 		}
 
@@ -347,16 +308,9 @@ char * Water6009_GetStrValveStatus(uint8 status)
 	char * str = NULL;
 	
 	switch(status){
-	case 0:   
-		str = "故障";
-		break;
-	case 1:
-		str = "开";
-		break;
-	case 2:
-		str = "关";
-		break;
-		
+	case 0:	str = "故障";	break;
+	case 1:	str = "开";	break;
+	case 2:	str = "关";	break;
 	default:
 		str = "未知";
 		break;
@@ -422,6 +376,49 @@ char * Water6009_GetStrErrorMsg(uint8 errorCode)
 	case 0xD2:
 	    str = "无此功能";
 		break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：获取6009水表 阀控失败原因
+* 参  数：errorCode	- 错误码
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
+{
+	char * str = NULL;
+	uint16 mask = 1, i;
+
+	for(i = 0; i < 12; i++){
+
+		mask = (mask << i);
+		
+		switch(errorCode & mask){
+		case 0x01:	str = "电池欠压";	break;
+		case 0x02:	str = "磁干扰中";	break;
+		case 0x04:	str = "Adc正在工作";	break;
+		case 0x08:	str = "阀门正在运行";	break;
+		case 0x10:	str = "阀门故障";	break;
+		case 0x20:	str = "RF正在工作";	break;
+		case 0x40:	str = "任务申请失败";	break;
+		case 0x80:	str = "等待按键开阀";	break;
+		case 0x100:	str = "阀门已经到位";	break;
+		case 0x200:	str = "设备类型错误";	break;
+		case 0x400:	str = "time申请失败";	break;
+		case 0x800:	str = "系统欠费";	break;
+		default:	
+			break;
+		}
+
+		if(str != NULL){
+			break;
+		}
+	}
+
+	if(str == NULL){
+		str = " ";
 	}
 
 	return str;
@@ -619,14 +616,11 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s  ", ptr);
 		index += 1;
 		//电池电压
-		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%cV\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
 		//环境温度
-		if((buf[index] & 0x80) > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d  ", (buf[index] & 0x7F));
-		}else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d  ", (buf[index] & 0x7F));
-		}
+		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
+		dispIdx += sprintf(&disps->buf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
         index += 1;
 		//SNR 噪音比
 		dispIdx += sprintf(&disps->buf[dispIdx], "SNR : %d\n", buf[index]);
@@ -636,7 +630,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		break;
 
 	case WaterCmd_ReadFrozenData:	// 读取冻结数据
-		if(rxlen < index + 21 && cmd != 0x02){
+		if(rxlen < index + 88 && cmd != 0x02){
 			break;
 		}
 		ret = true;
@@ -651,7 +645,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
 			, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
 		index += 5;
-		// 冻结数据方式 ：按天/按月
+		// 冻结数据方式 ：0-按天, 1-按月
 		// 冻结数据数量 ：按天最大24条，按月最大30条
 		dispIdx += sprintf(&disps->buf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
 		index += 2;	
@@ -664,12 +658,14 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		index += 1;
 		// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
+		dispIdx += sprintf(&disps->buf[dispIdx], "读取的10条数据如下: \n");
 		for(i = 0; i < 10; i++){
 			u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 			index += 4;
 			u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 			index += 2;
-			dispIdx += sprintf(&disps->buf[dispIdx], "%d: %d.%03d\n", i, u32Tmp, u16Tmp);
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
+			index +=1;
 		}
 		//告警状态字1
 		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
@@ -687,17 +683,18 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%cV\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
 		//环境温度
-		if((buf[index] & 0x80) > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: -%d  ", (buf[index] & 0x7F));
-		}else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "温度: %d  ", (buf[index] & 0x7F));
-		}
+		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
+		dispIdx += sprintf(&disps->buf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
         index += 1;
 		//SNR 噪音比
 		dispIdx += sprintf(&disps->buf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
-		//tx|rx信道、协议版本 跳过
-		index += 2;
+		//tx|rx信道
+		dispIdx += sprintf(&disps->buf[dispIdx], "信道: Tx-%d, Rx-%d ", (buf[index] & 0x0F), (buf[index] >> 4));
+		index += 1;
+		//协议版本
+		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %d\n", buf[index]);
+		index += 1;
 		break;
 
 	case WaterCmd_OpenValve:		// 开阀
@@ -709,15 +706,13 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		ret = true;
 		// 命令状态
-		if(buf[index] == 0xAD){
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		if(buf[index] == 0xAB){
+			ptr = Water6009_GetStrValveCtrlFailed(((buf[index + 1] << 8) + buf[index + 2]));
+			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s\n", ptr);
 		}
-		else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
-			ptr = Water6009_GetStrErrorMsg(buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
-		}
-		index += 1;
+		index += 3;
 		break;
 
 	case WaterCmd_ClearException:	// 清异常命令 
@@ -726,32 +721,20 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		ret = true;
 		// 命令状态
-		if(buf[index] == 0xAA){
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
-		}
-		else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
-			ptr = Water6009_GetStrErrorMsg(buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
-		}
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 
 	//-------------------------------------------------		测试命令	---------------------
 	case WaterCmd_RebootDevice:	// 表端重启
-		if(rxlen < index + 21 && cmd != 0x07){
+		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
 		ret = true;
 		// 命令状态
-		if(buf[index] == 0xAA){
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
-		}
-		else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
-			ptr = Water6009_GetStrErrorMsg(buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
-		}
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 
@@ -760,15 +743,75 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
+		//环境温度
+		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
+		dispIdx += sprintf(&disps->buf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
+        index += 1;
+		break;
+
+	case WaterCmd_ReadVoltage:	// 读表电压
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
+		}
+		ret = true;
 		// 命令状态
-		if(buf[index] == 0xAA){
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行成功\n");
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ClearPrepaidRefVal:	// 清预缴参考量
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
 		}
-		else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "执行失败\n");
-			ptr = Water6009_GetStrErrorMsg(buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "原因: %s \n", ptr);
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_SetOverCurrentTimeout:	// 设置过流超时
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
 		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadOperatorNumber:	// 读运营商编号
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadReportRoute:	// 读上报路径
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_SetMeterNumber:	// 设置表号
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 		
