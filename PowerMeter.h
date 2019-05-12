@@ -1,6 +1,7 @@
 #ifndef PowerMeter_H
 #define PowerMeter_H
 
+#include "HJLIB.H"
 #include "Common.h"
 
 // --------------------------------  类型定义  -----------------------------------------
@@ -819,7 +820,7 @@ void TransModuleCmdFunc(void)
 {
 	uint8 menuItemNo, tryCnt = 0;
 	_GuiLisStruEx menuList;
-	char *fileName = NULL;
+	char *fileName;
 	char tmp[70];
 	int fileHdl, fileLen, totalCnt, sendCnt;
 	int index;
@@ -888,7 +889,7 @@ void TransModuleCmdFunc(void)
 			_ClearScreen();
 			_RestoreBuffToScreen(Screenbuff);
 
-			if (fileName == NULL){
+			if (fileName == 0){
 				break;
 			}
 			
@@ -906,7 +907,7 @@ void TransModuleCmdFunc(void)
 			index = IndexOf(TxBuf, 1024, "SRWF-", 5, 512, 512);
 			if(index < 0){
 				_Printfxy(0, 7*16, "不是4E88-APP文件", 0);
-				fileName = NULL;
+				fileName = 0;
 			}
 			else{
 				sprintf(tmp, "大小:%dK,总包数:%d\0", fileLen/1024, totalCnt);
@@ -919,7 +920,7 @@ void TransModuleCmdFunc(void)
 			totalCnt = 200;
 			
 			// 初始化
-			if (fileName == NULL){
+			if (fileName == 0){
 				_Printfxy(0, 5*16, "请先选择升级文件", 0);
 				break;
 			}

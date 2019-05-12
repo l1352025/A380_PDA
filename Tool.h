@@ -1,12 +1,9 @@
 #ifndef Tool_H
 #define Tool_H
 
-#include <stdarg.h>
+#include "HJLIB.H"
+#include "stdarg.h"
 #include "Common.h"
-
-// 引用本文件前 先引用 <HJLIB.H> 和 "string.h"
-extern void _GUIRectangleFill(uint32 x, uint32 y, uint32 x1, uint32 y1, uint8 color);
-extern size_t strlen(const char * /*s*/);
 
 //---------------------------------  通用方法  -------------------------------------
 //
@@ -544,7 +541,7 @@ int StringTrimStart(const char * srcStr, char trimChar)
 */
 char HexToChar(uint8 b)
 {
-	char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
+	const char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
 	
 	if(b < 16){
 		return decHex[b];

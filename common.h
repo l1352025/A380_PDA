@@ -118,7 +118,7 @@ extern uint8 TmpBuf[1080];
 extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint32 RxLen, TxLen;
-extern uint8 LocalAddr[7];
+extern const uint8 LocalAddr[7];
 extern uint8 DstAddr[7];
 extern uint8 VersionInfo[40];
 extern uint8 StrDstAddr[TXTBUF_LEN];

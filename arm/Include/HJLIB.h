@@ -98,8 +98,8 @@ typedef struct {
   uint8 itype;
 }_GuiStrStru;
 
-#define MMENU_NO 8
-#define  SMENU_NO					8
+#define MMENU_NO    9
+#define SMENU_NO    9
 
 typedef  struct
 {  WINDOWS  *win;		
@@ -619,3 +619,4 @@ DIR  1 为输出，0为输入
 extern int _SetIoDir(int pin,int dir);
 
 #endif
+

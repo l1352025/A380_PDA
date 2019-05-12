@@ -1,12 +1,11 @@
 
-#include <HJLIB.H>
+#include "HJLIB.H"
 #include "string.h"
 #include "dbf.h"
 #include "stdio.h"
 
 #include "Common.h"
 #include "Tool.h"
-#include "PowerMeter.h"
 #include "WaterMeter.h"
 
 
@@ -16,15 +15,15 @@ uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
-uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
+const uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
 uint8 DstAddr[7];
 uint8 VersionInfo[40];
 uint8 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
 ParamsBuf Disps;
-uint8 StrDstAddr[TXTBUF_LEN] = {0};
-uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN] = {0};
+uint8 StrDstAddr[TXTBUF_LEN];
+uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
@@ -3166,8 +3165,8 @@ int main(void)
 	MainMenu.str[4] = " 清异常命令 ";
 	MainMenu.str[5] = " 开阀 ";
 	MainMenu.str[6] = " 关阀 ";
-	//MainMenu.str[7] = " 批量抄表 ";
-	MainMenu.str[7] = " 工程调试 ";
+	MainMenu.str[7] = " 批量抄表 ";
+	MainMenu.str[8] = " 工程调试 ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -3176,7 +3175,7 @@ int main(void)
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
 	MainMenu.key[7] = "8";
-	//MainMenu.key[8] = "9";
+	MainMenu.key[8] = "9";
 	MainMenu.Function[0] = MainFuncReadRealTimeData;
 	MainMenu.Function[1] = MainFuncReadFrozenData;
 	MainMenu.Function[2] = MainFuncReadMeterTime;
@@ -3184,8 +3183,8 @@ int main(void)
 	MainMenu.Function[4] = MainFuncClearException;
 	MainMenu.Function[5] = MainFuncOpenValve;
 	MainMenu.Function[6] = MainFuncCloseValve;
-	//MainMenu.Function[7] = MainFuncBatchMeterReading;
-	MainMenu.Function[7] = MainFuncEngineerDebuging;
+	MainMenu.Function[7] = MainFuncBatchMeterReading;
+	MainMenu.Function[8] = MainFuncEngineerDebuging;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
