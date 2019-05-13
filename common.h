@@ -109,6 +109,7 @@ uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 max
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
+void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
 void LogToFile(const char * fileName, const char * format, ...);
 

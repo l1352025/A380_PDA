@@ -1,6 +1,7 @@
 #ifndef WaterMeter_H
 #define WaterMeter_H
 
+#include "stdio.h"
 #include "Common.h"
 
 //----------------------------------------  表端命令  ------------------------
@@ -14,6 +15,9 @@
 6	其他操作
 */
 typedef enum{
+
+	WaterCmd_ReadMeterCfgInfo	 	= 0x04,	// 读取表端参数配置信息
+	
 	/*
 	常用命令：	
 	1	读取用户用量
@@ -143,7 +147,7 @@ typedef enum{
 	8	集中器初始化
 	9	读集中器工作模式
 	*/
-	CenterCmd_ReadCenterNo		= 0x11,
+	CenterCmd_ReadCenterNo		= 0x1011,
 	CenterCmd_ReadCenterVer,
 	CenterCmd_ReadCenterTime,
 	CenterCmd_SetCenterTime,
@@ -161,7 +165,7 @@ typedef enum{
 	4	删除档案信息
 	5	修改档案信息
 	*/
-	CenterCmd_ReadDocCount		= 0x21,
+	CenterCmd_ReadDocCount		= 0x1021,
 	CenterCmd_ReadDocInfo,
 	CenterCmd_AddDocInfo,
 	CenterCmd_DeleteDocInfo,
@@ -172,7 +176,7 @@ typedef enum{
 	1	读自定义路由
 	2	设自定义路由
 	*/
-	CenterCmd_ReadDefinedRoute	= 0x31,
+	CenterCmd_ReadDefinedRoute	= 0x1031,
 	CenterCmd_SetDefinedRoute,
 
 	/*
@@ -185,7 +189,7 @@ typedef enum{
 	6	读使能
 	7	清异常
 	*/
-	CenterCmd_ReadRealTimeData	= 0x41,
+	CenterCmd_ReadRealTimeData	= 0x1041,
 	CenterCmd_ReadFixedTimeData,
 	CenterCmd_ReadFrozenData,
 	CenterCmd_OpenValve,
@@ -198,6 +202,37 @@ typedef enum{
 
 
 //---------------------------------------		6009 解析函数	-------------------------------------
+
+/*
+* 描  述：将字符串地址打包成6009水表地址域
+* 参  数：addrs			- 地址域结构
+*		  strDstAddr	- 目的地址字符串
+* 		  strRelayAddrs - 中继地址字符串数组
+* 返回值：void
+*/
+void Water6009_PackAddrs(ParamsBuf *addrs, const uint8 strDstAddr[], const uint8 strRelayAddrs[][20])
+{
+	uint8 i;
+
+	// 源地址
+	addrs->itemCnt = 0;
+	addrs->items[addrs->itemCnt] = &addrs->buf[0];
+	memcpy(addrs->items[addrs->itemCnt], LocalAddr, 6);
+	addrs->itemCnt++;
+	// 中继地址
+	for(i = 0; i < RELAY_MAX; i++){
+		if(strRelayAddrs[i][0] >= '0' && strRelayAddrs[i][0] <= '9'){
+			addrs->items[addrs->itemCnt] = &addrs->buf[6 + i*6];
+			GetBytesFromStringHex(addrs->items[addrs->itemCnt], 0, 6, strRelayAddrs[i], 0, false);
+			addrs->itemCnt++;
+		}
+	}
+	// 目的地址
+	GetBytesFromStringHex(DstAddr, 0, 6, strDstAddr, 0, false);
+	addrs->items[addrs->itemCnt] = &addrs->buf[6 + i*6];
+	memcpy(addrs->items[addrs->itemCnt], DstAddr, 6);
+	addrs->itemCnt++;
+}
 
 /*
 * 描  述：获取6009水表读数类型名
@@ -578,8 +613,8 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 数据域解析
 	payloadIdx = index;
 	switch(cmdId){
-
-	//-------------------------------------------  抄表		-------------
+	
+	//-------------------------------------------  读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 
 		if(rxlen < index + 21 && cmd != 0x01){
@@ -629,6 +664,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 2;
 		break;
 
+	//-------------------------------------------------		读取冻结数据	---------------------
 	case WaterCmd_ReadFrozenData:	// 读取冻结数据
 		if(rxlen < index + 88 && cmd != 0x02){
 			break;
@@ -697,6 +733,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 1;
 		break;
 
+	//-------------------------------------------------		开关阀门	---------------------
 	case WaterCmd_OpenValve:		// 开阀
 	case WaterCmd_OpenValveForce:	// 强制开阀
 	case WaterCmd_CloseValve:		// 关阀
@@ -715,6 +752,21 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 3;
 		break;
 
+	//-------------------------------------------		读取表端配置信息		-------------
+	case WaterCmd_ReadMeterCfgInfo:	// 读取表端配置信息
+
+		if(rxlen < index + 164 && cmd != 0x04){
+			break;
+		}
+		ret = true;
+		index += 160;
+		memcpy(VersionInfo, &buf[index], 40);
+		buf[index + 40] = 0x00;
+		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %s\n", &buf[index]);
+		index += 40;
+		break;
+
+	//-------------------------------------------------		清异常命令	---------------------
 	case WaterCmd_ClearException:	// 清异常命令 
 		if(rxlen < index + 1 && cmd != 0x05){
 			break;
@@ -739,7 +791,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		break;
 
 	case WaterCmd_ReadTemperature:	// 读表温度
-		if(rxlen < index + 21 && cmd != 0x07){
+		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
 		ret = true;

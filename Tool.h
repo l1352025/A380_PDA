@@ -226,7 +226,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * t
 *		 title		- UI组件前面的标签
 *		 text		- 字符串缓冲区
 *		 maxLen		- 最大字符串长度
-* 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
+* 返回值：uint8 - 输入完成后的按键值： 上/下键，确认键，取消键
 */
 uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
 {
@@ -457,6 +457,31 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 		}
 		pr++;
 		col++;
+	}
+}
+
+/*
+* 描  述：在屏幕 x,y 坐标显示实心三角形
+* 参  数：x, y		- 屏幕中坐标
+		  direction	- 三角形方向：0 - 向上 ▲ ， 1 - 向下 ▼
+* 返回值：void
+*/
+void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
+{
+	uint8 x1, y1;
+
+	if(direction == 0){
+		x1 = 15/2;
+		for(y1 = 0; y1 < 15/2 + 1; y1++){
+			_GUIHLine(x + x1, y + y1, x + 15 - x1, Color_Black);
+			x1--;
+		}
+	}else{
+		x1 = 0;
+		for(y1 = 0; y1 < 15/2 + 1; y1++){
+			_GUIHLine(x + x1, y + y1, x + 15 - x1, Color_Black);
+			x1++;
+		}
 	}
 }
 
