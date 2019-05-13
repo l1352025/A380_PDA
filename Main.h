@@ -1311,25 +1311,9 @@ void WaterCmdFunc_CommonCmd(void)
 				continue;
 			}
 
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 1*16 + 8, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -1575,7 +1559,7 @@ void WaterCmdFunc_TestCmd(void)
 				continue;
 			}
 
-			// 6009 协议地址填充
+			// 地址填充
 			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
@@ -1785,25 +1769,9 @@ void WaterCmdFunc_Upgrade(void)
 				continue;
 			}
 
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -2009,25 +1977,9 @@ void WaterCmdFunc_PrepaiedVal(void)
 				continue;
 			}
 
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -2235,25 +2187,9 @@ void WaterCmdFunc_WorkingParams(void)
 				continue;
 			}
 
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -2458,25 +2394,9 @@ void WaterCmdFunc_Other(void)
 				continue;
 			}
 
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
-				}
-			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -2594,28 +2514,14 @@ void MainFuncReadRealTimeData(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -2709,28 +2615,14 @@ void MainFuncReadFrozenData(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -2765,7 +2657,7 @@ void MainFuncReadMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		_Printfxy(0, 0, "<<读取表端时钟", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2790,15 +2682,13 @@ void MainFuncReadMeterTime(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = 0x11;
+		CurrCmd = WaterCmd_ReadMeterTime;	// 读取表端时钟
 
 		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 			break;
 		}
-		Args.buf[i++] = 0x01;		// 命令字	01
-		ackLen = 21;				// 应答长度 21	
-		// 数据域
-		Args.buf[i++] = 0x00;				// 数据格式 00	
+		Args.buf[i++] = 0x13;		// 命令字	13
+		ackLen = 7;					// 应答长度 7	
 		Args.lastItemLen = i - 1;
 
 		if (key == KEY_CANCEL){
@@ -2810,28 +2700,14 @@ void MainFuncReadMeterTime(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -2866,7 +2742,7 @@ void MainFuncSetMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		_Printfxy(0, 0, "<<设置表端时钟", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2891,48 +2767,81 @@ void MainFuncSetMeterTime(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = 0x11;
+		CurrCmd = WaterCmd_SetMeterTime;	// 设置表端时钟
 
+		_GetDate(&TmpBuf[200], '-');
+		_GetTime(&TmpBuf[220], ':');
+		TmpBuf[0] = TmpBuf[200];	// year
+		TmpBuf[1] = TmpBuf[201];
+		TmpBuf[2] = TmpBuf[202];
+		TmpBuf[3] = TmpBuf[203];
+		TmpBuf[4] = 0x00;
+		TmpBuf[20] = TmpBuf[205];	// month
+		TmpBuf[21] = TmpBuf[206];
+		TmpBuf[22] = 0x00;
+		TmpBuf[40] = TmpBuf[208];	// day
+		TmpBuf[41] = TmpBuf[209];
+		TmpBuf[42] = 0x00;
+		TmpBuf[60] = TmpBuf[220];	// hour
+		TmpBuf[61] = TmpBuf[221];
+		TmpBuf[62] = 0x00;
+		TmpBuf[80] = TmpBuf[223];	// minute
+		TmpBuf[81] = TmpBuf[224];
+		TmpBuf[82] = 0x00;
+		TmpBuf[100] = TmpBuf[226];	// second
+		TmpBuf[101] = TmpBuf[227];
+		TmpBuf[102] = 0x00;
+		_Printfxy(0, 6*16, "当前时间:", Color_White);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0*8, 7*16, " ", &TmpBuf[0], 4, 4*8);	// YYYY
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 5*8, 7*16, "-", &TmpBuf[20], 2, 2*8);	// MM
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 8*8, 7*16, "-", &TmpBuf[40], 2, 2*8);	// dd
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 11*8, 7*16, " ", &TmpBuf[60], 2, 2*8);	// HH
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 13*8, 7*16, ":", &TmpBuf[80], 2, 2*8);	// mm
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 15*8, 7*16, ":", &TmpBuf[100], 2, 2*8);	// ss
 		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 			break;
 		}
-		Args.buf[i++] = 0x01;		// 命令字	01
-		ackLen = 21;				// 应答长度 21	
+		sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+			&TmpBuf[0], &TmpBuf[20], &TmpBuf[40], &TmpBuf[60], &TmpBuf[80], &TmpBuf[100]);
+		_SetDateTime(&TmpBuf[200]);
+
+		Args.buf[i++] = 0x14;		// 命令字	14
+		ackLen = 2;					// 应答长度 2	
 		// 数据域
-		Args.buf[i++] = 0x00;				// 数据格式 00	
+		Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+		Args.buf[i++] = _GetYear()%100;		
+		Args.buf[i++] = _GetMonth();		
+		Args.buf[i++] = _GetDay();			
+		Args.buf[i++] = _GetHour();			
+		Args.buf[i++] = _GetMin();			
+		Args.buf[i++] = _GetSec();	
 		Args.lastItemLen = i - 1;
 
 		if (key == KEY_CANCEL){
 			break;
 		}
 
+		for(i = 0; i < 101; i += 20){
+			if(TmpBuf[i] == 0x00 ){
+				_Printfxy(0, 6*16, "请输入正确的时间", Color_White);
+				_ReadKey();
+				continue;
+			}
+		}
+		
 		if(StrDstAddr[0] == 0x00 ){
 			sprintf(StrDstAddr, "请先输入表号");
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -3012,28 +2921,14 @@ void MainFuncClearException(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -3114,28 +3009,14 @@ void MainFuncOpenValve(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -3216,28 +3097,14 @@ void MainFuncCloseValve(void)
 			continue;
 		}
 
-		// 6009 协议地址填写不用反序
-		GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
-		// 填充地址
-		Addrs.itemCnt = 0;
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-		memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-		Addrs.itemCnt++;
-		for(i = 0; i < RELAY_MAX; i++){
-			if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-				Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-				GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-				Addrs.itemCnt++;
-			}
-		}
-		Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-		memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-		Addrs.itemCnt++;
-
+		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * 6;
-		timeout = 6500 + (Addrs.itemCnt - 2) * 6000 * 2;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
