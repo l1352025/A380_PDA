@@ -40,7 +40,7 @@ UI_ItemList UiList;
 bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
 	uint8 sendCnt = 0, cmdResult;
-	uint16 waitTime = 0;
+	uint16 waitTime = 0, lastRxLen;
 	int fp;
 
 	if(_Access("system.cfg", 0) < 0){
@@ -52,6 +52,8 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 
+	// 应答长度、超时时间、重发次数
+	ackLen += 14 + Addrs.itemCnt * 6;
 	timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 
@@ -79,10 +81,11 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
 		waitTime = 0;
+		lastRxLen = 0;
 		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %d s ", RxLen, ackLen, (timeout / 1000));
 
 		do{
-			RxLen += _GetComStr(&RxBuf[RxLen], ackLen - RxLen, 10);	// 100ms 检测接收
+			RxLen += _GetComStr(&RxBuf[lastRxLen], 300, 10);	// 100ms 检测接收
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -90,7 +93,22 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 				return false;
 			}
 			waitTime += 100;
+			if(lastRxLen > 0){
+				if(lastRxLen != RxLen){
+					lastRxLen = RxLen;
+					continue;
+				}else{
+					break;
+				}
+			}else{
+				lastRxLen = RxLen;
+			}
 		}while(RxLen < ackLen && waitTime < timeout);
+
+		_SoundOn();
+		_Sleep(30);
+		_SoundOff();
+		LogToFile("debug.log", "last rx %d,  curr rx %d,  acklen %d \r\n", lastRxLen, RxLen, ackLen);
 
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  ", RxLen, ackLen);
 		
@@ -138,10 +156,15 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	int8 lineCnt = 0, currLine = 0;
 	uint8 *lines[30], key;
 
-	Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
+	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
+		if(strncmp(Disps.items[0], "结果", 4) != 0){	
+			Disps.items[0] = NULL;
+			lines[0] = NULL;
+		}
+	}
 
 	lineCnt = GetPrintLines(0, Disps.items[0], lines);
-	PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);
 
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
@@ -197,7 +220,7 @@ void CenterCmdFunc_CommonCmd(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -241,8 +264,8 @@ void CenterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -425,7 +448,7 @@ void CenterCmdFunc_DocumentOperation(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -465,8 +488,8 @@ void CenterCmdFunc_DocumentOperation(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -649,7 +672,7 @@ void CenterCmdFunc_RouteSetting(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -686,8 +709,8 @@ void CenterCmdFunc_RouteSetting(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -870,7 +893,7 @@ void CenterCmdFunc_CommandTransfer(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -912,8 +935,8 @@ void CenterCmdFunc_CommandTransfer(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1123,7 +1146,7 @@ void WaterCmdFunc_CommonCmd(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -1165,8 +1188,8 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1344,9 +1367,9 @@ void WaterCmdFunc_TestCmd(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
-	uint16 ackLen, timeout;
+	uint16 ackLen, timeout, u16Tmp;
 
 	_ClearScreen();
 
@@ -1387,8 +1410,8 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1435,7 +1458,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x05;		// 命令选项 05	
 				Args.lastItemLen = i - 1;
@@ -1447,7 +1470,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x07;		// 命令选项 07	
 				Args.lastItemLen = i - 1;
@@ -1459,7 +1482,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x08;		// 命令选项 08	
 				Args.lastItemLen = i - 1;
@@ -1467,13 +1490,34 @@ void WaterCmdFunc_TestCmd(void)
 
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "过流电流(mA):", &TmpBuf[1040], 3, 4*8);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "超时时间(ms):", &TmpBuf[1060], 5, 5*8);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
+				if(TmpBuf[1040] < '0' || TmpBuf[1040] > '9'
+					|| TmpBuf[1060] < '0' || TmpBuf[1060] > '9'){
+					PrintfXyMultiLine_VaList(0, 8*16, "请先输入必要参数");
+					break;
+				}
+				_leftspace(&TmpBuf[1040], 3, '0');
+				_leftspace(&TmpBuf[1060], 5, '0');
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 4;					// 应答长度 4	
 				// 数据域
-				Args.buf[i++] = 0x09;		// 命令选项 09	
+				Args.buf[i++] = 0x09;		// 命令选项 09
+
+				u16Tmp = (TmpBuf[1040] - '0') * 100 
+					+ (TmpBuf[1041] - '0') * 10 
+					+ (TmpBuf[1042] - '0');	
+				Args.buf[i++] = (uint8)u16Tmp;		// 过流电流 0~255	
+				u16Tmp = (TmpBuf[1060] - '0') * 10000 
+					+ (TmpBuf[1061] - '0') * 1000 
+					+ (TmpBuf[1062] - '0') * 100
+					+ (TmpBuf[1063] - '0') * 10
+					+ (TmpBuf[1064] - '0') * 1;	
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);	// 超时时间 0~65535	
+				Args.buf[i++] = (uint8)(u16Tmp >> 8);
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1483,7 +1527,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 4;					// 应答长度 4	
 				// 数据域
 				Args.buf[i++] = 0x0A;		// 命令选项 0A	
 				Args.lastItemLen = i - 1;
@@ -1503,6 +1547,7 @@ void WaterCmdFunc_TestCmd(void)
 			
 			case WaterCmd_SetMeterNumber:		// " 设置表号 ";
 				/*---------------------------------------------*/
+				TmpBuf[1040] = 0x00;
 				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "新表号:", &TmpBuf[1040], 12, 13*8);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
@@ -1514,8 +1559,8 @@ void WaterCmdFunc_TestCmd(void)
 					continue;
 				}
 				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 164;				// 应答长度 164	
+				Args.buf[i++] = 0x04;		// 命令字	04
+				ackLen = 128;				// 应答长度 128	
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
@@ -1524,9 +1569,8 @@ void WaterCmdFunc_TestCmd(void)
 					ackLen = 1;					// 应答长度 1	
 					// 数据域
 					Args.buf[i++] = 0x10;		// 命令选项 10	
-					memcpy(&Args.buf[i], VersionInfo, 40);	
+					memcpy(&Args.buf[i], &Disps.buf[6], 40);	
 					i += 40;					// 软件版本号
-					VersionInfo[0] = 0x00;		// clear
 					GetBytesFromStringHex(&Args.buf[i], 0, 6, &TmpBuf[1040], 0, false);
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;
@@ -1592,7 +1636,7 @@ void WaterCmdFunc_Upgrade(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -1634,8 +1678,8 @@ void WaterCmdFunc_Upgrade(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1802,7 +1846,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -1843,8 +1887,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -2010,7 +2054,7 @@ void WaterCmdFunc_WorkingParams(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -2053,8 +2097,8 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -2220,7 +2264,7 @@ void WaterCmdFunc_Other(void)
 	_GuiLisStruEx menuList;
 	UI_Item * pUiItems = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pChar;
+	uint8 * pByte;
 	uint8 currUiItem = 0;
 	uint16 ackLen, timeout;
 
@@ -2260,8 +2304,8 @@ void WaterCmdFunc_Other(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pChar = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pChar[5]);
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<< %s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -3162,7 +3206,7 @@ int main(void)
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=8;
-	MainMenu.title = "   桑锐手持机  ";
+	MainMenu.title = "    桑锐手持机  ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
 	MainMenu.str[2] = " 读取表端时钟 ";

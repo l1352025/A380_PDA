@@ -254,14 +254,11 @@ uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 max
 
 		if( NewInput.context[0] >= '0' && NewInput.context[0] <= '9'){
 
-			if(retKey == KEY_ENTER 
-				|| retKey == KEY_UP
-				|| retKey == KEY_DOWN )
-			{
+			if(maxLen == 12 && (retKey == KEY_ENTER || retKey == KEY_UP || retKey == KEY_DOWN)){
 				_leftspace(NewInput.context, maxLen, '0');
 			}
 
-			if(maxLen == 12 && strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
+			if(strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
 				sprintf(NewInput.context, "地址不能为0");
 				retKey = 0xFF;
 			}

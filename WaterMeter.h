@@ -411,6 +411,9 @@ char * Water6009_GetStrErrorMsg(uint8 errorCode)
 	case 0xD2:
 	    str = "无此功能";
 		break;
+	default:
+		str = "未知错误";
+		break;
 	}
 
 	return str;
@@ -561,8 +564,8 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 缓冲区多包中查找
 	while(1){
 
-		if(rxlen < index + ackLen){
-			sprintf(&disps->buf[dispIdx], "失败: 超时，无应答");
+		if(rxlen < index + 27){
+			sprintf(&disps->buf[dispIdx], "结果: 超时,无应答");
 			return false;
 		}
 
@@ -591,7 +594,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		// crc8 check
 		crc8 = GetCrc8(&buf[index], length - 2);
 		if(crc8 !=  buf[index + length - 2]){
-			sprintf(&disps->buf[dispIdx], "失败: 有应答，CRC错误");
+			sprintf(&disps->buf[dispIdx], "结果: 有应答,CRC错误");
 			return false;
 		}
 
@@ -651,7 +654,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s  ", ptr);
 		index += 1;
 		//电池电压
-		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%cV\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
 		//环境温度
 		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
@@ -716,7 +719,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "阀门: %s  ", ptr);
 		index += 1;
 		//电池电压
-		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%cV\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
 		//环境温度
 		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
@@ -755,14 +758,14 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	//-------------------------------------------		读取表端配置信息		-------------
 	case WaterCmd_ReadMeterCfgInfo:	// 读取表端配置信息
 
-		if(rxlen < index + 164 && cmd != 0x04){
+		if(rxlen < index + 124 && cmd != 0x04){
 			break;
 		}
 		ret = true;
-		index += 160;
-		memcpy(VersionInfo, &buf[index], 40);
-		buf[index + 40] = 0x00;
-		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %s\n", &buf[index]);
+		index += 84;
+		memcpy(TmpBuf, &buf[index], 40);
+		TmpBuf[40] = 0x00;
+		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %s\n", TmpBuf);
 		index += 40;
 		break;
 
@@ -780,10 +783,11 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 
 	//-------------------------------------------------		测试命令	---------------------
 	case WaterCmd_RebootDevice:	// 表端重启
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 2 && cmd != 0x07){
 			break;
 		}
 		ret = true;
+		index += 1;
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
@@ -795,9 +799,10 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
+		index += 1;
 		//环境温度
 		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
-		dispIdx += sprintf(&disps->buf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
+		dispIdx += sprintf(&disps->buf[dispIdx], "温度: %s%d\n", ptr, (buf[index] & 0x7F));
         index += 1;
 		break;
 
@@ -806,9 +811,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		//电池电压
+		dispIdx += sprintf(&disps->buf[dispIdx], "电池电压: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
 		break;
 
@@ -817,6 +822,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
+		index += 1;
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
@@ -824,25 +830,38 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		break;
 
 	case WaterCmd_SetOverCurrentTimeout:	// 设置过流超时
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 3 && cmd != 0x07){
 			break;
 		}
 		ret = true;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		// 命令状态
+		if(buf[index] != Args.buf[2] || buf[index + 1] != Args.buf[3] || buf[index + 2] != Args.buf[4]){
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+			index += 1;
+		}
+		else{
+			dispIdx += sprintf(&disps->buf[dispIdx], "结果: 操作成功\n");
+			// 过流电流
+			dispIdx += sprintf(&disps->buf[dispIdx], "过流电流: %d mA\n", buf[index]);
+			index += 1;
+			// 超时时间
+			dispIdx += sprintf(&disps->buf[dispIdx], "超时时间: %d ms\n", (buf[index] + buf[index + 1] * 256));
+			index += 2;
+		}
 		break;
 
 	case WaterCmd_ReadOperatorNumber:	// 读运营商编号
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 4 && cmd != 0x07){
 			break;
 		}
 		ret = true;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		// 运营商编号
+		dispIdx += sprintf(&disps->buf[dispIdx], "运营商编号: %2X%2X%2X%2X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
 		break;
 
 	case WaterCmd_ReadReportRoute:	// 读上报路径
@@ -850,10 +869,34 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+
+		// 路径1长度 6*n
+		u8Tmp = buf[index] / 6;
+		dispIdx += sprintf(&disps->buf[dispIdx], "路径1级数: %d\n", u8Tmp);
+		index += 1;
+		// 路径1地址列表
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes(&TmpBuf[0], buf, index, 6, 0, false);
+			TmpBuf[12] = 0x00;
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d : %s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+		}
+		index += (30 - u8Tmp * 6);
+
+		// 路径2长度 6*n
+		u8Tmp = buf[index] / 6;
+		dispIdx += sprintf(&disps->buf[dispIdx], "  \n路径2级数: %d\n", u8Tmp);
+		index += 1;
+		// 路径2地址列表
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes(&TmpBuf[0], buf, index, 6, 0, false);
+			TmpBuf[12] = 0x00;
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d : %s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+		}
+		index += (30 - u8Tmp * 6);
+
 		break;
 
 	case WaterCmd_SetMeterNumber:	// 设置表号
@@ -875,6 +918,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	if(index == startIdx + length - 4)
 	{
 		//下行/上行 信号强度
+		dispIdx += sprintf(&disps->buf[dispIdx], "                    \n");
 		dispIdx += sprintf(&disps->buf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;
 	}
