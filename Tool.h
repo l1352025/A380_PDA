@@ -236,7 +236,7 @@ uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 max
 
 	// 输入框设置
 	NewInput.top = y;
-	NewInput.left = x + strlen(title) * 8 + 4;
+	NewInput.left = x + strlen(title) * 8;
 	NewInput.width = 10 * 16;	// 不显示输入框，设为最大
 	NewInput.hight = 16;
 	NewInput.caption = "";
@@ -285,7 +285,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 	for(i = 0; i < uiList.cnt; i++){
 		ptr = &uiList.items[i];
 		_Printfxy(ptr->x, ptr->y, ptr->title, Color_White);
-		_Printfxy(ptr->x1 + 4, ptr->y1, ptr->text, Color_White);
+		_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
 	}
 
 	(*itemNo) = ((*itemNo) > uiList.cnt -1 ? 0 : (*itemNo));
@@ -366,6 +366,10 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 		pr++;
 		col++;
 	}
+
+#if LogEnable
+	LogToFile(LogName, " lineCnt: %d \n disp: %s", lineCnt, buf);
+#endif
 
 	return lineCnt;
 }

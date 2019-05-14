@@ -61,3 +61,4 @@ dkms.conf
 *.tmp
 *.L
 
+/通讯/通信工具/DEBUG.TXT

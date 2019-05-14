@@ -19,6 +19,8 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10
+
+#define LogEnable   false       // 调试日志开关
 #define LogName     "debug.log"  // 日志文件名
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
@@ -53,7 +55,7 @@ typedef enum{
 }GUI_COLOR;
 
 typedef struct{
-	uint8 buf[200];
+	uint8 buf[2000];
 	uint8 *items[10];
 	uint8 itemCnt;
     uint8 lastItemLen;

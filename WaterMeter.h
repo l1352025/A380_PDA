@@ -551,9 +551,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 {
 	bool ret = false;
 	uint8 crc8, addrsCnt, cmd, i, u8Tmp;
-	uint16 index = 0, length, startIdx, payloadIdx, u16Tmp;
+	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
-	uint8 *ptr, dispIdx;
+	uint8 *ptr;
 
 	// 显示表号
 	dispIdx = 0;
@@ -676,8 +676,10 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		// 冻结数据类型
 		dispIdx += sprintf(&disps->buf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
 		index += 1;
+
+		#if false	// 冻结数据格式-旧版本 1 + 78 byte
 		// 冻结数据起始序号
-		u16Tmp = buf[index] * 10;
+		u8Tmp = buf[index] * 10;
 		dispIdx += sprintf(&disps->buf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
 		index += 1;
 		// 冻结数据起始时间
@@ -706,6 +708,36 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			dispIdx += sprintf(&disps->buf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
 			index +=1;
 		}
+		#endif
+
+		// 冻结数据格式-新版本	1 + 104 byte
+		// 冻结数据起始序号
+		dispIdx += sprintf(&disps->buf[dispIdx], "范围: 倒数第%d天数据\n", buf[index] + 1);
+		index += 1;
+		// 时间信息
+		dispIdx += sprintf(&disps->buf[dispIdx], "时间: %02X-%02X %02X:%02X\n",
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		// 累计用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&disps->buf[dispIdx], "累计用量: %d.%03d\n", u32Tmp, u16Tmp);
+		// 0:00 ~ 23:30 增量
+		u8Tmp = 0;
+		u16Tmp = 0x00;
+		for(i = 0; i < 47; i++){
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
+			u16Tmp += 0x30;
+			if(u16Tmp == 0x60){
+				u16Tmp = 0x00;
+				u8Tmp += 1;
+			}
+			dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X增量:%d\n", u8Tmp, u16Tmp, (buf[index] + buf[index + 1]*256));
+			index += 2;
+		}
+
 		//告警状态字1
 		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
 		dispIdx += sprintf(&disps->buf[dispIdx], "告警: %s ", ptr);
@@ -729,7 +761,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
 		//tx|rx信道
-		dispIdx += sprintf(&disps->buf[dispIdx], "信道: Tx-%d, Rx-%d ", (buf[index] & 0x0F), (buf[index] >> 4));
+		dispIdx += sprintf(&disps->buf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
 		index += 1;
 		//协议版本
 		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %d\n", buf[index]);
@@ -865,7 +897,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		break;
 
 	case WaterCmd_ReadReportRoute:	// 读上报路径
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 63 && cmd != 0x07){
 			break;
 		}
 		ret = true;

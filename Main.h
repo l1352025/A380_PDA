@@ -53,7 +53,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	_Fclose(fp);
 
 	// 应答长度、超时时间、重发次数
-	ackLen += 14 + Addrs.itemCnt * 6;
+	//ackLen += 14 + Addrs.itemCnt * 6;
 	timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 
@@ -85,7 +85,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %d s ", RxLen, ackLen, (timeout / 1000));
 
 		do{
-			RxLen += _GetComStr(&RxBuf[lastRxLen], 300, 10);	// 100ms 检测接收
+			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 10);	// 100ms 检测接收
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -105,10 +105,10 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			}
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		_SoundOn();
-		_Sleep(30);
-		_SoundOff();
-		LogToFile("debug.log", "last rx %d,  curr rx %d,  acklen %d \r\n", lastRxLen, RxLen, ackLen);
+		// _SoundOn();
+		// _Sleep(30);
+		// _SoundOff();
+		// LogToFile("debug.log", "last rx %d,  curr rx %d,  acklen %d \r\n", lastRxLen, RxLen, ackLen);
 
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  ", RxLen, ackLen);
 		
@@ -152,9 +152,9 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 */
 uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
-	const uint8 lineStep = 3, lineMax = 7;
+	const uint8 lineStep = 7, lineMax = 7;
 	int8 lineCnt = 0, currLine = 0;
-	uint8 *lines[30], key;
+	uint8 *lines[100], key;
 
 	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
 		if(strncmp(Disps.items[0], "结果", 4) != 0){	
@@ -1244,7 +1244,7 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.buf[i++] = 0x02;		// 命令字	02
 				ackLen = 88;				// 应答长度 88	
 				// 数据域
-				Args.buf[i++] = 0x02;				// 数据格式 01/02
+				Args.buf[i++] = 0x01;				// 数据格式 01/02
 				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
 				Args.buf[i++] = _GetYear()%100;		
 				Args.buf[i++] = _GetMonth();		
@@ -1446,7 +1446,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x04;		// 命令选项 04	
 				Args.lastItemLen = i - 1;
@@ -1490,6 +1490,8 @@ void WaterCmdFunc_TestCmd(void)
 
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
+				TmpBuf[1040] = 0x00;
+				TmpBuf[1060] = 0x00;
 				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "过流电流(mA):", &TmpBuf[1040], 3, 4*8);
 				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "超时时间(ms):", &TmpBuf[1060], 5, 5*8);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
@@ -1497,7 +1499,7 @@ void WaterCmdFunc_TestCmd(void)
 				}
 				if(TmpBuf[1040] < '0' || TmpBuf[1040] > '9'
 					|| TmpBuf[1060] < '0' || TmpBuf[1060] > '9'){
-					PrintfXyMultiLine_VaList(0, 8*16, "请先输入必要参数");
+					PrintfXyMultiLine_VaList(0, 8*16, "请输入必要参数");
 					break;
 				}
 				_leftspace(&TmpBuf[1040], 3, '0');
@@ -1527,7 +1529,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 4;					// 应答长度 4	
+				ackLen = 4;					// 应答长度 5	
 				// 数据域
 				Args.buf[i++] = 0x0A;		// 命令选项 0A	
 				Args.lastItemLen = i - 1;
@@ -1539,7 +1541,7 @@ void WaterCmdFunc_TestCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 63;				// 应答长度 63	
 				// 数据域
 				Args.buf[i++] = 0x0E;		// 命令选项 0E	
 				Args.lastItemLen = i - 1;
@@ -1558,6 +1560,10 @@ void WaterCmdFunc_TestCmd(void)
 					sprintf(StrDstAddr, "请先输入表号");
 					continue;
 				}
+				if(TmpBuf[1040] < '0' || TmpBuf[1040] > '9'){
+					PrintfXyMultiLine_VaList(0, 8*16, "请输入必要参数");
+					break;
+				}
 				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 				Args.buf[i++] = 0x04;		// 命令字	04
 				ackLen = 128;				// 应答长度 128	
@@ -1575,7 +1581,7 @@ void WaterCmdFunc_TestCmd(void)
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;
 
-					if(true == Protol6009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
+					if(true == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
 						memcpy(DstAddr, &Args.buf[42], 6);
 					}
 				}
@@ -3206,7 +3212,7 @@ int main(void)
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=8;
-	MainMenu.title = "    桑锐手持机  ";
+	MainMenu.title =  "     桑锐手持机    ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
 	MainMenu.str[2] = " 读取表端时钟 ";
