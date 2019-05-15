@@ -105,13 +105,13 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			}
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		// _SoundOn();
-		// _Sleep(30);
-		// _SoundOff();
-		// LogToFile("debug.log", "last rx %d,  curr rx %d,  acklen %d \r\n", lastRxLen, RxLen, ackLen);
-
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  ", RxLen, ackLen);
-		
+
+#if LogEnable
+
+		//LogToFile(LogName, "Tx: %s\n", );
+#endif
+
 		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, &Disps);
 
 	}while(sendCnt < tryCnt && cmdResult == false);
@@ -281,10 +281,10 @@ void CenterCmdFunc_CommonCmd(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -505,10 +505,10 @@ void CenterCmdFunc_DocumentOperation(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -726,10 +726,10 @@ void CenterCmdFunc_RouteSetting(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -952,10 +952,10 @@ void CenterCmdFunc_CommandTransfer(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -1161,7 +1161,7 @@ void WaterCmdFunc_CommonCmd(void)
 	menuList.y = 0;
 	menuList.with = 10 * 16;
 	menuList.str[0] = "  1. 读取用户用量";
-	menuList.str[1] = "  2. 读取冻结正转数据";
+	menuList.str[1] = "  2. 读取冻结数据";
 	menuList.str[2] = "  3. 开阀";
 	menuList.str[3] = "  4. 强制开阀";
 	menuList.str[4] = "  5. 关阀";
@@ -1189,7 +1189,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1205,10 +1205,10 @@ void WaterCmdFunc_CommonCmd(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -1233,7 +1233,7 @@ void WaterCmdFunc_CommonCmd(void)
 			case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
 				/*---------------------------------------------*/
 				sprintf(TmpBuf, "0");
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
@@ -1427,10 +1427,10 @@ void WaterCmdFunc_TestCmd(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -1490,34 +1490,40 @@ void WaterCmdFunc_TestCmd(void)
 
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
-				TmpBuf[1040] = 0x00;
-				TmpBuf[1060] = 0x00;
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "过流电流(mA):", &TmpBuf[1040], 3, 4*8);
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "超时时间(ms):", &TmpBuf[1060], 5, 5*8);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "过流电流mA:", &TmpBuf[1040], 3, 8*8, true);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "超时时间ms:", &TmpBuf[1060], 5, 8*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				if(TmpBuf[1040] < '0' || TmpBuf[1040] > '9'
-					|| TmpBuf[1060] < '0' || TmpBuf[1060] > '9'){
-					PrintfXyMultiLine_VaList(0, 8*16, "请输入必要参数");
-					break;
+				if(TmpBuf[1040] == 0x00 ){
+					sprintf(&TmpBuf[1040], " 请输入");
+					currUiItem = 4;
+					continue;
 				}
-				_leftspace(&TmpBuf[1040], 3, '0');
-				_leftspace(&TmpBuf[1060], 5, '0');
+				if(_atof(&TmpBuf[1040]) > 255){
+					sprintf(&TmpBuf[1040], " 0-255");
+					currUiItem = 4;
+					continue;
+				}
+				if(TmpBuf[1060] == 0x00 ){
+					sprintf(&TmpBuf[1060], " 请输入");
+					currUiItem = 5;
+					continue;
+				}
+				if(_atof(&TmpBuf[1060]) > 65535){
+					sprintf(&TmpBuf[1060], " 0-65535");
+					currUiItem = 5;
+					continue;
+				}
+				
 				Args.buf[i++] = 0x07;		// 命令字	07
 				ackLen = 4;					// 应答长度 4	
 				// 数据域
 				Args.buf[i++] = 0x09;		// 命令选项 09
+				u16Tmp = (uint16)_atof(&TmpBuf[1040]);
+				Args.buf[i++] = (uint8)u16Tmp;			// 过流电流 0~255	
 
-				u16Tmp = (TmpBuf[1040] - '0') * 100 
-					+ (TmpBuf[1041] - '0') * 10 
-					+ (TmpBuf[1042] - '0');	
-				Args.buf[i++] = (uint8)u16Tmp;		// 过流电流 0~255	
-				u16Tmp = (TmpBuf[1060] - '0') * 10000 
-					+ (TmpBuf[1061] - '0') * 1000 
-					+ (TmpBuf[1062] - '0') * 100
-					+ (TmpBuf[1063] - '0') * 10
-					+ (TmpBuf[1064] - '0') * 1;	
+				u16Tmp = (uint16)_atof(&TmpBuf[1060]);
 				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);	// 超时时间 0~65535	
 				Args.buf[i++] = (uint8)(u16Tmp >> 8);
 				Args.lastItemLen = i - 1;
@@ -1550,19 +1556,19 @@ void WaterCmdFunc_TestCmd(void)
 			case WaterCmd_SetMeterNumber:		// " 设置表号 ";
 				/*---------------------------------------------*/
 				TmpBuf[1040] = 0x00;
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "新表号:", &TmpBuf[1040], 12, 13*8);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "新表号:", &TmpBuf[1040], 12, 13*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
 
 				// 先读取参数配置信息 - 获取版本号
 				if(StrDstAddr[0] == 0x00 ){
-					sprintf(StrDstAddr, "请先输入表号");
+					sprintf(StrDstAddr, " 请输入");
 					continue;
 				}
-				if(TmpBuf[1040] < '0' || TmpBuf[1040] > '9'){
-					PrintfXyMultiLine_VaList(0, 8*16, "请输入必要参数");
-					break;
+				if(TmpBuf[1040] == 0x00 ){
+					sprintf(&TmpBuf[1040], " 请输入");
+					continue;
 				}
 				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 				Args.buf[i++] = 0x04;		// 命令字	04
@@ -1605,7 +1611,7 @@ void WaterCmdFunc_TestCmd(void)
 			}
 
 			if(StrDstAddr[0] == 0x00 ){
-				sprintf(StrDstAddr, "请先输入表号");
+				sprintf(StrDstAddr, " 请输入");
 				continue;
 			}
 
@@ -1701,10 +1707,10 @@ void WaterCmdFunc_Upgrade(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -1854,7 +1860,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUiItem = 0;
-	uint16 ackLen, timeout;
+	uint16 ackLen, timeout, u16Temp;
+	uint32 u32Temp;
 
 	_ClearScreen();
 
@@ -1894,7 +1901,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -1909,10 +1916,10 @@ void WaterCmdFunc_PrepaiedVal(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -1922,95 +1929,89 @@ void WaterCmdFunc_PrepaiedVal(void)
 			CurrCmd = (0x40 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_ReadPrepaidRefVal:		// "读预缴参考用量"
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x15;		// 命令字	15
+				ackLen = 12;				// 应答长度 12	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_SetPrepaidRefVal:		// " 设预缴参考用量 "
 				/*---------------------------------------------*/
+				TmpBuf[1040] = 0x00;
+				TmpBuf[1060] = 0x00;
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "预缴用量:", &TmpBuf[1040], 10, 11*8, true);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "参考用量:", &TmpBuf[1060], 10, 11*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(TmpBuf[1040] == 0x00 || TmpBuf[1060] == 0x00){
+					sprintf(&TmpBuf[1040], " 请输入");
+					sprintf(&TmpBuf[1060], " 请输入");
+					currUiItem = 4;
+					continue;
+				}
+				Args.buf[i++] = 0x16;		// 命令字	15
+				ackLen = 2;					// 应答长度 2	
+				// 数据域
+				u32Temp = (uint32)_atof(&TmpBuf[1040]);
+				u16Temp = (_atof(&TmpBuf[1040]) - u32Temp) * 10000;
+				Args.buf[i++] = (uint8)(u32Temp & 0xFF);		// 预缴用量	
+				Args.buf[i++] = (uint8)((u32Temp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Temp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Temp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Temp & 0xFF);		// 参考起始用量	
+				Args.buf[i++] = (uint8)((u16Temp >> 8) & 0xFF);
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_ReadAlarmLimitOverdraft:	// " 读报警限值透支 "
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x17;		// 命令字	17
+				ackLen = 4;					// 应答长度 4	
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_SetAlarmLimit:		// " 设报警限值 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_SetCloseValveLimit:		// " 设关阀限值 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// "  ";
+			case WaterCmd_SetAlarmAndCloseValveLimit:		// " 设报警关阀限值 ";
 				/*---------------------------------------------*/
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
@@ -2119,10 +2120,10 @@ void WaterCmdFunc_WorkingParams(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -2326,10 +2327,10 @@ void WaterCmdFunc_Other(void)
 			}
 
 			(*pUiCnt) = 0;
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+			TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 			// 命令参数处理
 			i = 0;	
@@ -2534,10 +2535,10 @@ void MainFuncReadRealTimeData(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -2606,7 +2607,7 @@ void MainFuncReadFrozenData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取冻结正转数据", Color_White);
+		_Printfxy(0, 0, "<<读取冻结数据", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2621,10 +2622,10 @@ void MainFuncReadFrozenData(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -2634,7 +2635,7 @@ void MainFuncReadFrozenData(void)
 		CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
 		/*---------------------------------------------*/
 		sprintf(TmpBuf, "0");
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "数据序号:", &TmpBuf[0], 1, 2*8, true);
 		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 			break;
 		}
@@ -2722,10 +2723,10 @@ void MainFuncReadMeterTime(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -2807,10 +2808,10 @@ void MainFuncSetMeterTime(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -2841,16 +2842,33 @@ void MainFuncSetMeterTime(void)
 		TmpBuf[100] = TmpBuf[226];	// second
 		TmpBuf[101] = TmpBuf[227];
 		TmpBuf[102] = 0x00;
-		_Printfxy(0, 6*16, "当前时间:", Color_White);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0*8, 7*16, " ", &TmpBuf[0], 4, 4*8);	// YYYY
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 5*8, 7*16, "-", &TmpBuf[20], 2, 2*8);	// MM
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 8*8, 7*16, "-", &TmpBuf[40], 2, 2*8);	// dd
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 11*8, 7*16, " ", &TmpBuf[60], 2, 2*8);	// HH
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 13*8, 7*16, ":", &TmpBuf[80], 2, 2*8);	// mm
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 15*8, 7*16, ":", &TmpBuf[100], 2, 2*8);	// ss
+		_Printfxy(0, 6*16, "时 间:", Color_White);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0*8, 7*16, " ", &TmpBuf[0], 4, 4*8, false);	// YYYY
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 5*8, 7*16, "-", &TmpBuf[20], 2, 2*8, false);	// MM
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 8*8, 7*16, "-", &TmpBuf[40], 2, 2*8, false);	// dd
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 11*8, 7*16, " ", &TmpBuf[60], 2, 2*8, false);	// HH
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 14*8, 7*16, ":", &TmpBuf[80], 2, 2*8, false);	// mm
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 17*8, 7*16, ":", &TmpBuf[100], 2, 2*8, false);	// ss
 		if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 			break;
 		}
+		
+		for(i = 0; i < 101; i += 20){
+			if(TmpBuf[i] == 0x00 || TmpBuf[0] == '0' ){
+				_Printfxy(0, 8*16, "请输入正确的时间", Color_White);
+				key = KEY_NOHOOK;
+				break;
+			}
+		}
+		if(key == KEY_NOHOOK){	
+			key = _ReadKey();		// show err msg and wait key
+			if (key != KEY_CANCEL){
+				break;
+			}else{
+				continue;
+			}
+		}
+
 		sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
 			&TmpBuf[0], &TmpBuf[20], &TmpBuf[40], &TmpBuf[60], &TmpBuf[80], &TmpBuf[100]);
 		_SetDateTime(&TmpBuf[200]);
@@ -2871,14 +2889,6 @@ void MainFuncSetMeterTime(void)
 			break;
 		}
 
-		for(i = 0; i < 101; i += 20){
-			if(TmpBuf[i] == 0x00 ){
-				_Printfxy(0, 6*16, "请输入正确的时间", Color_White);
-				_ReadKey();
-				continue;
-			}
-		}
-		
 		if(StrDstAddr[0] == 0x00 ){
 			sprintf(StrDstAddr, "请先输入表号");
 			continue;
@@ -2941,10 +2951,10 @@ void MainFuncClearException(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -3028,10 +3038,10 @@ void MainFuncOpenValve(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	
@@ -3116,10 +3126,10 @@ void MainFuncCloseValve(void)
 		}
 
 		(*pUiCnt) = 0;
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8);
-		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 2*16, "表 号:", StrDstAddr, 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 3*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 4*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 5*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
 		// 命令参数处理
 		i = 0;	

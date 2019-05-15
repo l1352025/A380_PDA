@@ -21,7 +21,6 @@
 //-----------------------------------------------------------------------------------
 
 /*
-* 函数名：IndexOf
 * 描  述：在数组中查找子数组，可指定查找的起始位置和范围
 * 参  数：srcArray - 源数组地址， srcLen - 源数组长度
 		  dstBytes - 目的数组地址， dstLen - 目的数组长度 
@@ -113,37 +112,39 @@ void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 * 参  数：inputSt - 输入框结构指针
 * 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
 */
-uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
+uint8 GetInputNumStr(UI_Item inputSt)
 {
 	static uint8 keyBuf[TXTBUF_LEN] = {0};
-	uint8 key, idx, cleared = false;
+	uint8 key, cleared = false;
 	char keyStr[2] = {0};
-	uint8 x = inputSt->left;
-	uint8 y = inputSt->top;
+	int idx;
+	int x = inputSt.x1;
+	int y = inputSt.y1;
 
-	memcpy(keyBuf, inputSt->context, TXTBUF_LEN);
+	memcpy(keyBuf, inputSt.text, TXTBUF_LEN);
 	_Printfxy(x, y, keyBuf, Color_White);
-	_toxy(x, y + inputSt->hight);
+	_toxy(x, y + inputSt.height);
 	_ShowCur();
 	idx = 0;
 
 	while(1){
 		key = _ReadKey();
 
-		if(key >= KEY_0 && key <= KEY_9){
+		if((key >= KEY_0 && key <= KEY_9) 
+			||(key == KEY_DOT && idx > 0 && idx < inputSt.txtbox.dataLen -1)){
 
-			if(inputSt->IsClear && cleared == false && idx == 0){
+			if(inputSt.txtbox.isClear && cleared == false && idx == 0){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
-				_GUIRectangleFill(inputSt->left, inputSt->top, 
-					(inputSt->left + inputSt->width), 
-					(inputSt->top + inputSt->hight), Color_White);
+				_GUIRectangleFill(inputSt.x1, inputSt.y1, 
+					(inputSt.x1 + inputSt.width), 
+					(inputSt.y1 + inputSt.height), Color_White);
 				cleared = true;
 			}
 
 			keyBuf[idx] = key;
 			keyStr[0] = key;
 			_Printfxy(x, y, keyStr, Color_White);
-			if(idx != inputSt->datelen -1){
+			if(idx != inputSt.txtbox.dataLen -1){
 				idx++;
 				x += 8;
 			}
@@ -154,14 +155,21 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 				x -= 8;
 			}
 		}
-		else if(key == KEY_RIGHT && keyBuf[idx] >= '0' && keyBuf[idx] <= '9'){
-			if(idx != inputSt->datelen - 1){
+		else if((key == KEY_RIGHT && keyBuf[idx] >= '0' && keyBuf[idx] <= '9')
+			|| (key == KEY_DOT)){
+			if(idx != inputSt.txtbox.dataLen - 1){
 				idx++;
 				x += 8;
 			}
 		}
 		else if(key == KEY_DELETE){
-			if(idx == inputSt->datelen -1 && keyBuf[idx] != 0x00){
+			if(false == inputSt.txtbox.isClear){
+				keyBuf[idx] = '0';
+				_Printfxy(x, y, "0", Color_White);
+				idx--;
+				x -= 8;
+			}
+			else if(idx == inputSt.txtbox.dataLen -1 && keyBuf[idx] != 0x00){
 				keyBuf[idx] = 0x00;
 				_Printfxy(x, y, " ", Color_White);
 			}
@@ -173,10 +181,13 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 			}
 			else if(idx == 0 && keyBuf[idx] != 0x00){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
-				_GUIRectangleFill(inputSt->left, inputSt->top, 
-					(inputSt->left + inputSt->width), 
-					(inputSt->top + inputSt->hight), Color_White);
+				_GUIRectangleFill(inputSt.x1, inputSt.y1, 
+					(inputSt.x1 + inputSt.width), 
+					(inputSt.y1 + inputSt.height), Color_White);
 			}
+
+			if(idx < 0) idx = 0;
+			if(x < inputSt.x1) x = inputSt.x1;
 		}
 		else if(key == KEY_UP || key == KEY_DOWN
 			|| key == KEY_ENTER || key == KEY_CANCEL){
@@ -186,11 +197,11 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 			// do nothing
 		}
 
-		_toxy(x, y + inputSt->hight);
+		_toxy(x, y + inputSt.height);
 	}
 
 	if(key != KEY_CANCEL){
-		memcpy(inputSt->context, keyBuf, TXTBUF_LEN);
+		memcpy(inputSt.text, keyBuf, TXTBUF_LEN);
 	}
 
 	_HideCur();
@@ -206,9 +217,10 @@ uint8 GetInputNumStr(_GuiInputBoxStru * inputSt)
 *		 text		- 字符串缓冲区
 *		 maxLen		- 最大字符串长度
 *		 width		- 输入框长度
+*		 isClear	- 输入时是否清空
 * 返回值：void
 */
-void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width)
+void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear)
 {
 	item->x = x;
 	item->y = y;
@@ -217,57 +229,9 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * t
 	item->y1 = y;
 	item->text = text;
 	item->width = width;
+	item->height = 16;
 	item->txtbox.dataLen = maxLen;
-}
-
-/*
-* 描  述：获取输入框中的字符串
-* 参  数：x, y		- UI组件前面的标签的起始坐标
-*		 title		- UI组件前面的标签
-*		 text		- 字符串缓冲区
-*		 maxLen		- 最大字符串长度
-* 返回值：uint8 - 输入完成后的按键值： 上/下键，确认键，取消键
-*/
-uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen)
-{
-	const char * ZeroAddr = "000000000000";
-	static _GuiInputBoxStru NewInput;
-	uint8 retKey = 0;
-
-	// 输入框设置
-	NewInput.top = y;
-	NewInput.left = x + strlen(title) * 8;
-	NewInput.width = 10 * 16;	// 不显示输入框，设为最大
-	NewInput.hight = 16;
-	NewInput.caption = "";
-	NewInput.context = text;
-	NewInput.type = 1;			// 数字
-	NewInput.datelen = maxLen;	// 最大长度
-	NewInput.keyUpDown = 1; 
-	NewInput.IsClear = 1;
-	_SetInputMode(1); 			//设置输入方式 
-	_DisInputMode(1);			//输入法是否允许切换
-
-	do{
-		//接收输入
-		retKey = GetInputNumStr(&NewInput);
-
-		if( NewInput.context[0] >= '0' && NewInput.context[0] <= '9'){
-
-			if(maxLen == 12 && (retKey == KEY_ENTER || retKey == KEY_UP || retKey == KEY_DOWN)){
-				_leftspace(NewInput.context, maxLen, '0');
-			}
-
-			if(strncmp(ZeroAddr, NewInput.context, maxLen) == 0){
-				sprintf(NewInput.context, "地址不能为0");
-				retKey = 0xFF;
-			}
-
-			_Printfxy(NewInput.left, NewInput.top, NewInput.context, Color_White);
-		}
-	}while(retKey == 0xFF);
-
-	return retKey;
+	item->txtbox.isClear = isClear;
 }
 
 /*
@@ -278,6 +242,7 @@ uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 max
 */
 uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 {
+	const char * ZeroAddr = "000000000000";
 	uint8 key;
 	uint8 i;
 	UI_Item *ptr;
@@ -295,7 +260,21 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		ptr = &uiList.items[(*itemNo)];
 
 		if(ptr->type == UI_TxtBox){
-			key = TextBoxGetStr(ptr->x, ptr->y, ptr->title, ptr->text, ptr->txtbox.dataLen);
+			do{
+				//接收输入
+				key = GetInputNumStr(*ptr);
+
+				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
+					if(ptr->txtbox.dataLen == 12 && (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
+						_leftspace(ptr->text, ptr->txtbox.dataLen, '0');
+						if(strncmp(ZeroAddr, ptr->text, ptr->txtbox.dataLen) == 0){
+							sprintf(ptr->text, " 不能为0 ");
+							key = 0xFF;
+						}
+					}
+					_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
+				}
+			}while(key == 0xFF);
 		}
 		else if(ptr->type == UI_CombBox){
 
@@ -308,12 +287,16 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		if(key == KEY_DOWN){
 			if((*itemNo) < uiList.cnt -1){
 				(*itemNo)++;
+			}else{
+				(*itemNo) = 0;
 			}
 			continue;
 		}
 		else if(key == KEY_UP){
 			if((*itemNo) > 0){
 				(*itemNo)--;
+			}else{
+				(*itemNo) = uiList.cnt -1;
 			}
 			continue;
 		}
@@ -487,7 +470,6 @@ void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
 }
 
 /*
-* 函数名：StringPadLeft
 * 描  述：字符串左侧填充
 * 参  数：srcStr - 原字符串
 		  totalLen - 总字符长度：原字符+左侧填充的字符（若原字符长度>=总长度，则无需填充）
@@ -523,7 +505,6 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 }
 
 /*
-* 函数名：StringTrimStart
 * 描  述：字符串头部裁剪
 * 参  数：srcStr - 字符串起始地址
 		  trimChar - 裁剪的字符
@@ -562,7 +543,6 @@ int StringTrimStart(const char * srcStr, char trimChar)
 
 
 /*
-* 函数名：HexToChar
 * 描  述：16进制数转换成对应的字符
 */
 char HexToChar(uint8 b)
@@ -597,7 +577,6 @@ uint8 CharToHex(char c)
 }
 
 /*
-* 函数名：GetStringHexFromBytes
 * 描  述：将字节数组转换成16进制字符串
 * 参  数：strHex - 目的字符串缓冲区地址
 		  bytes - 源字节数组
@@ -636,7 +615,6 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 	return index;
 }
 /*
-* 函数名：GetBytesFromStringHex
 * 描  述：将16进制字符串转换成字节数组
 * 参  数：bytes - 目的字节数组
 		  iStart - 数组中保存的起始索引
@@ -685,7 +663,6 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 }
 
 /*
-* 函数名：GetCrc16
 * 描  述：计算CRC16
 * 参  数：Buf - 数据缓存起始地址
 		  Len - 计算的总长度
@@ -715,7 +692,6 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 }
 
 /*
-* 函数名：GetCrc16
 * 描  述：计算CRC8
 * 参  数：Buf - 数据缓存起始地址
 		  Len - 计算的总长度
@@ -742,7 +718,6 @@ uint8 GetCrc8(uint8 *Buf, int len)
 }
 
 /*
-* 函数名：GetSum8
 * 描  述：计算8位累加和
 * 参  数：Buf - 数据缓存起始地址
 		  Len - 计算的总长度

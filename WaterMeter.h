@@ -617,7 +617,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	payloadIdx = index;
 	switch(cmdId){
 	
-	//-------------------------------------------  读取用户用量		-------------
+	//----------------------------------------		读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 
 		if(rxlen < index + 21 && cmd != 0x01){
@@ -667,7 +667,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 2;
 		break;
 
-	//-------------------------------------------------		读取冻结数据	---------------------
+	//----------------------------------------		读取冻结数据	---------------------
 	case WaterCmd_ReadFrozenData:	// 读取冻结数据
 		if(rxlen < index + 88 && cmd != 0x02){
 			break;
@@ -677,65 +677,65 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		dispIdx += sprintf(&disps->buf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
 		index += 1;
 
-		#if false	// 冻结数据格式-旧版本 1 + 78 byte
-		// 冻结数据起始序号
-		u8Tmp = buf[index] * 10;
-		dispIdx += sprintf(&disps->buf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
-		index += 1;
-		// 冻结数据起始时间
-		dispIdx += sprintf(&disps->buf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
-			, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
-		index += 5;
-		// 冻结数据方式 ：0-按天, 1-按月
-		// 冻结数据数量 ：按天最大24条，按月最大30条
-		dispIdx += sprintf(&disps->buf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
-		index += 2;	
-		// 冻结数据时间间隔
-		if(buf[index] == 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "间隔: 每%s冻结1条\n", (buf[index - 2] == 0x01 ? "天" : "月"));
+		if(rxlen < index + 104){	// 冻结数据格式-旧版本 1 + 78 byte
+			// 冻结数据起始序号
+			u8Tmp = buf[index] * 10;
+			dispIdx += sprintf(&disps->buf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+			index += 1;
+			// 冻结数据起始时间
+			dispIdx += sprintf(&disps->buf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
+				, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
+			index += 5;
+			// 冻结数据方式 ：0-按天, 1-按月
+			// 冻结数据数量 ：按天最大24条，按月最大30条
+			dispIdx += sprintf(&disps->buf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
+			index += 2;	
+			// 冻结数据时间间隔
+			if(buf[index] == 0){
+				dispIdx += sprintf(&disps->buf[dispIdx], "间隔: 每%s冻结1条\n", (buf[index - 2] == 0x01 ? "天" : "月"));
+			}
+			else{
+				dispIdx += sprintf(&disps->buf[dispIdx], "间隔: %d%s冻结1条\n", buf[index], (buf[index - 2] == 0x01 ? "小时" : "天"));
+			}
+			index += 1;
+			// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
+			dispIdx += sprintf(&disps->buf[dispIdx], "读取的10条数据如下: \n");
+			for(i = 0; i < 10; i++){
+				u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+				index += 4;
+				u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+				index += 2;
+				dispIdx += sprintf(&disps->buf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
+				index +=1;
+			}
 		}
-		else{
-			dispIdx += sprintf(&disps->buf[dispIdx], "间隔: %d%s冻结1条\n", buf[index], (buf[index - 2] == 0x01 ? "小时" : "天"));
-		}
-		index += 1;
-		// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
-		dispIdx += sprintf(&disps->buf[dispIdx], "读取的10条数据如下: \n");
-		for(i = 0; i < 10; i++){
+		else{		// 冻结数据格式-新版本	1 + 104 byte
+			// 冻结数据起始序号
+			dispIdx += sprintf(&disps->buf[dispIdx], "范围: 倒数第%d天数据\n", buf[index] + 1);
+			index += 1;
+			// 时间信息
+			dispIdx += sprintf(&disps->buf[dispIdx], "时间: %02X-%02X %02X:%02X\n",
+				buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+			index += 4;
+			// 累计用量
 			u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 			index += 4;
 			u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 			index += 2;
-			dispIdx += sprintf(&disps->buf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
-			index +=1;
-		}
-		#endif
-
-		// 冻结数据格式-新版本	1 + 104 byte
-		// 冻结数据起始序号
-		dispIdx += sprintf(&disps->buf[dispIdx], "范围: 倒数第%d天数据\n", buf[index] + 1);
-		index += 1;
-		// 时间信息
-		dispIdx += sprintf(&disps->buf[dispIdx], "时间: %02X-%02X %02X:%02X\n",
-			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
-		index += 4;
-		// 累计用量
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&disps->buf[dispIdx], "累计用量: %d.%03d\n", u32Tmp, u16Tmp);
-		// 0:00 ~ 23:30 增量
-		u8Tmp = 0;
-		u16Tmp = 0x00;
-		for(i = 0; i < 47; i++){
-			dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
-			u16Tmp += 0x30;
-			if(u16Tmp == 0x60){
-				u16Tmp = 0x00;
-				u8Tmp += 1;
+			dispIdx += sprintf(&disps->buf[dispIdx], "累计用量: %d.%03d\n", u32Tmp, u16Tmp);
+			// 0:00 ~ 23:30 增量
+			u8Tmp = 0;
+			u16Tmp = 0x00;
+			for(i = 0; i < 47; i++){
+				dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
+				u16Tmp += 0x30;
+				if(u16Tmp == 0x60){
+					u16Tmp = 0x00;
+					u8Tmp += 1;
+				}
+				dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X增量:%d\n", u8Tmp, u16Tmp, (buf[index] + buf[index + 1]*256));
+				index += 2;
 			}
-			dispIdx += sprintf(&disps->buf[dispIdx], "%d:%02X增量:%d\n", u8Tmp, u16Tmp, (buf[index] + buf[index + 1]*256));
-			index += 2;
 		}
 
 		//告警状态字1
@@ -768,7 +768,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 1;
 		break;
 
-	//-------------------------------------------------		开关阀门	---------------------
+	//---------------------------------------		开关阀门	---------------------
 	case WaterCmd_OpenValve:		// 开阀
 	case WaterCmd_OpenValveForce:	// 强制开阀
 	case WaterCmd_CloseValve:		// 关阀
@@ -787,7 +787,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 3;
 		break;
 
-	//-------------------------------------------		读取表端配置信息		-------------
+	//----------------------------------------		读取表端配置信息		-------------
 	case WaterCmd_ReadMeterCfgInfo:	// 读取表端配置信息
 
 		if(rxlen < index + 124 && cmd != 0x04){
@@ -801,7 +801,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 40;
 		break;
 
-	//-------------------------------------------------		清异常命令	---------------------
+	//---------------------------------------		清异常命令		---------------------
 	case WaterCmd_ClearException:	// 清异常命令 
 		if(rxlen < index + 1 && cmd != 0x05){
 			break;
@@ -813,7 +813,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		index += 1;
 		break;
 
-	//-------------------------------------------------		测试命令	---------------------
+	//---------------------------------------		测试命令	---------------------
 	case WaterCmd_RebootDevice:	// 表端重启
 		if(rxlen < index + 2 && cmd != 0x07){
 			break;
@@ -939,6 +939,121 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	//--------------------------------------		预缴用量、参考用量-读取/设置	---------------------
+	case WaterCmd_ReadPrepaidRefVal:	// 读预缴参考用量
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		// 预缴用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&disps->buf[dispIdx], "预缴用量: %d.%03d\n", u32Tmp, u16Tmp);
+		// 参考用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&disps->buf[dispIdx], "参考用量: %d.%03d\n", u32Tmp, u16Tmp);
+		break;
+
+	case WaterCmd_SetPrepaidRefVal:		// 设预缴参考用量
+		if(rxlen < index + 2 && cmd != 0x16){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		// 数据非法原因
+		if(buf[index - 1] == 0xAE){
+			if(buf[index] & 0x01 > 0){
+				dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+			}
+			if(buf[index] & 0x02 > 0){
+				dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+			}
+			index += 1;
+		}
+		break;
+
+	case WaterCmd_ReadAlarmLimitOverdraft:		// 读报警限值透支
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAB ? "操作失败" : "操作成功");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		// 操作成功时结果
+		if(buf[index - 1] == 0xAA){
+			dispIdx += sprintf(&disps->buf[dispIdx], "报警限值: %d\n", buf[index]);
+			index += 1;
+			u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "透支用量: %s%d\n", 
+				(u16Tmp & 0x8000 > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
+			index += 2;
+		}
+		break;
+
+	case WaterCmd_SetAlarmLimit:			// 设报警限值
+		if(rxlen < index + 2 && cmd != 0x18){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index] & 0x01 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+		}
+		if(buf[index] & 0x02 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+		}
+		index += 1;
+		break;
+
+	case WaterCmd_SetCloseValveLimit:			// 设关阀限值
+		if(rxlen < index + 2 && cmd != 0x16){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index] & 0x01 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+		}
+		if(buf[index] & 0x02 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+		}
+		index += 1;
+		break;
+
+	case WaterCmd_SetAlarmAndCloseValveLimit:	// 设报警关阀限值
+		if(rxlen < index + 2 && cmd != 0x16){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index] & 0x01 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+		}
+		if(buf[index] & 0x02 > 0){
+			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+		}
 		index += 1;
 		break;
 		

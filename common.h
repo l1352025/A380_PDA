@@ -12,6 +12,11 @@ typedef unsigned char bool;
 #define false   0
 #endif
 
+#define DebugEnable 0         // 调试日志开关
+#define LogEnable   0           // 调试日志开关
+#define LogName     "debug.log"  // 日志文件名
+
+
 #define VERSION_Name    "桑锐6009手持机"     // 程序名
 #define VERSION_RevNo   "1.0"               // 版本号
 #define VERSION_Date    "2019-5-9"          // 版本日期
@@ -19,9 +24,6 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10
-
-#define LogEnable   false       // 调试日志开关
-#define LogName     "debug.log"  // 日志文件名
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
         物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
@@ -68,15 +70,16 @@ typedef enum{
 
 typedef struct{
     
-    uint8 x;        // title position
+    uint8 x;        // UI title position
     uint8 y;
     char *title;
-    uint8 x1;       // text position
+    uint8 x1;       // UI text position
     uint8 y1;
     char *text;
-    uint8 width;    // text width
+    uint8 width;    // UI width
+    uint8 height;   // UI high
     UI_Type type;
-
+    
     struct{
 		uint8 cnt;
 		uint8 currIdx;
@@ -84,6 +87,7 @@ typedef struct{
 
 	struct {
 		uint8 dataLen;
+        uint8 isClear;
 	}txtbox;
 }UI_Item;
 
@@ -106,8 +110,8 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
-void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width);
-uint8 TextBoxGetStr(uint8 x, uint8 y, const char * title, char * text, uint8 maxLen);
+uint8 GetInputNumStr(UI_Item inputSt);
+void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
