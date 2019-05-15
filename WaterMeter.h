@@ -974,10 +974,10 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		// 数据非法原因
 		if(buf[index - 1] == 0xAE){
 			if(buf[index] & 0x01 > 0){
-				dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+				dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n");
 			}
 			if(buf[index] & 0x02 > 0){
-				dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+				dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n");
 			}
 			index += 1;
 		}
@@ -1003,59 +1003,31 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		break;
 
-	case WaterCmd_SetAlarmLimit:			// 设报警限值
+	case WaterCmd_SetAlarmLimit:				// 设报警限值
+	case WaterCmd_SetCloseValveLimit:			// 设关阀限值
+	case WaterCmd_SetAlarmAndCloseValveLimit:	// 设报警关阀限值
 		if(rxlen < index + 2 && cmd != 0x18){
 			break;
 		}
 		ret = true;
-		// 命令状态
-		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
-		if(buf[index] & 0x01 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
+		if(buf[index] == 0xAB){
+			dispIdx += sprintf(&disps->buf[dispIdx], "结果: 操作失败\n");
+			index += 1;
+			index += 1;		// 失败原因
 		}
-		if(buf[index] & 0x02 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
-		}
-		index += 1;
-		break;
-
-	case WaterCmd_SetCloseValveLimit:			// 设关阀限值
-		if(rxlen < index + 2 && cmd != 0x16){
-			break;
-		}
-		ret = true;
-		// 命令状态
-		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
-		if(buf[index] & 0x01 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
-		}
-		if(buf[index] & 0x02 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
+		else if(buf[index] == 0xAA){
+			dispIdx += sprintf(&disps->buf[dispIdx], "结果: 操作成功\n");
+			index += 1;
+			dispIdx += sprintf(&disps->buf[dispIdx], "报警限值: %d\n", buf[index]);
+			index += 1;
+			u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
+			dispIdx += sprintf(&disps->buf[dispIdx], "关阀限值: %s%d\n", 
+				(u16Tmp & 0x8000 > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
+			index += 2;
 		}
 		index += 1;
 		break;
 
-	case WaterCmd_SetAlarmAndCloseValveLimit:	// 设报警关阀限值
-		if(rxlen < index + 2 && cmd != 0x16){
-			break;
-		}
-		ret = true;
-		// 命令状态
-		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
-		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
-		if(buf[index] & 0x01 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->参考起始用量不合法\n", ptr);
-		}
-		if(buf[index] & 0x02 > 0){
-			dispIdx += sprintf(&disps->buf[dispIdx], "-->设置的预缴用量未达到开阀门限\n", ptr);
-		}
-		index += 1;
-		break;
 		
 	default:
 		break;

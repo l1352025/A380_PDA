@@ -12,9 +12,10 @@ typedef unsigned char bool;
 #define false   0
 #endif
 
-#define DebugEnable 0         // 调试日志开关
-#define LogEnable   0           // 调试日志开关
-#define LogName     "debug.log"  // 日志文件名
+#define Debug_On    0           // 调试日志开关
+#define Log_On      0           // 调试日志开关
+#define LogName     "debug.txt" // 日志文件名
+#define LogScom_On  1           // 日志串口开关：1- 输出到串口No.2，0 -输出到文件
 
 
 #define VERSION_Name    "桑锐6009手持机"     // 程序名
@@ -23,7 +24,8 @@ typedef unsigned char bool;
 
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
-#define UI_MAX      10
+#define UI_MAX      10      // 最大UI控件数
+#define RxBeep_On   0       // 调试日志开关
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
         物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
@@ -117,7 +119,8 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
-void LogToFile(const char * fileName, const char * format, ...);
+void LogPrint(const char * fileName, const char * format, ...);
+void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern char Screenbuff[160*(160/3+1)*2]; 
@@ -127,7 +130,7 @@ extern uint8 RxBuf[1080];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[7];
 extern uint8 DstAddr[7];
-extern uint8 VersionInfo[40];
+extern uint8 StrBuf[10][TXTBUF_LEN];    // extend input buffer
 extern uint8 StrDstAddr[TXTBUF_LEN];
 extern uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;

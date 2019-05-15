@@ -62,18 +62,22 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 }
 
 /*
-* 描  述：打印日志到文件
+* 描  述：打印日志到文件或串口No.2 , 通信串口在收发时不可打印到串口
 * 参  数：fileName	 - 文件名
 		  format	- 字符串格式
 		  ... 		- 可变参数
 * 返回值：void
 */
-void LogToFile(const char * fileName, const char * format, ...)
+void LogPrint(const char * fileName, const char * format, ...)
 {
-	static uint8 buf[512] = {0};
+#if Log_On
+	//static uint8 buf[512] = {0};
 	int fp;
 	uint32 len = 0; 
 	va_list ap;
+	uint8 *buf;
+
+	buf = (uint8 *) _malloc(1024);
 
 	va_start(ap, format);
 	len += vsprintf(&buf[0], format, ap);
@@ -87,12 +91,52 @@ void LogToFile(const char * fileName, const char * format, ...)
 		fp = _Fopen("debug.txt", "RW");
 	}
 
+#if LogScom_On
+	_CloseCom();
+	_ComSetTran(Trans_Scom);
+	_ComSet((uint8 *)"115200,E,8,1", 2);
+	_SendComStr(buf, len);
+	_CloseCom();
+#else
 	_Lseek(fp, 0, 2);
 	_Fwrite(buf, len, fp);
 	_Fclose(fp);
+#endif
 
-	//_SendComStr(buf, len);
+	_free(buf);
+
+#endif
 }
+
+/*
+* 描  述：打印日志到文件或串口No.2 , 通信串口在收发时不可打印到串口
+* 参  数：title	 - 标题
+		  buf	- 字节数组起始地址
+		  size	- 打印的字节数， 最大1024
+* 返回值：void
+*/
+void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
+{
+#if Log_On
+	const char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
+	uint16 i = 0;
+	uint8 *tmp;
+
+	tmp = (uint8 *) _malloc(1024);
+	while(size--){
+		tmp[i++] = decHex[*buf >> 4];
+		tmp[i++] = decHex[*buf & 0x0F];
+		tmp[i++] = ' ';
+		buf++;
+	}
+	tmp[i++] = '\0';
+
+	LogPrint(LogName, "%s%s", title, tmp);
+	_free(tmp);
+
+#endif
+}
+
 /*
 * 函数名：ShowProgressBar
 * 描  述：显示进度条
@@ -349,10 +393,6 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 		pr++;
 		col++;
 	}
-
-#if LogEnable
-	LogToFile(LogName, " lineCnt: %d \n disp: %s", lineCnt, buf);
-#endif
 
 	return lineCnt;
 }
