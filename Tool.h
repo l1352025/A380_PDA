@@ -264,7 +264,7 @@ uint8 GetInputNumStr(UI_Item inputSt)
 *		 isClear	- 输入时是否清空
 * 返回值：void
 */
-void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear)
+void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *text, uint8 maxLen, uint8 width, bool isClear)
 {
 	item->x = x;
 	item->y = y;
