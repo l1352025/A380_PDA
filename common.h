@@ -13,19 +13,19 @@ typedef unsigned char bool;
 #endif
 
 #define Debug_On    0           // 调试日志开关
-#define Log_On      0           // 调试日志开关
+#define Log_On      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
-#define LogScom_On  1           // 日志串口开关：1- 输出到串口No.2，0 -输出到文件
+#define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
 
 
-#define VERSION_Name    "桑锐6009手持机"     // 程序名
-#define VERSION_RevNo   "1.0"               // 版本号
-#define VERSION_Date    "2019-5-9"          // 版本日期
+#define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
+#define VerInfo_RevNo   (char *)"1.0"               // 版本号
+#define VerInfo_RevDate (char *)"2019-5-16"         // 版本日期
 
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10      // 最大UI控件数
-#define RxBeep_On   0       // 调试日志开关
+#define RxBeep_On   1       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
         物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
@@ -47,10 +47,12 @@ typedef unsigned char bool;
 
 #if defined(Project_6009_IR)
 	#define CurrPort    Trans_IR                
-	#define CurrBaud    (uint8 *)"4800,E,8,1"	
+	#define CurrBaud    (uint8 *)"4800,E,8,1"
+    #define TransType   "红外透传"      // 通信方式	
 #else //defined(Project_6009_RF)
 	#define CurrPort    Trans_IR_Quick          
-	#define CurrBaud    (uint8 *)"9600,E,8,1"	
+	#define CurrBaud    (uint8 *)"9600,E,8,1"
+    #define TransType   "Lora透传"      // 通信方式	
 #endif
 
 typedef enum{
@@ -130,6 +132,7 @@ extern uint8 RxBuf[1080];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[7];
 extern uint8 DstAddr[7];
+extern uint8 VerInfo[41];
 extern uint8 StrBuf[10][TXTBUF_LEN];    // extend input buffer
 extern uint8 StrDstAddr[TXTBUF_LEN];
 extern uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN];

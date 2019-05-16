@@ -93,7 +93,7 @@ void LogPrint(const char * fileName, const char * format, ...)
 
 #if LogScom_On
 	_CloseCom();
-	_ComSetTran(Trans_Scom);
+	_ComSetTran(CurrPort);
 	_ComSet((uint8 *)"115200,E,8,1", 2);
 	_SendComStr(buf, len);
 	_CloseCom();
@@ -453,8 +453,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
 	static uint8 buf[512] = {0};
-	uint16 len; 
-	uint8 *pr = buf, col = 0; 
+	uint8 len;
 	va_list ap;
 
 	va_start(ap, format);
@@ -462,26 +461,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 	buf[len] = '\0';
 	va_end(ap);
 
-	// first line
-	_Printfxy(x, y, pr, 0);
-	
-	// next lines
-	len = 0;
-	while(*pr != '\0'){
-		if(*pr == '\n' || (x + col * 8) > 160){
-			col = 0;
-			x = 0;
-			y += 16;
-			pr = (*pr == '\n' ? pr + 1 : pr);
-
-			if(*pr == '\0'){
-				break;
-			}
-			_Printfxy(x, y, pr, Color_White);
-		}
-		pr++;
-		col++;
-	}
+	PrintfXyMultiLine(x, y, buf, 10);	// 最大显示10行
 }
 
 /*

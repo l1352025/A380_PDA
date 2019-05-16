@@ -480,7 +480,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 {
 	static uint8 Fsn = 0;
 	static uint16 index = 0;
-	uint8 i, crc8;
+	uint8 i, cmd , crc8;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
@@ -492,8 +492,9 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 	buf[index++] = 0x00;		// 长度： 报文标识 --> 结束符16
 	buf[index++] = 0x00;	
 	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1
-	buf[index++] = Fsn++;	// 任务号： mac fsn 发起方自累加
-	buf[index++] = *args->items[0];		// 命令字
+	buf[index++] = Fsn++;		// 任务号： mac fsn 发起方自累加
+	cmd = *args->items[0];
+	buf[index++] = cmd;			// 命令字
 	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， 10 - 冷水表， 11 - GPRS水表
 	buf[index++] = 0x0F;		// 生命周期
 	buf[index++] = addrs->itemCnt & 0x0F;	// 路径信息:  当前位置|路径长度
@@ -509,7 +510,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 
 	buf[index++] = 0x00;		// 下行场强
 	buf[index++] = 0x00;		// 上行场强
-        // 长度计算
+    // 长度计算
 	buf[2] = (uint8)(index & 0xFF);	
 	buf[3] = (uint8)(index >> 8);	
     
@@ -519,11 +520,11 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 
 		
 
-	if(cmdId < 0x40 || cmdId == 0x70 || cmdId == 0x74){
+	if(cmd < 0x40 || cmd == 0x70 || cmd == 0x74){
 		buf[index++] = 0x1E;	// 导言长度标识
 		buf[index++] = 0x03;	// 表端APP时 发送信道
 		buf[index++] = 0x19;	// 表端APP时 接收信道
-	}else if(cmdId > 0x70 && cmdId < 0x74){
+	}else if(cmd > 0x70 && cmd < 0x74){
 		buf[index++] = 0x1E;	// 导言长度标识
 		buf[index++] = 0x03;	// 表端Boot时 发送信道
 		buf[index++] = 0x19;	// 表端Boot时 接收信道
@@ -795,9 +796,10 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		ret = true;
 		index += 84;
-		memcpy(TmpBuf, &buf[index], 40);
-		TmpBuf[40] = 0x00;
-		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %s\n", TmpBuf);
+		memcpy(VerInfo, &buf[index], 40);
+		memcpy(&TmpBuf[1020], &buf[index], 40);
+		TmpBuf[1060] = 0x00;
+		dispIdx += sprintf(&disps->buf[dispIdx], "版本: %s\n", &TmpBuf[1020]);
 		index += 40;
 		break;
 
@@ -983,7 +985,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		}
 		break;
 
-	case WaterCmd_ReadAlarmLimitOverdraft:		// 读报警限值透支
+	case WaterCmd_ReadAlarmLimitOverdraft:		// 读报警关阀限值
 		if(rxlen < index + 1 && cmd != 0x17){
 			break;
 		}
@@ -997,8 +999,8 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			dispIdx += sprintf(&disps->buf[dispIdx], "报警限值: %d\n", buf[index]);
 			index += 1;
 			u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "透支用量: %s%d\n", 
-				(u16Tmp & 0x8000 > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
+			dispIdx += sprintf(&disps->buf[dispIdx], "关阀限值: %s%d\n", 
+				((u16Tmp & 0x8000) > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
 			index += 2;
 		}
 		break;
@@ -1010,26 +1012,185 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			break;
 		}
 		ret = true;
-		if(buf[index] == 0xAB){
-			dispIdx += sprintf(&disps->buf[dispIdx], "结果: 操作失败\n");
-			index += 1;
-			index += 1;		// 失败原因
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		// 新版可能+ 2 byte
+		break;
+
+	//--------------------------------------		工作参数	---------------------
+	case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
 		}
-		else if(buf[index] == 0xAA){
-			dispIdx += sprintf(&disps->buf[dispIdx], "结果: 操作成功\n");
-			index += 1;
-			dispIdx += sprintf(&disps->buf[dispIdx], "报警限值: %d\n", buf[index]);
-			index += 1;
-			u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
-			dispIdx += sprintf(&disps->buf[dispIdx], "关阀限值: %s%d\n", 
-				(u16Tmp & 0x8000 > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
-			index += 2;
+		ret = true;
+
+		break;
+
+	case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
 		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetTimedUpload:		// 设置定时上传
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetFixedValUpload:	// 设置定量上传
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_ReadMeterTime:	// 读表端时钟
+		if(rxlen < index + 7 && cmd != 0x13){
+			break;
+		}
+		ret = true;
+		dispIdx += sprintf(&disps->buf[dispIdx], "表端时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
+			, buf[index + 4], buf[index + 5], buf[index + 6]);
+		index += 7;
+		break;
+
+	case WaterCmd_SetMeterTime:		// 校表端时钟
+		if(rxlen < index + 1 && cmd != 0x14){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		dispIdx += sprintf(&disps->buf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 
+	//--------------------------------------		其他操作		---------------------
+	case WaterCmd_ReadRxTxMgnDistbCnt:		// 读收/发/磁扰次数
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+
+		break;
+
+	case WaterCmd_ReadRxdAndTxdChanel:	// 读取RXD和TXD信道
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetRxdAndTxdChanel:	// 设置RXD和TXD信道
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetOperatorNumber:		// 设置运营商编号
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_SetDefinedRoute:	// 路径下发
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	//--------------------------------------		程序升级		---------------------
+	case WaterCmd_SingleUpgrade:		// 单表升级
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+
+		break;
+
+	case WaterCmd_QueryUpgrade:			// 查询升级
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_BroadcastUpgrade:		// 广播升级
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_DocAdd:			// 添加档案
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_DocDelete:		// 删除档案
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_DocQuery:			// 查询档案
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
+
+	case WaterCmd_UpgradeStatistics:	// 升级统计
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		
+		break;
 		
 	default:
+		ret = true;
+		dispIdx += sprintf(&disps->buf[dispIdx], "该命令[%02X]暂未解析\n", cmd);
 		break;
 	}
 

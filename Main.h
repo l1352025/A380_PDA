@@ -17,7 +17,7 @@ uint8 RxBuf[1080];
 uint32 RxLen, TxLen;
 const uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
 uint8 DstAddr[7];
-uint8 VersionInfo[40];
+uint8 VerInfo[41];
 uint8 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
@@ -26,6 +26,18 @@ uint8 StrBuf[10][TXTBUF_LEN];    // extend input buffer
 uint8 StrDstAddr[TXTBUF_LEN];
 uint8 StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
+
+
+//----------------------------------	版本信息		--------------------------
+void VersionInfoFunc(void)
+{
+	PrintfXyMultiLine_VaList(0, 0*16, "  %s ", VerInfo_Name);
+	PrintfXyMultiLine_VaList(0, 1*16, "版 本 号：%s", VerInfo_RevNo);
+	PrintfXyMultiLine_VaList(0, 2*16, "版本日期：%s", VerInfo_RevDate);
+	PrintfXyMultiLine_VaList(0, 3*16, "通信方式：%s", TransType);
+
+	_ReadKey();
+}
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
 /*
@@ -68,7 +80,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	do{
 		// 发送 
 		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, sendCnt);
-		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		_SendComStr(TxBuf, TxLen);
 		sendCnt++;
 		if(sendCnt == 1){
@@ -83,11 +95,12 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		}
 
 		// 接收
-		_GetComStr(TmpBuf, 1024, 100/10);	// clear , 100ms timeout
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
 		waitTime = 0;
 		lastRxLen = 0;
-		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %d s ", RxLen, ackLen, (timeout / 1000));
+		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %s s  ", RxLen, ackLen, TmpBuf);
 
 		do{
 			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 10);	// 100ms 检测接收
@@ -110,7 +123,8 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			}
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  ", RxLen, ackLen);
+		_DoubleToStr(TmpBuf, (double)(waitTime / 1000), 1);
+		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  %s s  ", RxLen, ackLen, TmpBuf);
 
 #if Log_On
 		LogPrintBytes("Tx: ", TxBuf, TxLen);
@@ -1583,17 +1597,19 @@ void WaterCmdFunc_TestCmd(void)
 					continue;
 				}
 				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+				i = 0;
 				Args.buf[i++] = 0x04;		// 命令字	04
 				ackLen = 128;				// 应答长度 128	
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
 				if(true == Protol6009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
+					i = 0;
 					Args.buf[i++] = 0x07;		// 命令字	07
 					ackLen = 1;					// 应答长度 1	
 					// 数据域
 					Args.buf[i++] = 0x10;		// 命令选项 10	
-					memcpy(&Args.buf[i], &Disps.buf[6], 40);	
+					memcpy(&Args.buf[i], VerInfo, 40);	
 					i += 40;					// 软件版本号
 					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[0], 0, false);
 					i += 6;						// 新地址
@@ -1877,7 +1893,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 	_ClearScreen();
 
-	// 菜单
+	// 菜单`
 	menuList.title = "<<预缴用量";
 	menuList.no = 6;
 	menuList.MaxNum = 6;
@@ -1887,7 +1903,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 	menuList.with = 10 * 16;
 	menuList.str[0] = "  1. 读预缴参考用量";
 	menuList.str[1] = "  2. 设预缴参考用量";
-	menuList.str[2] = "  3. 读报警限值透支";
+	menuList.str[2] = "  3. 读报警关阀限值";
 	menuList.str[3] = "  4. 设报警限值";
 	menuList.str[4] = "  5. 设关阀限值";
 	menuList.str[5] = "  6. 设报警关阀限值";
@@ -1956,7 +1972,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			case WaterCmd_SetPrepaidRefVal:		// " 设预缴参考用量 "
 				/*---------------------------------------------*/
 				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "预缴用量:", StrBuf[0], 10, 11*8, true);
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "参考用量:", StrBuf[1], 10, 11*8, true);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "参考用量:", StrBuf[1], 10, 11*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
@@ -1974,7 +1990,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				u32Temp = (uint32)_atof(StrBuf[0]);
-				u16Temp = (_atof(StrBuf[0]) - u32Temp) * 10000;
+				u16Temp = (_atof(StrBuf[0]) - u32Temp) * 1000;
 				Args.buf[i++] = (uint8)(u32Temp & 0xFF);		// 预缴用量	
 				Args.buf[i++] = (uint8)((u32Temp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Temp >> 16) & 0xFF);
@@ -1982,7 +1998,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				Args.buf[i++] = (uint8)(u16Temp & 0xFF);		
 				Args.buf[i++] = (uint8)((u16Temp >> 8) & 0xFF);
 				u32Temp = (uint32)_atof(StrBuf[1]);
-				u16Temp = (_atof(StrBuf[1]) - u32Temp) * 10000;
+				u16Temp = (_atof(StrBuf[1]) - u32Temp) * 1000;
 				Args.buf[i++] = (uint8)(u32Temp & 0xFF);		// 参考起始用量	
 				Args.buf[i++] = (uint8)((u32Temp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Temp >> 16) & 0xFF);
@@ -2047,7 +2063,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				ackLen = 4;					// 应答长度 4	
 				// 数据域
 				Args.buf[i++] = 0x01;		// 命令选项：0- 报警限值 1-关阀限值  2-报警限值+关阀限值	
-				Args.buf[i++] = (uint8)u32Temp;		// 关阀限值
+				Args.buf[i++] = (uint8)(u32Temp & 0xFF);	// 关阀限值
 				Args.buf[i++] = (uint8)(u32Temp >> 8);
 				Args.lastItemLen = i - 1;
 				break;
@@ -2055,7 +2071,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			case WaterCmd_SetAlarmAndCloseValveLimit:		// " 设报警关阀限值 ";
 				/*---------------------------------------------*/
 				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "报警限值:", StrBuf[0], 3, 11*8, true);
-				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 6*16, "关阀限值:", StrBuf[1], 5, 11*8, true);
+				TextBoxCreate(&pUiItems[(*pUiCnt)++], 0, 7*16, "关阀限值:", StrBuf[1], 5, 11*8, true);
 				if(KEY_CANCEL == (key = ShowUI(UiList, &currUiItem))){
 					break;
 				}
@@ -2072,21 +2088,21 @@ void WaterCmdFunc_PrepaiedVal(void)
 				}
 				if(StrBuf[1][0] == 0x00){
 					sprintf(StrBuf[1], " 请输入");
-					currUiItem = 4;
+					currUiItem = 5;
 					continue;
 				}
 				u32Temp = (uint32)_atof(StrBuf[1]);
 				if(u16Temp > 65535){
 					sprintf(StrBuf[1], " 0-65535");
-					currUiItem = 4;
+					currUiItem = 5;
 					continue;
 				}
 				Args.buf[i++] = 0x18;		// 命令字	18
 				ackLen = 4;					// 应答长度 4	
 				// 数据域
 				Args.buf[i++] = 0x02;		// 命令选项：0- 报警限值 1-关阀限值  2-报警限值+关阀限值	
-				Args.buf[i++] = (uint8)u16Temp;		// 报警限值
-				Args.buf[i++] = (uint8)u32Temp;		// 关阀限值
+				Args.buf[i++] = (uint8)u16Temp;				// 报警限值
+				Args.buf[i++] = (uint8)(u32Temp & 0xFF);	// 关阀限值
 				Args.buf[i++] = (uint8)(u32Temp >> 8);
 				Args.lastItemLen = i - 1;
 				break;
@@ -2829,6 +2845,7 @@ void MainFuncReadMeterTime(void)
 
 		if(StrDstAddr[0] == 0x00 ){
 			sprintf(StrDstAddr, "请先输入表号");
+			currUiItem = 0;
 			continue;
 		}
 
@@ -2925,7 +2942,7 @@ void MainFuncSetMeterTime(void)
 		StrBuf[5][0] = TmpBuf[226];	// second
 		StrBuf[5][1] = TmpBuf[227];
 		StrBuf[5][2] = 0x00;
-		_Printfxy(0, 6*16, "时 间:", Color_White);
+		_Printfxy(0, 6*16, "时 间:             ", Color_White);
 		TextBoxCreate(&pUiItems[(*pUiCnt)++], 0*8, 7*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 		TextBoxCreate(&pUiItems[(*pUiCnt)++], 5*8, 7*16, "-", StrBuf[1], 2, 2*8, false);	// MM
 		TextBoxCreate(&pUiItems[(*pUiCnt)++], 8*8, 7*16, "-", StrBuf[2], 2, 2*8, false);	// dd
@@ -2937,17 +2954,9 @@ void MainFuncSetMeterTime(void)
 		}
 		
 		for(i = 0; i < 6; i ++){
-			if(StrBuf[i][0] == 0x00 || StrBuf[i][0] == '0' ){
-				_Printfxy(0, 8*16, "请输入正确的时间", Color_White);
-				key = KEY_NOHOOK;
-				break;
-			}
-		}
-		if(key == KEY_NOHOOK){	
-			key = _ReadKey();		// show err msg and wait key
-			if (key != KEY_CANCEL){
-				break;
-			}else{
+			if(StrBuf[i][0] == 0x00 || StrBuf[0][0] == '0' ){
+				_Printfxy(0, 6*16, "时 间: 请输入有效值 ", Color_White);
+				currUiItem = 4;
 				continue;
 			}
 		}
@@ -2956,11 +2965,12 @@ void MainFuncSetMeterTime(void)
 			StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
 		_SetDateTime(&TmpBuf[200]);
 
+		i = 0;
 		Args.buf[i++] = 0x14;		// 命令字	14
 		ackLen = 2;					// 应答长度 2	
 		// 数据域
-		Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-		Args.buf[i++] = _GetYear()%100;		
+		Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
+		Args.buf[i++] = (uint8)(_GetYear()%100);		
 		Args.buf[i++] = _GetMonth();		
 		Args.buf[i++] = _GetDay();			
 		Args.buf[i++] = _GetHour();			
@@ -2974,6 +2984,7 @@ void MainFuncSetMeterTime(void)
 
 		if(StrDstAddr[0] == 0x00 ){
 			sprintf(StrDstAddr, "请先输入表号");
+			currUiItem = 0;
 			continue;
 		}
 
@@ -2985,6 +2996,13 @@ void MainFuncSetMeterTime(void)
 		ackLen += 14 + Addrs.itemCnt * 6;
 		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
 		tryCnt = 3;
+
+#if Log_On
+		LogPrint(LogName, "Addrs.itemCnt : %d, Args.itemCnt %d, Args.lastItemLen %d\n"
+			, Addrs.itemCnt, Args.itemCnt, Args.lastItemLen);
+		LogPrintBytes("addr buf: ", Addrs.buf, Addrs.itemCnt * 6 + 7);
+		LogPrintBytes("args buf: ", Args.buf, Args.lastItemLen + 7);
+#endif
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -3287,7 +3305,7 @@ void MainFuncEngineerDebuging(void)
 	menu.key[2] = "3";
 	menu.Function[0] = WaterCmdFunc;
 	menu.Function[1] = CenterCmdFunc;
-	menu.Function[2] = CenterCmdFunc;
+	menu.Function[2] = VersionInfoFunc;
 	menu.FunctionEx = 0;
 	_Menu(&menu);
 }
