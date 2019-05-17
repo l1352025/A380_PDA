@@ -476,7 +476,7 @@ char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
 		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
 * 返回值：uint8 帧总长度
 */
-uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, ParamsBuf *args, uint8 retryCnt)
+uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
 	static uint8 Fsn = 0;
 	static uint16 index = 0;
@@ -548,7 +548,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint8 cmdId, Para
 *		  dispBuf 	- 解析的显示数据
 * 返回值：bool 解析结果：fasle - 失败 ， true - 成功
 */
-bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint8 cmdId, uint16 ackLen, char *dispBuf)
+bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
 	bool ret = false;
 	uint8 crc8, addrsCnt, cmd, i, u8Tmp;
@@ -556,9 +556,14 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	uint32 u32Tmp;
 	char *ptr;
 
-	// 显示表号
 	dispIdx = 0;
-	dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
+
+	// 显示表号 或 集中器号
+	if(cmdId < 0x1010){
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
+	}else{
+		dispIdx += sprintf(&dispBuf[dispIdx], "集中器号: \n      %s\n", StrDstAddr);
+	}
 
 	// 缓冲区多包中查找
 	while(1){
@@ -611,11 +616,26 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 	// 跳过 地址域
 	index += addrsCnt * 6;
 
+	// 集中器转发的命令头部
+	if(cmd == 0x4D){
+		// 命令字
+		cmd = buf[index];
+		index += 1;
+		// 目标地址 跳过
+		index += 6;
+		// 转发结果
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+	}
 
 	// 数据域解析
 	payloadIdx = index;
 	switch(cmdId){
 	
+	//-------------------------------------------------------------------------------------------------
+	//--------------------------------------	表端命令 0x01 ~ 0x25 , 70 ~ 74		--------------------
+	//-------------------------------------------------------------------------------------------------
 	//----------------------------------------		读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 
@@ -1129,6 +1149,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		
 		break;
 
+
 	//--------------------------------------		程序升级		---------------------
 	case WaterCmd_SingleUpgrade:		// 单表升级
 		if(rxlen < index + 12 && cmd != 0x15){
@@ -1185,7 +1206,192 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		ret = true;
 		
 		break;
-		
+
+
+	//-------------------------------------------------------------------------------------------------
+	//--------------------------------------	集中器命令 0x40 ~ 0x65 , F1 ~ F3	--------------------
+	//-------------------------------------------------------------------------------------------------
+	//--------------------------------------		常用操作		-------------------------------------
+	case CenterCmd_ReadCenterNo:	// 读集中器号
+		if(rxlen < index + 12 && cmd != 0x15){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadCenterVer:		// 读集中器版本
+		if(rxlen < index + 2 && cmd != 0x16){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadCenterTime:		// 读集中器时钟
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_SetCenterTime:		// 设集中器时钟
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadGprsParam:		// 读GPRS参数
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_SetGprsParam:		// 设GPRS参数
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadGprsSignal:		// 读GPRS信号强度
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_InitCenter:		// 集中器初始化
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadCenterWorkMode:		// 读集中器工作模式
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+
+	//--------------------------------------		档案操作：		-------------------------------------
+	case CenterCmd_ReadDocCount:		// 读档案数量
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadDocInfo:			// 读档案信息
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_AddDocInfo:			// 添加档案信息
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_DeleteDocInfo:			// 删除档案信息
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_ModifyDocInfo:			// 修改档案信息
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	//--------------------------------------		路径设置：		-------------------------------------
+	case CenterCmd_ReadDefinedRoute:		// 读自定义路由
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case CenterCmd_SetDefinedRoute:			// 设自定义路由
+		if(rxlen < index + 1 && cmd != 0x17){
+			break;
+		}
+		ret = true;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+
 	default:
 		ret = true;
 		dispIdx += sprintf(&dispBuf[dispIdx], "该命令[%02X]暂未解析\n", cmd);

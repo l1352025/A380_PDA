@@ -19,7 +19,7 @@ uint32 RxLen, TxLen;
 const uint8 LocalAddr[7] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00};	// 地址 201900002019，12字符
 uint8 DstAddr[7];
 uint8 VerInfo[41];
-uint8 CurrCmd;
+uint16 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
 char StrBuf[10][TXTBUF_LEN];    // extend input buffer
@@ -86,12 +86,14 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		if(sendCnt == 1){
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "状态: 命令发送      ", Color_White);
+			//_Printfxy(0, 9*16, "状态: 命令发送      ", Color_White);
+			_Printfxy(0, 9*16, " <  命令发送...  >  ", Color_White);
 		}
 		else{
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			PrintfXyMultiLine_VaList(0, 9*16, "状态: 命令重发 %d    ", sendCnt);
+			//PrintfXyMultiLine_VaList(0, 9*16, "状态: 命令重发 %d    ", sendCnt);
+			PrintfXyMultiLine_VaList(0, 9*16, " <  命令重发...%d  > ", sendCnt);
 		}
 
 		// 接收
@@ -100,18 +102,26 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		waitTime = 0;
 		lastRxLen = 0;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
-		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d  %s s  ", RxLen, ackLen, TmpBuf);
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n预计等待 %s s  ", RxLen, ackLen, TmpBuf);
 
 		do{
+
 			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 10);	// 100ms 检测接收
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-				_Printfxy(0, 9*16, "状态: 命令已取消    ", Color_White);
+				_Printfxy(0, 6*16, "命令已取消         ", Color_White);
+				_Printfxy(0, 9*16, "返回  <已取消>  继续", Color_White);
 				DispBuf[0] = 0x00;
 				return false;
 			}
 			waitTime += 100;
+
+			if(waitTime % 1000 == 0){
+				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
+				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n预计等待 %s s  ", RxLen, ackLen, TmpBuf);
+			}
+
 			if(lastRxLen > 0){
 				if(lastRxLen != RxLen){
 					lastRxLen = RxLen;
@@ -124,8 +134,9 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			}
 		}while(RxLen < ackLen && waitTime < timeout);
 
-		_DoubleToStr(TmpBuf, (double)(waitTime / 1000), 1);
-		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d  %s s  ", RxLen, ackLen, TmpBuf);
+		if(waitTime >= timeout){
+			PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
+		}
 
 #if Log_On
 		LogPrintBytes("Tx: ", TxBuf, TxLen);
@@ -146,7 +157,8 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		//------------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "状态: 命令成功      ", Color_White);
+		//_Printfxy(0, 9*16, "状态: 命令成功      ", Color_White);
+		_Printfxy(0, 9*16, "返回  < 成功 >  继续", Color_White);
 	}
 	else{
 #if RxBeep_On
@@ -157,7 +169,8 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 #endif
 		//-----------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "状态: 命令失败      ", Color_White);
+		//_Printfxy(0, 9*16, "状态: 命令失败      ", Color_White);
+		_Printfxy(0, 9*16, "返回  < 失败 >  继续", Color_White);
 	}
 
 	_CloseCom();
@@ -189,22 +202,22 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	}
 
 	lineCnt = GetPrintLines(0, DispBuf, lines);
-	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);
+	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
 
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
 
 		if(lineCnt > lineMax){
 			if(currLine < lineCnt - lineMax){
-				PrintXyTriangle(9*16, 9*16, 1);		// ▼
+				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
 			}else{
-				_Printfxy(9*16, 9*16, "  ", Color_White);
+				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
 			}
 
 			if(currLine > 0){
-				PrintXyTriangle(9*16, 8, 0);		// ▲
+				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
 			}else{
-				_Printfxy(9*16, 0, "  ", Color_White);
+				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
 			}
 		}
 
@@ -283,6 +296,8 @@ void CenterCmdFunc_CommonCmd(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -296,7 +311,7 @@ void CenterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -450,6 +465,7 @@ void CenterCmdFunc_CommonCmd(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -500,6 +516,8 @@ void CenterCmdFunc_DocumentOperation(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -513,7 +531,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -667,6 +685,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -714,6 +733,8 @@ void CenterCmdFunc_RouteSetting(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -727,7 +748,7 @@ void CenterCmdFunc_RouteSetting(void)
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -881,6 +902,7 @@ void CenterCmdFunc_RouteSetting(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -933,6 +955,8 @@ void CenterCmdFunc_CommandTransfer(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -946,7 +970,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			/*---------------------------------------------*/
 //----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1100,6 +1124,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -1194,7 +1219,7 @@ void WaterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1364,6 +1389,7 @@ void WaterCmdFunc_CommonCmd(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -1427,13 +1453,13 @@ void WaterCmdFunc_TestCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1612,11 +1638,13 @@ void WaterCmdFunc_TestCmd(void)
 					}
 				}
 
-				// 继续 / 返回
 				key = _ReadKey();
+
+				// 继续 / 返回
 				if (key == KEY_CANCEL){
 					break;
 				}else{
+					isUiFinish = false;
 					continue;
 				}
 				break;
@@ -1672,6 +1700,7 @@ void WaterCmdFunc_TestCmd(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -1724,6 +1753,8 @@ void WaterCmdFunc_Upgrade(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -1731,13 +1762,13 @@ void WaterCmdFunc_Upgrade(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1895,6 +1926,7 @@ void WaterCmdFunc_Upgrade(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -1961,7 +1993,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -2032,7 +2064,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			case WaterCmd_ReadAlarmLimitOverdraft:	// " 读报警限值透支 "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
 				Args.buf[i++] = 0x17;		// 命令字	17
@@ -2188,6 +2220,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -2241,6 +2274,8 @@ void WaterCmdFunc_WorkingParams(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -2248,12 +2283,12 @@ void WaterCmdFunc_WorkingParams(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -2411,6 +2446,7 @@ void WaterCmdFunc_WorkingParams(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -2461,6 +2497,8 @@ void WaterCmdFunc_Other(void)
 			break;
 		}
 		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		while(1){
 			
@@ -2468,12 +2506,12 @@ void WaterCmdFunc_Other(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -2630,6 +2668,7 @@ void WaterCmdFunc_Other(void)
 			if (key == KEY_CANCEL){
 				break;
 			}else{
+				isUiFinish = false;
 				continue;
 			}
 		}
@@ -2683,6 +2722,9 @@ void MainFuncReadRealTimeData(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
+	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	isUiFinish = false;
+
 	while(1){
 		
 		_ClearScreen();
@@ -2693,7 +2735,7 @@ void MainFuncReadRealTimeData(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2708,11 +2750,23 @@ void MainFuncReadRealTimeData(void)
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_ReadRealTimeData;	// "读取用户用量"
 
-		Args.buf[i++] = 0x01;		// 命令字	01
-		ackLen = 21;				// 应答长度 21	
-		// 数据域
-		Args.buf[i++] = 0x00;				// 数据格式 00	
-		Args.lastItemLen = i - 1;
+		
+		switch(CurrCmd){
+		case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x01;		// 命令字	01
+			ackLen = 21;				// 应答长度 21	
+			// 数据域
+			Args.buf[i++] = 0x00;				// 数据格式 00	
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -2760,6 +2814,7 @@ void MainFuncReadRealTimeData(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -2793,7 +2848,7 @@ void MainFuncReadFrozenData(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2807,30 +2862,39 @@ void MainFuncReadFrozenData(void)
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
-		/*---------------------------------------------*/
-		if(false == isUiFinish){
-			sprintf(StrBuf[0], "0 (0-9有效)");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
-		}
-		if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-			currUi = 1;
-			isUiFinish = false;
-			continue;
-		}
+		
+		switch(CurrCmd){
+		case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				sprintf(StrBuf[0], "0 (0-9有效)");
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
+				break;
+			}
+			
+			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+				currUi = 1;
+				isUiFinish = false;
+				continue;
+			}
+			Args.buf[i++] = 0x02;		// 命令字	02
+			ackLen = 114;				// 应答长度 88/114	
+			// 数据域
+			Args.buf[i++] = 0x01;				// 数据格式 01/02
+			Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+			Args.buf[i++] = _GetYear()%100;		
+			Args.buf[i++] = _GetMonth();		
+			Args.buf[i++] = _GetDay();			
+			Args.buf[i++] = _GetHour();			
+			Args.buf[i++] = _GetMin();			
+			Args.buf[i++] = _GetSec();			
+			Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
+			Args.lastItemLen = i - 1;
+			break;
 
-		Args.buf[i++] = 0x02;		// 命令字	02
-		ackLen = 114;				// 应答长度 88	
-		// 数据域
-		Args.buf[i++] = 0x02;				// 数据格式 01/02
-		Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-		Args.buf[i++] = _GetYear()%100;		
-		Args.buf[i++] = _GetMonth();		
-		Args.buf[i++] = _GetDay();			
-		Args.buf[i++] = _GetHour();			
-		Args.buf[i++] = _GetMin();			
-		Args.buf[i++] = _GetSec();			
-		Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
-		Args.lastItemLen = i - 1;
+		default: 
+			break;
+		}
 				
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -2878,6 +2942,7 @@ void MainFuncReadFrozenData(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -2898,6 +2963,9 @@ void MainFuncReadMeterTime(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
+	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	isUiFinish = false;
+
 	while(1){
 		
 		_ClearScreen();
@@ -2908,7 +2976,7 @@ void MainFuncReadMeterTime(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2923,10 +2991,19 @@ void MainFuncReadMeterTime(void)
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_ReadMeterTime;	// 读取表端时钟
 
-		Args.buf[i++] = 0x13;		// 命令字	13
-		ackLen = 7;					// 应答长度 7	
-		Args.lastItemLen = i - 1;
-
+		switch(CurrCmd){
+		case WaterCmd_ReadMeterTime:		// "读取表端时钟"
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x13;		// 命令字	13
+			ackLen = 7;					// 应答长度 7	
+			Args.lastItemLen = i - 1;
+			break;
+		default:
+			break;
+		}
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
 			for(i = 0; i < RELAY_MAX; i++){
@@ -2973,6 +3050,7 @@ void MainFuncReadMeterTime(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -3006,7 +3084,7 @@ void MainFuncSetMeterTime(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -3021,63 +3099,73 @@ void MainFuncSetMeterTime(void)
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_SetMeterTime;	// 设置表端时钟
 
-		_GetDate(&TmpBuf[200], '-');
-		_GetTime(&TmpBuf[220], ':');
-		StrBuf[0][0] = TmpBuf[200];		// year
-		StrBuf[0][1] = TmpBuf[201];
-		StrBuf[0][2] = TmpBuf[202];
-		StrBuf[0][3] = TmpBuf[203];
-		StrBuf[0][4] = 0x00;
-		StrBuf[1][0] = TmpBuf[205];		// month
-		StrBuf[1][1] = TmpBuf[206];
-		StrBuf[1][2] = 0x00;
-		StrBuf[2][0] = TmpBuf[208];	// day
-		StrBuf[2][1] = TmpBuf[209];
-		StrBuf[2][2] = 0x00;
-		StrBuf[3][0] = TmpBuf[220];	// hour
-		StrBuf[3][1] = TmpBuf[221];
-		StrBuf[3][2] = 0x00;
-		StrBuf[4][0] = TmpBuf[223];	// minute
-		StrBuf[4][1] = TmpBuf[224];
-		StrBuf[4][2] = 0x00;
-		StrBuf[5][0] = TmpBuf[226];	// second
-		StrBuf[5][1] = TmpBuf[227];
-		StrBuf[5][2] = 0x00;
+		switch(CurrCmd){
+		case WaterCmd_SetMeterTime:		// "设置表端时钟"
+			/*---------------------------------------------*/
+			_GetDate(&TmpBuf[200], '-');
+			_GetTime(&TmpBuf[220], ':');
+			StrBuf[0][0] = TmpBuf[200];		// year
+			StrBuf[0][1] = TmpBuf[201];
+			StrBuf[0][2] = TmpBuf[202];
+			StrBuf[0][3] = TmpBuf[203];
+			StrBuf[0][4] = 0x00;
+			StrBuf[1][0] = TmpBuf[205];		// month
+			StrBuf[1][1] = TmpBuf[206];
+			StrBuf[1][2] = 0x00;
+			StrBuf[2][0] = TmpBuf[208];	// day
+			StrBuf[2][1] = TmpBuf[209];
+			StrBuf[2][2] = 0x00;
+			StrBuf[3][0] = TmpBuf[220];	// hour
+			StrBuf[3][1] = TmpBuf[221];
+			StrBuf[3][2] = 0x00;
+			StrBuf[4][0] = TmpBuf[223];	// minute
+			StrBuf[4][1] = TmpBuf[224];
+			StrBuf[4][2] = 0x00;
+			StrBuf[5][0] = TmpBuf[226];	// second
+			StrBuf[5][1] = TmpBuf[227];
+			StrBuf[5][2] = 0x00;
 
-		if(false == isUiFinish){
-			_Printfxy(0, 6*16, "时 间:             ", Color_White);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
-			TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
-			TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
-			TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
-			TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
-			TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
-		}
-		
-		for(i = 0; i < 6; i ++){
-			if(StrBuf[i][0] == 0x00 || StrBuf[0][0] == '0' ){
-				_Printfxy(0, 6*16, "时 间: 请输入有效值 ", Color_White);
-				currUi = 4;
-				continue;
+			if(false == isUiFinish){
+				_Printfxy(0, 3*16, "时 间:             ", Color_White);
+				uiRowIdx = 4;
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+				TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+				TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+				TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+				TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+				TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+				break;
 			}
+			
+			for(i = 0; i < 6; i ++){
+				if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
+					_Printfxy(0, 3*16, "时 间: 请输入有效值 ", Color_White);
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+			}
+
+			sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+				StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+			_SetDateTime(&TmpBuf[200]);
+
+			i = 0;
+			Args.buf[i++] = 0x14;		// 命令字	14
+			ackLen = 2;					// 应答长度 2	
+			// 数据域
+			Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
+			Args.buf[i++] = (uint8)(_GetYear()%100);		
+			Args.buf[i++] = _GetMonth();		
+			Args.buf[i++] = _GetDay();			
+			Args.buf[i++] = _GetHour();			
+			Args.buf[i++] = _GetMin();			
+			Args.buf[i++] = _GetSec();	
+			Args.lastItemLen = i - 1;
+			break;
+		default:
+			break;
 		}
-
-		sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
-			StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
-		_SetDateTime(&TmpBuf[200]);
-
-		i = 0;
-		Args.buf[i++] = 0x14;		// 命令字	14
-		ackLen = 2;					// 应答长度 2	
-		// 数据域
-		Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
-		Args.buf[i++] = (uint8)(_GetYear()%100);		
-		Args.buf[i++] = _GetMonth();		
-		Args.buf[i++] = _GetDay();			
-		Args.buf[i++] = _GetHour();			
-		Args.buf[i++] = _GetMin();			
-		Args.buf[i++] = _GetSec();	
-		Args.lastItemLen = i - 1;
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -3125,6 +3213,7 @@ void MainFuncSetMeterTime(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -3145,6 +3234,9 @@ void MainFuncClearException(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
+	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	isUiFinish = false;
+
 	while(1){
 		
 		_ClearScreen();
@@ -3155,7 +3247,7 @@ void MainFuncClearException(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -3169,13 +3261,23 @@ void MainFuncClearException(void)
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
-		/*---------------------------------------------*/
+		
+		switch(CurrCmd){
+		case WaterCmd_ClearException:		// " 清异常命令 ";
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x05;		// 命令字	05
+			ackLen = 1;					// 应答长度 1	
+			// 数据域
+			Args.buf[i++] = 0x00;		// 命令选项 00	
+			Args.lastItemLen = i - 1;
+			break;
 
-		Args.buf[i++] = 0x05;		// 命令字	05
-		ackLen = 1;					// 应答长度 1	
-		// 数据域
-		Args.buf[i++] = 0x00;		// 命令选项 00	
-		Args.lastItemLen = i - 1;
+		default: 
+			break;
+		}
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -3223,6 +3325,7 @@ void MainFuncClearException(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -3243,6 +3346,9 @@ void MainFuncOpenValve(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
+	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	isUiFinish = false;
+
 	while(1){
 		
 		_ClearScreen();
@@ -3253,7 +3359,7 @@ void MainFuncOpenValve(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -3266,15 +3372,25 @@ void MainFuncOpenValve(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_OpenValve;			// " 开阀 "
-		/*---------------------------------------------*/
+		CurrCmd = WaterCmd_OpenValve;		// " 开阀 "
+		
+		switch(CurrCmd){
+		case WaterCmd_OpenValve:			// " 开阀 "
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x03;		// 命令字	03
+			ackLen = 3;					// 应答长度 3	
+			// 数据域
+			Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+			Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			Args.lastItemLen = i - 1;
+			break;
 
-		Args.buf[i++] = 0x03;		// 命令字	03
-		ackLen = 3;					// 应答长度 3	
-		// 数据域
-		Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-		Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
-		Args.lastItemLen = i - 1;
+		default: 
+			break;
+		}
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -3322,6 +3438,7 @@ void MainFuncOpenValve(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}
@@ -3342,6 +3459,9 @@ void MainFuncCloseValve(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
+	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	isUiFinish = false;
+
 	while(1){
 		
 		_ClearScreen();
@@ -3352,7 +3472,7 @@ void MainFuncCloseValve(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 -等待输入- 执行", Color_White);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -3366,14 +3486,24 @@ void MainFuncCloseValve(void)
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
 		CurrCmd = WaterCmd_CloseValve;		// " 关阀 ";
-		/*---------------------------------------------*/
+		
+		switch(CurrCmd){
+		case WaterCmd_OpenValveForce:		// " 强制开阀 ";
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x03;		// 命令字	03
+			ackLen = 3;					// 应答长度 3	
+			// 数据域
+			Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+			Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			Args.lastItemLen = i - 1;
+			break;
 
-		Args.buf[i++] = 0x03;		// 命令字	03
-		ackLen = 3;					// 应答长度 3	
-		// 数据域
-		Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-		Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
-		Args.lastItemLen = i - 1;
+		default: 
+			break;
+		}
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
@@ -3387,7 +3517,7 @@ void MainFuncCloseValve(void)
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
 
-			
+
 			key = ShowUI(UiList, &currUi);
 
 			if (key == KEY_CANCEL){
@@ -3421,6 +3551,7 @@ void MainFuncCloseValve(void)
 		if (key == KEY_CANCEL){
 			break;
 		}else{
+			isUiFinish = false;
 			continue;
 		}
 	}

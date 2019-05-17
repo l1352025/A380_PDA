@@ -475,15 +475,15 @@ void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
 	uint8 x1, y1;
 
 	if(direction == 0){
-		x1 = 15/2;
-		for(y1 = 0; y1 < 15/2 + 1; y1++){
-			_GUIHLine(x + x1, y + y1, x + 15 - x1, Color_Black);
+		x1 = 7/2;
+		for(y1 = 1; y1 <= 7/2 + 1; y1++){
+			_GUIHLine(x + x1, y + y1, x + 7 - x1, Color_Black);
 			x1--;
 		}
 	}else{
 		x1 = 0;
-		for(y1 = 0; y1 < 15/2 + 1; y1++){
-			_GUIHLine(x + x1, y + y1, x + 15 - x1, Color_Black);
+		for(y1 = 0; y1 < 7/2 + 1; y1++){
+			_GUIHLine(x + x1, y + y1, x + 7 - x1, Color_Black);
 			x1++;
 		}
 	}
