@@ -153,21 +153,21 @@ void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 
 /*
 * 描  述：获取输入的字符串
-* 参  数：inputSt - 输入框结构指针
-* 返回值：uint8  - 输入后返回的按键 ： 上/下键，确认键，取消键
+* 参  数：uiItem - Ui组件结构指针
+* 返回值：uint8  - 退出Ui组件时返回的按键 ： 上/下键，确认键，取消键
 */
-uint8 GetInputNumStr(UI_Item inputSt)
+static uint8 GetInputNumStr(UI_Item *uiItem)
 {
 	static uint8 keyBuf[TXTBUF_LEN] = {0};
 	uint8 key, cleared = false;
 	char keyStr[2] = {0};
 	int idx;
-	int x = inputSt.x1;
-	int y = inputSt.y1;
+	int x = uiItem->x1;
+	int y = uiItem->y1;
 
-	memcpy(keyBuf, inputSt.text, TXTBUF_LEN);
+	memcpy(keyBuf, uiItem->text, TXTBUF_LEN);
 	_Printfxy(x, y, keyBuf, Color_White);
-	_toxy(x, y + inputSt.height);
+	_toxy(x, y + uiItem->height);
 	_ShowCur();
 	idx = 0;
 
@@ -175,20 +175,20 @@ uint8 GetInputNumStr(UI_Item inputSt)
 		key = _ReadKey();
 
 		if((key >= KEY_0 && key <= KEY_9) 
-			||(key == KEY_DOT && idx > 0 && idx < inputSt.txtbox.dataLen -1)){
+			||(key == KEY_DOT && idx > 0 && idx < uiItem->txtbox.dataLen -1)){
 
-			if(inputSt.txtbox.isClear && cleared == false && idx == 0){
+			if(uiItem->txtbox.isClear && cleared == false && idx == 0){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
-				_GUIRectangleFill(inputSt.x1, inputSt.y1, 
-					(inputSt.x1 + inputSt.width), 
-					(inputSt.y1 + inputSt.height), Color_White);
+				_GUIRectangleFill(uiItem->x1, uiItem->y1, 
+					(uiItem->x1 + uiItem->width), 
+					(uiItem->y1 + uiItem->height), Color_White);
 				cleared = true;
 			}
 
 			keyBuf[idx] = key;
 			keyStr[0] = key;
 			_Printfxy(x, y, keyStr, Color_White);
-			if(idx != inputSt.txtbox.dataLen -1){
+			if(idx != uiItem->txtbox.dataLen -1){
 				idx++;
 				x += 8;
 			}
@@ -201,19 +201,19 @@ uint8 GetInputNumStr(UI_Item inputSt)
 		}
 		else if((key == KEY_RIGHT && keyBuf[idx] >= '0' && keyBuf[idx] <= '9')
 			|| (key == KEY_DOT)){
-			if(idx != inputSt.txtbox.dataLen - 1){
+			if(idx != uiItem->txtbox.dataLen - 1){
 				idx++;
 				x += 8;
 			}
 		}
 		else if(key == KEY_DELETE){
-			if(false == inputSt.txtbox.isClear){
+			if(false == uiItem->txtbox.isClear){
 				keyBuf[idx] = '0';
 				_Printfxy(x, y, "0", Color_White);
 				idx--;
 				x -= 8;
 			}
-			else if(idx == inputSt.txtbox.dataLen -1 && keyBuf[idx] != 0x00){
+			else if(idx == uiItem->txtbox.dataLen -1 && keyBuf[idx] != 0x00){
 				keyBuf[idx] = 0x00;
 				_Printfxy(x, y, " ", Color_White);
 			}
@@ -225,13 +225,13 @@ uint8 GetInputNumStr(UI_Item inputSt)
 			}
 			else if(idx == 0 && keyBuf[idx] != 0x00){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
-				_GUIRectangleFill(inputSt.x1, inputSt.y1, 
-					(inputSt.x1 + inputSt.width), 
-					(inputSt.y1 + inputSt.height), Color_White);
+				_GUIRectangleFill(uiItem->x1, uiItem->y1, 
+					(uiItem->x1 + uiItem->width), 
+					(uiItem->y1 + uiItem->height), Color_White);
 			}
 
 			if(idx < 0) idx = 0;
-			if(x < inputSt.x1) x = inputSt.x1;
+			if(x < uiItem->x1) x = uiItem->x1;
 		}
 		else if(key == KEY_UP || key == KEY_DOWN
 			|| key == KEY_ENTER || key == KEY_CANCEL){
@@ -241,14 +241,78 @@ uint8 GetInputNumStr(UI_Item inputSt)
 			// do nothing
 		}
 
-		_toxy(x, y + inputSt.height);
+		_toxy(x, y + uiItem->height);
 	}
 
 	if(key != KEY_CANCEL){
-		memcpy(inputSt.text, keyBuf, TXTBUF_LEN);
+		memcpy(uiItem->text, keyBuf, TXTBUF_LEN);
 	}
 
 	_HideCur();
+
+	return key;
+}
+
+/*
+* 描  述：获取选项列表框当前选项
+* 参  数：uiItem - Ui组件结构指针
+* 返回值：uint8  - 退出Ui组件时返回的按键 ： 上/下键，确认键，取消键
+*/
+static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
+{
+	uint8 key, isShowIcon = 1, cnt = 0;
+	uint8 x, y, idx, lastIdx = 0xFF;
+	char buf[21];
+
+	idx = *uiItem->combox.currIdx;
+	
+	while(1){
+
+		key = _GetKeyExt();
+
+		if(idx != lastIdx){
+			uiItem->text = uiItem->combox.strs[idx];
+			x = uiItem->x1 + (uiItem->width - strlen(uiItem->text)*8)/2;
+			y = uiItem->y1;
+			_GUIRectangleFill(uiItem->x1 + 16, y, uiItem->x1 + uiItem->width - 32, y + 16, Color_White);
+			_Printfxy(x, y, uiItem->text, Color_White);
+			lastIdx = idx;
+		}
+
+		if(isShowIcon && cnt == 3){
+			_Printfxy(uiItem->x1, uiItem->y1, "[ ", Color_White);
+			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, " ]", Color_White);
+			isShowIcon = 0;
+			cnt = 0;
+		}else if(!isShowIcon && cnt == 3){
+			_Printfxy(uiItem->x1, uiItem->y1, "  ", Color_White);
+			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, "  ", Color_White);
+			isShowIcon = 1;
+			cnt = 0;
+		}
+		_Sleep(100);
+		cnt++;
+
+		if(key == KEY_LEFT){
+			if(idx > 0){
+				idx--;
+			}
+		}
+		if(key == KEY_RIGHT){
+			if(idx < uiItem->combox.cnt -1){
+				idx++;
+			}
+		}
+		else if(key == KEY_UP || key == KEY_DOWN
+			|| key == KEY_ENTER || key == KEY_CANCEL){
+			break;
+		}
+		else{
+			// do nothing
+		}
+	}
+
+	*uiItem->combox.currIdx = idx;
 
 	return key;
 }
@@ -274,8 +338,50 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 	item->text = text;
 	item->width = width;
 	item->height = 16;
+	item->type = UI_TxtBox;
 	item->txtbox.dataLen = maxLen;
 	item->txtbox.isClear = isClear;
+}
+
+/*
+* 描  述：创建选项框 ，左右键切换选项
+* 参  数：x, y		- UI组件前面的标签的起始坐标
+*		 item		- UI组件属性
+*		 title		- UI组件前面的标签
+*		 currIdx	- 当前选项字符串索引 0~9
+*		 maxCnt		- 最大选项字符串数量 1~10
+*		 ...		- N个选项字符串
+* 返回值：void
+*/
+void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *currIdx, uint8 maxCnt, ...)
+{
+	va_list ap;
+	char i, *ptr;
+
+	va_start(ap, maxCnt);
+	for(i = 0; i < maxCnt && i < 10; i++){
+		ptr = va_arg(ap, char *);
+		if(ptr == NULL){
+			break;
+		}
+		item->combox.strs[i] = ptr;
+	}
+
+	if(*currIdx > i -1){
+		*currIdx = 0;
+	}
+
+	item->x = x;
+	item->y = y;
+	item->title = title;
+	item->x1 = x + strlen(title) * 8;
+	item->y1 = y;
+	item->text = NULL;
+	item->width = 160 - item->x1;
+	item->height = 16;
+	item->type = UI_CombBox;
+	item->combox.cnt = (uint8)i;
+	item->combox.currIdx = currIdx;
 }
 
 /*
@@ -287,7 +393,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 {
 	const char * ZeroAddr = "000000000000";
-	uint8 key;
+	uint8 key, x, y;
 	uint8 i;
 	UI_Item *ptr;
 
@@ -295,6 +401,15 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		ptr = &uiList.items[i];
 		_Printfxy(ptr->x, ptr->y, ptr->title, Color_White);
 		_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
+
+		if(ptr->type == UI_CombBox){
+			ptr->text = ptr->combox.strs[*ptr->combox.currIdx];
+			x = ptr->x1 + (ptr->width - strlen(ptr->text)*8)/2;
+			y = ptr->y1;
+			_Printfxy(x, y, ptr->text, Color_White);
+			_Printfxy(ptr->x1, ptr->y1, "[ ", Color_White);
+			_Printfxy(ptr->x1 + ptr->width - 16, ptr->y1, " ]", Color_White);
+		}
 	}
 
 	(*itemNo) = ((*itemNo) > uiList.cnt -1 ? 0 : (*itemNo));
@@ -306,7 +421,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		if(ptr->type == UI_TxtBox){
 			do{
 				//接收输入
-				key = GetInputNumStr(*ptr);
+				key = GetInputNumStr(ptr);
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
 					if(ptr->txtbox.dataLen == 12 && (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
@@ -321,7 +436,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 			}while(key == 0xFF);
 		}
 		else if(ptr->type == UI_CombBox){
-
+			key = CombBoxGetCurrIndex(ptr);
 		}
 
 		if(key == KEY_CANCEL || key == KEY_ENTER){

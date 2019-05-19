@@ -90,8 +90,9 @@ typedef struct{
     UI_Type type;
     
     struct{
+        char *strs[10];
 		uint8 cnt;
-		uint8 currIdx;
+		uint8 *currIdx;
 	}combox;
 
 	struct {
@@ -101,7 +102,6 @@ typedef struct{
 }UI_Item;
 
 typedef struct{
-    uint8 uiBuf[200];
     UI_Item items[UI_MAX];
     uint8 cnt;
 }UI_ItemList;
@@ -119,8 +119,8 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
-uint8 GetInputNumStr(UI_Item inputSt);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
+void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint8 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
@@ -143,7 +143,7 @@ extern char StrBuf[10][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
-extern uint8 CurrCmd;
+extern uint16 CurrCmd;
 extern ParamsBuf Addrs;		
 extern ParamsBuf Args;
 

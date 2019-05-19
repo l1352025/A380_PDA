@@ -2239,7 +2239,8 @@ void WaterCmdFunc_WorkingParams(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
+	uint16 ackLen = 0, timeout, u16Tmp;
+	uint32 u32Tmp;
 
 	_ClearScreen();
 
@@ -2301,98 +2302,194 @@ void WaterCmdFunc_WorkingParams(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x20 + menuItemNo);
+			CurrCmd = (0x50 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					StrBuf[1][0] = 0x01;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
+						"1", "10", "100", "1000");
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], " 请输入");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				u32Tmp = (uint32)_atof(StrBuf[0]);
+				u16Tmp = (_atof(StrBuf[0]) - u32Tmp) * 1000;
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 114;				// 应答长度 88/114	
+				// 数据域
+				Args.buf[i++] = 0x01;				// 数据格式 01/02
+				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = _GetYear()%100;		
+				Args.buf[i++] = _GetMonth();		
+				Args.buf[i++] = _GetDay();			
+				Args.buf[i++] = _GetHour();			
+				Args.buf[i++] = _GetMin();			
+				Args.buf[i++] = _GetSec();			
+				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_SetTimedUpload:		// 设置定时上传
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_SetFixedValUpload:	// 设置定量上传
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// "  ";
+			case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearException:		// "  ";
+			case WaterCmd_ReadMeterTime:	// 读表端时钟
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x13;		// 命令字	13
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_SetMeterTime:		// 校表端时钟
+				/*---------------------------------------------*/
+				_GetDate(&TmpBuf[200], '-');
+				_GetTime(&TmpBuf[220], ':');
+				StrBuf[0][0] = TmpBuf[200];		// year
+				StrBuf[0][1] = TmpBuf[201];
+				StrBuf[0][2] = TmpBuf[202];
+				StrBuf[0][3] = TmpBuf[203];
+				StrBuf[0][4] = 0x00;
+				StrBuf[1][0] = TmpBuf[205];		// month
+				StrBuf[1][1] = TmpBuf[206];
+				StrBuf[1][2] = 0x00;
+				StrBuf[2][0] = TmpBuf[208];	// day
+				StrBuf[2][1] = TmpBuf[209];
+				StrBuf[2][2] = 0x00;
+				StrBuf[3][0] = TmpBuf[220];	// hour
+				StrBuf[3][1] = TmpBuf[221];
+				StrBuf[3][2] = 0x00;
+				StrBuf[4][0] = TmpBuf[223];	// minute
+				StrBuf[4][1] = TmpBuf[224];
+				StrBuf[4][2] = 0x00;
+				StrBuf[5][0] = TmpBuf[226];	// second
+				StrBuf[5][1] = TmpBuf[227];
+				StrBuf[5][2] = 0x00;
+
+				if(false == isUiFinish){
+					_Printfxy(0, 3*16, "时 间:             ", Color_White);
+					uiRowIdx = 4;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+					TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+					break;
+				}
+				
+				for(i = 0; i < 6; i ++){
+					if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
+						_Printfxy(0, 3*16, "时 间: 请输入有效值 ", Color_White);
+						currUi = 1;
+						isUiFinish = false;
+						continue;
+					}
+				}
+
+				sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_SetDateTime(&TmpBuf[200]);
+
+				i = 0;
+				Args.buf[i++] = 0x14;		// 命令字	14
+				ackLen = 2;					// 应答长度 2	
+				// 数据域
+				Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = (uint8)(_GetYear()%100);		
+				Args.buf[i++] = _GetMonth();		
+				Args.buf[i++] = _GetDay();			
+				Args.buf[i++] = _GetHour();			
+				Args.buf[i++] = _GetMin();			
+				Args.buf[i++] = _GetSec();	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
@@ -2524,105 +2621,93 @@ void WaterCmdFunc_Other(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x20 + menuItemNo);
+			CurrCmd = (0x60 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_ReadRxTxMgnDistbCnt:		// 读收/发/磁扰次数
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_ReadRxdAndTxdChanel:	// 读取RXD和TXD信道
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 114;				// 应答长度 88/114	
+				// 数据域
+				Args.buf[i++] = 0x01;				// 数据格式 01/02
+				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = _GetYear()%100;		
+				Args.buf[i++] = _GetMonth();		
+				Args.buf[i++] = _GetDay();			
+				Args.buf[i++] = _GetHour();			
+				Args.buf[i++] = _GetMin();			
+				Args.buf[i++] = _GetSec();			
+				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_SetRxdAndTxdChanel:	// 设置RXD和TXD信道
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_SetOperatorNumber:		// 设置运营商编号
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_SetDefinedRoute:	// 路径下发
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
 			}
 
-// 创建 “中继地址输入框” 后， 显示UI
+			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){

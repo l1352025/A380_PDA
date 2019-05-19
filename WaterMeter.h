@@ -892,6 +892,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 			ptr = Water6009_GetStrErrorMsg(buf[index]);
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 			index += 1;
+			ret = false;
 		}
 		else{
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
@@ -989,6 +990,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		ret = true;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
+		ret = (buf[index] == 0xAA ? true : false);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 数据非法原因
@@ -1010,6 +1012,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		ret = true;
 		// 命令状态
 		ptr = (buf[index] == 0xAB ? "操作失败" : "操作成功");
+		ret = (buf[index] == 0xAA ? true : false);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 操作成功时结果
@@ -1032,6 +1035,7 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		ret = true;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? true : false);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 新版可能+ 2 byte
@@ -1039,11 +1043,26 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 
 	//--------------------------------------		工作参数	---------------------
 	case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 7 && cmd != 0x06){
 			break;
 		}
 		ret = true;
-
+		// 用户用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "用户用量:%d.%03d\n", u32Tmp, u16Tmp);
+		// 脉冲系数
+		switch (buf[index]){
+		case 0x00:	u16Tmp = 1;	break;
+		case 0x01:	u16Tmp = 10;	break;
+		case 0x02:	u16Tmp = 100;	break;
+		case 0x03:	u16Tmp = 1000;	break;
+		default:  u16Tmp = buf[index];	break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数:%d脉冲/方\n", u16Tmp);
+		index += 1;
 		break;
 
 	case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
@@ -1101,9 +1120,9 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		if(rxlen < index + 1 && cmd != 0x14){
 			break;
 		}
-		ret = true;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? true : false);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
