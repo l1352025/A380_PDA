@@ -262,7 +262,6 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 {
 	uint8 key, isShowIcon = 1, cnt = 0;
 	uint8 x, y, idx, lastIdx = 0xFF;
-	char buf[21];
 
 	idx = *uiItem->combox.currIdx;
 	
@@ -274,14 +273,14 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 			uiItem->text = uiItem->combox.strs[idx];
 			x = uiItem->x1 + (uiItem->width - strlen(uiItem->text)*8)/2;
 			y = uiItem->y1;
-			_GUIRectangleFill(uiItem->x1 + 16, y, uiItem->x1 + uiItem->width - 32, y + 16, Color_White);
+			_GUIRectangleFill(uiItem->x1 + 16, y, uiItem->x1 + uiItem->width - 16, y + 16, Color_White);
 			_Printfxy(x, y, uiItem->text, Color_White);
 			lastIdx = idx;
 		}
 
 		if(isShowIcon && cnt == 3){
-			_Printfxy(uiItem->x1, uiItem->y1, "[ ", Color_White);
-			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, " ]", Color_White);
+			_Printfxy(uiItem->x1, uiItem->y1, "<<", Color_White);
+			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, ">>", Color_White);
 			isShowIcon = 0;
 			cnt = 0;
 		}else if(!isShowIcon && cnt == 3){
@@ -312,6 +311,8 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 		}
 	}
 
+	_Printfxy(uiItem->x1, uiItem->y1, "<<", Color_White);
+	_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, ">>", Color_White);
 	*uiItem->combox.currIdx = idx;
 
 	return key;
@@ -353,7 +354,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 *		 ...		- N个选项字符串
 * 返回值：void
 */
-void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *currIdx, uint8 maxCnt, ...)
+void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *currIdx, uint32 maxCnt, ...)
 {
 	va_list ap;
 	char i, *ptr;
@@ -407,8 +408,8 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 			x = ptr->x1 + (ptr->width - strlen(ptr->text)*8)/2;
 			y = ptr->y1;
 			_Printfxy(x, y, ptr->text, Color_White);
-			_Printfxy(ptr->x1, ptr->y1, "[ ", Color_White);
-			_Printfxy(ptr->x1 + ptr->width - 16, ptr->y1, " ]", Color_White);
+			_Printfxy(ptr->x1, ptr->y1, "<<", Color_White);
+			_Printfxy(ptr->x1 + ptr->width - 16, ptr->y1, ">>", Color_White);
 		}
 	}
 

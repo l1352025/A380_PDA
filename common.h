@@ -120,7 +120,7 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
-void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint8 maxCnt, ...);
+void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);

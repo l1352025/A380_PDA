@@ -462,6 +462,45 @@ char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
 	return str;
 }
 
+/*
+* 描  述：获取6009水表 功能使能状态
+* 参  数：stateCode	- 使能状态码
+* 		  buf		- 使能状态码字符串输出缓冲区
+* 返回值：uint16	- 解析后的字符串总长度
+*/
+uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
+{
+	uint16 mask = 1, i, len = 0;
+
+	for(i = 0; i < 16; i++){
+
+		mask = (mask << i);
+		
+		switch(stateCode & mask){
+		case 0x01:	len += sprintf(&buf[len], "磁干扰关阀功能  : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x02:	len += sprintf(&buf[len], "上报数据加密功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x04:	len += sprintf(&buf[len], "防拆卸检测功能  : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x08:	len += sprintf(&buf[len], "垂直安装检测功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x10:	len += sprintf(&buf[len], "主动告警功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x20:	len += sprintf(&buf[len], "主动上传冻结数据: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x40:	len += sprintf(&buf[len], "透支关阀功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x80:	len += sprintf(&buf[len], "预付费功能     : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x100:	len += sprintf(&buf[len], "自动信道分配功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x200:	len += sprintf(&buf[len], "防锈功能       : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x400:	len += sprintf(&buf[len], "掉电关阀功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x800:	len += sprintf(&buf[len], "RF休眠策略     : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x1000:	len += sprintf(&buf[len], "离线自动关阀功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x2000:	len += sprintf(&buf[len], "煤气泄漏检测功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		case 0x4000:	break;
+		case 0x8000:	len += sprintf(&buf[len], "流速控制功能    : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
+		default:	
+			break;
+		}
+	}
+
+	return len;
+}
+
 
 //-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
 
@@ -1066,43 +1105,45 @@ bool ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstA
 		break;
 
 	case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 6 && cmd != 0x0A){
 			break;
 		}
 		ret = true;
-		
+		// 反转读数
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "反转读数:%d.%03d\n", u32Tmp, u16Tmp);
 		break;
 
 	case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 2 && cmd != 0x0B){
 			break;
 		}
 		ret = true;
-		
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += Water6009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		break;
 
 	case WaterCmd_SetTimedUpload:		// 设置定时上传
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = true;
-		
-		break;
-
 	case WaterCmd_SetFixedValUpload:	// 设置定量上传
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = true;
-		
-		break;
-
 	case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 2 && cmd != 0x0C){
 			break;
 		}
 		ret = true;
-		
+		if(buf[index] == 0xAA){
+			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
+			index += 1;
+		}
+		if(rxlen >= index + 2 + 4){		// 新协议增加
+			dispIdx += sprintf(&dispBuf[dispIdx], "定时上传间隔:%d 小时\n", buf[index]);
+			index += 1;
+			dispIdx += sprintf(&dispBuf[dispIdx], "定量上传间隔:%d m3\n", buf[index]);
+			index += 1;
+		}
 		break;
 
 	case WaterCmd_ReadMeterTime:	// 读表端时钟

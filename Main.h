@@ -2044,7 +2044,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				u32Tmp = (uint32)_atof(StrBuf[0]);
-				u16Tmp = (_atof(StrBuf[0]) - u32Tmp) * 1000;
+				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 预缴用量	
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
@@ -2052,7 +2052,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
 				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
 				u32Tmp = (uint32)_atof(StrBuf[1]);
-				u16Tmp = (_atof(StrBuf[1]) - u32Tmp) * 1000;
+				u16Tmp = (uint16)((float)((_atof(StrBuf[1]) - u32Tmp)*1000.0));
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 参考起始用量	
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
@@ -2308,7 +2308,9 @@ void WaterCmdFunc_WorkingParams(void)
 			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					StrBuf[1][0] = 0x01;
+					if(StrBuf[1][0] == 0x00){
+						StrBuf[1][0] = 0x01;
+					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
 						"1", "10", "100", "1000");
@@ -2324,8 +2326,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = 0x06;		// 命令字	06
 				ackLen = 7;					// 应答长度 7	
 				// 数据域
-				u32Tmp = (uint32)_atof(StrBuf[0]);
-				u16Tmp = (_atof(StrBuf[0]) - u32Tmp) * 1000;
+				u32Tmp = (uint32) _atof(StrBuf[0]);
+				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
@@ -2339,28 +2341,11 @@ void WaterCmdFunc_WorkingParams(void)
 			case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					sprintf(StrBuf[0], "0 (0-9有效)");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					currUi = 1;
-					isUiFinish = false;
-					continue;
-				}
-				Args.buf[i++] = 0x02;		// 命令字	02
-				ackLen = 114;				// 应答长度 88/114	
+				Args.buf[i++] = 0x0A;		// 命令字	0A
+				ackLen = 6;					// 应答长度 6	
 				// 数据域
-				Args.buf[i++] = 0x01;				// 数据格式 01/02
-				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-				Args.buf[i++] = _GetYear()%100;		
-				Args.buf[i++] = _GetMonth();		
-				Args.buf[i++] = _GetDay();			
-				Args.buf[i++] = _GetHour();			
-				Args.buf[i++] = _GetMin();			
-				Args.buf[i++] = _GetSec();			
-				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -2369,50 +2354,83 @@ void WaterCmdFunc_WorkingParams(void)
 				if(false == isUiFinish){
 					break;
 				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
+				Args.buf[i++] = 0x0B;		// 命令字	0B
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
 			
 			case WaterCmd_SetTimedUpload:		// 设置定时上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时间隔:", StrBuf[0], 2, 3*8, true);
 					break;
 				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], "   ");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x0C;		// 命令字	0C
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.buf[i++] = 0x00;		// 类别：定时间隔
+				Args.buf[i++] = (uint8) _atof(StrBuf[0]);	// 定时间隔时间
 				Args.lastItemLen = i - 1;
 				break;
 
             case WaterCmd_SetFixedValUpload:	// 设置定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					_Printfxy(7*16, (uiRowIdx)*16, "立方米", Color_White);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定量间隔:", StrBuf[0], 3, 4*8, true);
 					break;
 				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
+				if((StrBuf[0][0] > '9' || StrBuf[0][0] < '0') 
+					|| _atof(StrBuf[0]) > 255){
+					sprintf(StrBuf[0], "   ");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x0C;		// 命令字	0C
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.buf[i++] = 0x01;		// 类别：定量间隔
+				Args.buf[i++] = (uint8) _atof(StrBuf[0]);	// 定量间隔数量
 				Args.lastItemLen = i - 1;
 				break;
 
 			case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时间隔:", StrBuf[0], 2, 3*8, true);
+					_Printfxy(7*16, (uiRowIdx)*16, "立方米", Color_White);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定量间隔:", StrBuf[1], 3, 4*8, true);
 					break;
 				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], "   ");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				if((StrBuf[1][0] > '9' || StrBuf[1][0] < '0') 
+					|| _atof(StrBuf[1]) > 255){
+					sprintf(StrBuf[1], "   ");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x0C;		// 命令字	0C
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.buf[i++] = 0x02;		// 类别：定时间隔
+				Args.buf[i++] = (uint8) _atof(StrBuf[0]);	// 定时间隔时间
+				Args.buf[i++] = (uint8) _atof(StrBuf[1]);	// 定量间隔数量
 				Args.lastItemLen = i - 1;
 				break;
 
