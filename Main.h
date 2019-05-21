@@ -2157,14 +2157,14 @@ void WaterCmdFunc_PrepaiedVal(void)
 					isUiFinish = false;
 					continue;
 				}
-				u16Tmp = (uint16)_atof(StrBuf[0]);
+				u16Tmp = (uint16) _atof(StrBuf[0]);
 				if(u16Tmp > 255){
 					sprintf(StrBuf[0], " 0-255");
 					currUi = 1;
 					isUiFinish = false;
 					continue;
 				}
-				u32Tmp = (uint32)_atof(StrBuf[1]);
+				u32Tmp = (uint32) _atof(StrBuf[1]);
 				if(u32Tmp > 65535){
 					sprintf(StrBuf[1], " 0-65535");
 					currUi = 2;
@@ -2593,8 +2593,8 @@ void WaterCmdFunc_Other(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
+	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
+	uint16 ackLen = 0, timeout, u16Tmp;
 
 	_ClearScreen();
 
@@ -2676,17 +2676,40 @@ void WaterCmdFunc_Other(void)
 				Args.buf[i++] = 0x1B;		// 命令字	1B
 				ackLen = 3;					// 应答长度 3	
 				// 数据域
+				Args.buf[i++] = 0x00;		// 读取类别 0 - 抄表信道 和 上传信道
+				Args.buf[i++] = 0;			// 抄表信道 bit7 0-读取 ，1-设置
+				Args.buf[i++] = 0;			// 上传信道 bit7 0-读取 ，1-设置
 				Args.lastItemLen = i - 1;
 				break;
 
 			case WaterCmd_SetRxdAndTxdChanel:	// 设置RXD和TXD信道
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "抄表信道:", StrBuf[0], 2, 11*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上传信道:", StrBuf[1], 2, 11*8, true);
 					break;
 				}
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], " 请输入");
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				if(StrBuf[1][0] > '9' || StrBuf[1][0] < '0'){
+					sprintf(StrBuf[1], " 请输入");
+					currUi = 2;
+					isUiFinish = false;
+					continue;
+				}
+				u8Tmp = (uint8) _atof(StrBuf[0]);
+				u16Tmp = (uint16) _atof(StrBuf[1]);
+
 				Args.buf[i++] = 0x1B;		// 命令字	1B
-				ackLen = 3;					// 应答长度 3	
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
+				Args.buf[i++] = 0x00;		// 设置类别 0 - 抄表信道 和 上传信道
+				Args.buf[i++] = (0x80 | u8Tmp);			// 抄表信道 bit7 0-读取 ，1-设置
+				Args.buf[i++] = (0x80 | (uint8)u16Tmp);	// 上传信道 bit7 0-读取 ，1-设置
 				Args.lastItemLen = i - 1;
 				break;
 			
@@ -2712,14 +2735,71 @@ void WaterCmdFunc_Other(void)
 
             case WaterCmd_SetDefinedRoute:	// 路径下发
 				/*---------------------------------------------*/
+				_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 				if(false == isUiFinish){
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "路径长度:", &StrBuf[0][0], 4, 
+						"2", "3", "4", "5");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "当前位置:", StrBuf[1], 1, 10*8, true);
 					break;
 				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
+				u8Tmp = (uint8)StrBuf[0][0];		// 路径长度
+				u16Tmp = (uint16) _atof(StrBuf[1]);	// 当前位置
+				if(StrBuf[0][0] < u16Tmp){
+					sprintf(StrBuf[1], " (此时<=%d)", (uint8)StrBuf[0][0]);
+					currUi = 2;
+					isUiFinish = false;
+					continue;
+				}
+				while(1){
+					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+					_Printfxy(0, 2*16, "路径的各跳地址:", Color_White);
+					uiRowIdx = 3;
+					for(i = 0; i < u8Tmp; i++){
+						PrintfXyMultiLine_VaList(0, (uiRowIdx)*16, "路径%d: %s", i+1);
+						if(i == u16Tmp){	// 当前位置
+							memcpy(StrBuf[i], StrDstAddr, TXTBUF_LEN);
+							_Printfxy(7*8, (uiRowIdx)*16, StrBuf[i], Color_White);
+						}
+						else{
+							TextBoxCreate(&pUi[(*pUiCnt)++], 7*8, (uiRowIdx++)*16, "", StrBuf[i], 12, 13*8, true);
+						}
+						uiRowIdx++;
+					}
+					key = ShowUI(UiList, &currUi);
+					isUiFinish = true;
+
+					if (key == KEY_CANCEL){
+						break;
+					}
+					currUi = 0;
+					for(i = 0; i < u8Tmp; i++){
+						if(i != u16Tmp){
+							currUi++;
+						}
+						if(StrBuf[i][0] > '9' || StrBuf[i][0] < '0'){
+							sprintf(StrBuf[i], " 请输入");
+							isUiFinish = false;
+							break;
+						}
+					}
+
+					if(isUiFinish){
+						break;
+					}
+				}
+				if (key == KEY_CANCEL){
+					break;
+				}
+				i = 0;
+				Args.buf[i++] = 0x22;		// 命令字	22
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.buf[i++] = (uint8)u16Tmp;	// 当前位置
+				Args.buf[i++] = u8Tmp;			// 路径长度
+				for(i = 0; i < u8Tmp; i++){
+					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[i], 0, false);
+					i += 6;
+				}
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -2755,6 +2835,10 @@ void WaterCmdFunc_Other(void)
 
 				isUiFinish = true;
 				continue;	// go back to get ui args
+			}
+
+			if (key == KEY_CANCEL){
+				break;
 			}
 
 			// 地址填充
