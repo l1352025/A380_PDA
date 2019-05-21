@@ -52,11 +52,12 @@ typedef unsigned char bool;
 
 #if defined(Project_6009_IR)
 	#define CurrPort    Trans_IR                
-	#define CurrBaud    (uint8 *)"4800,E,8,1"
+	#define CurrBaud    (uint8 *)"1200,E,8,1"
     #define TransType   "红外透传"      // 通信方式	
 #else //defined(Project_6009_RF)
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
+    #define Timeout     Trans_IR 
     #define TransType   "Lora透传"      // 通信方式	
 #endif
 

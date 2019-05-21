@@ -93,7 +93,7 @@ void LogPrint(const char * fileName, const char * format, ...)
 
 #if LogScom_On
 	_CloseCom();
-	_ComSetTran(CurrPort);
+	_ComSetTran(Trans_IR_Quick);
 	_ComSet((uint8 *)"115200,E,8,1", 2);
 	_SendComStr(buf, len);
 	_CloseCom();
@@ -569,11 +569,14 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
 	static uint8 buf[512] = {0};
-	uint8 len;
+	int len;
 	va_list ap;
 
 	va_start(ap, format);
 	len = vsprintf(buf, format, ap);
+	if(len < 0 || len > 512){
+		len = 0;
+	}
 	buf[len] = '\0';
 	va_end(ap);
 
