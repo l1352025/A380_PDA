@@ -249,6 +249,42 @@ void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 }
 
 /*
+* 描  述：获取6009水表-设备类型名
+* 参  数：typeId	- 类型ID
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water6009_GetStrDeviceType(uint8 typeId)
+{
+	char * str = NULL;
+	
+	switch(typeId){
+	case 0x10:	str = "RF冷水表";	break;
+	case 0x11:	str = "GPRS冷水表";	break;
+	case 0x12:	str = "NB-IoT冷水表";	break;
+	case 0x20:	str = "RF热水表";	break;
+	case 0x21:	str = "NB-IoT热水表";	break;
+	case 0x30:	str = "RF气表";	break;
+	case 0x31:	str = "GPRS气表";	break;
+	case 0x32:	str = "NB-IoT气表";	break;
+	case 0x40:	str = "电表";	break;
+
+	case 0x50:	str = "透传模块";	break;
+
+	case 0xF9:	str = "USB";	break;
+	case 0xFA:	str = "上位机器";	break;
+	case 0xFB:	str = "UART串口";	break;
+	case 0xFC:	str = "集中器";	break;
+	case 0xFD:	str = "中继器";	break;
+	case 0xFE:	str = "手持机";	break;
+	default:
+		str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+/*
 * 描  述：获取6009水表读数类型名
 * 参  数：typeId	- 类型ID
 * 返回值：char *	- 解析后的字符串
@@ -1212,9 +1248,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			}
 		}
 		else{
-			dispIdx += sprintf(&dispBuf[dispIdx], "抄表信道: %d\n", (buf[index]));
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表信道: %d\n", (buf[index] & 0x7F));
 			index += 1;
-			dispIdx += sprintf(&dispBuf[dispIdx], "上报信道: %d\n", (buf[index]));
+			dispIdx += sprintf(&dispBuf[dispIdx], "上报信道: %d\n", (buf[index] & 0x7F));
 			index += 1;
 		}
 		break;
@@ -1332,40 +1368,46 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//-------------------------------------------------------------------------------------------------
 	//--------------------------------------		常用操作		-------------------------------------
 	case CenterCmd_ReadCenterNo:	// 读集中器号
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 6 && cmd != 0x41){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		// 集中器号
+		dispIdx += sprintf(&dispBuf[dispIdx], "集中器号: \n    %02X%02X%02X%02X%02X%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3], buf[index + 4], buf[index + 5]);
+		index += 6;
 		break;
 
 	case CenterCmd_ReadCenterVer:		// 读集中器版本
-		if(rxlen < index + 2 && cmd != 0x16){
+		if(rxlen < index + 6 && cmd != 0x40){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		// 软件版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %02X%02X \n", buf[index], buf[index + 1]);
+		index += 2;
+		// 硬件版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "硬件版本: %02X%02X \n", buf[index], buf[index + 1]);
+		index += 2;
+		// 协议版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %02X%02X \n", buf[index], buf[index + 1]);
+		index += 2;
 		break;
 
 	case CenterCmd_ReadCenterTime:		// 读集中器时钟
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 7 && cmd != 0x43){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		// 集中器时钟
+		dispIdx += sprintf(&dispBuf[dispIdx], "集中器时钟: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
+			, buf[index + 4], buf[index + 5], buf[index + 6]);
+		index += 7;
 		break;
 
 	case CenterCmd_SetCenterTime:		// 设集中器时钟
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 && cmd != 0x44){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1376,18 +1418,46 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsParam:		// 读GPRS参数
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 16 && cmd != 0x45){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		// 首先IP + 端口
+		dispIdx += sprintf(&dispBuf[dispIdx], "首先IP: %d.%d.%d.%d\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		dispIdx += sprintf(&dispBuf[dispIdx], "  端口: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 备用IP + 端口
+		dispIdx += sprintf(&dispBuf[dispIdx], "备用IP: %d.%d.%d.%d\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		dispIdx += sprintf(&dispBuf[dispIdx], "  端口: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 心跳包间隔
+		dispIdx += sprintf(&dispBuf[dispIdx], "心跳包间隔: %d s\n", (buf[index] * 10));
+		// A P N
+		u8Tmp = buf[index];
+		memcpy(&TmpBuf[0], &buf[index + 1], u8Tmp);
+		TmpBuf[u8Tmp] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "A P N: %s\n", &TmpBuf[0]);
+		index += (u8Tmp + 1);
+		// 用户名
+		u8Tmp = buf[index];
+		memcpy(&TmpBuf[0], &buf[index + 1], u8Tmp);
+		TmpBuf[u8Tmp] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "用户名: %s\n", &TmpBuf[0]);
+		index += (u8Tmp + 1);
+		// 密  码
+		u8Tmp = buf[index];
+		memcpy(&TmpBuf[0], &buf[index + 1], u8Tmp);
+		TmpBuf[u8Tmp] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "密  码: %s\n", &TmpBuf[0]);
+		index += (u8Tmp + 1);
 		break;
 
 	case CenterCmd_SetGprsParam:		// 设GPRS参数
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 && cmd != 0x46){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1398,21 +1468,53 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsSignal:		// 读GPRS信号强度
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 4 && cmd != 0x47){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		// 信号强度
+		if(buf[index] == 0){
+			ptr = "<= -113dBm";
+		}
+		else if(buf[index] < 31){
+			sprintf(&TmpBuf[0], "-%ddBm", 113 - 2 * buf[index]);
+			ptr = &TmpBuf[0];
+		}
+		else if(buf[index] == 31){
+			ptr = ">= -53dBm";
+		}
+		else if(buf[index] == 99){
+			ptr = "未知";
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "信号强度: %s\n", ptr);
 		index += 1;
+		// 联机状态
+		ptr = (buf[index] == 0 ? "离线" : "在线");
+		dispIdx += sprintf(&dispBuf[dispIdx], "联机状态: %s\n", ptr);
+		index += 1;
+		// IMSI
+		u8Tmp = buf[index];
+		memcpy(&TmpBuf[0], &buf[index + 1], u8Tmp);
+		TmpBuf[u8Tmp] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "IMSI: %s\n", &TmpBuf[0]);
+		index += (u8Tmp + 1);
+		// GMM
+		u8Tmp = buf[index];
+		memcpy(&TmpBuf[0], &buf[index + 1], u8Tmp);
+		TmpBuf[u8Tmp] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "GMM: %s\n", &TmpBuf[0]);
+		index += (u8Tmp + 1);
 		break;
 
 	case CenterCmd_InitCenter:		// 集中器初始化
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 2 && cmd != 0x48){
 			break;
 		}
 		ret = RxResult_Ok;
+		// 数据上传功能
+		ptr = (buf[index] == 0 ? "清空档案和路径" : "清空所有数据");
+		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
+		index += 1;
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -1420,31 +1522,51 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterWorkMode:		// 读集中器工作模式
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 7 && cmd != 0x49){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		// 工作类型
+		ptr = (buf[index] == 0 ? "抄定时定量" : (buf[index] == 1 ? "抄冻结" : "无效"));
+		dispIdx += sprintf(&dispBuf[dispIdx], "工作类型: %s\n", ptr);
+		index += 1;
+		// 数据补抄功能
+		ptr = ((buf[index] & 0x80) > 0 ? "开" : "关");
+		dispIdx += sprintf(&dispBuf[dispIdx], "数据补抄功能: %s\n", ptr);
+		// 数据上传功能
+		ptr = ((buf[index] & 0x40) > 0 ? "开" : "关");
+		dispIdx += sprintf(&dispBuf[dispIdx], "数据上传功能: %s\n", ptr);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "数据上传时间: %2X点\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "数据补抄日期-位标记: \n");
+		dispIdx += sprintf(&dispBuf[dispIdx], " 1- 7日 补抄标记: %02X\n", (buf[index] & 0x7F));
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], " 8-15日 补抄标记: %02X\n", (buf[index]));
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "16-23日 补抄标记: %02X\n", (buf[index]));
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "24-31日 补抄标记: %02X\n", (buf[index]));
 		index += 1;
 		break;
 
 
 	//--------------------------------------		档案操作：		-------------------------------------
 	case CenterCmd_ReadDocCount:		// 读档案数量
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 3 && cmd != 0x50){
 			break;
 		}
 		ret = RxResult_Ok;
 		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		ptr = Water6009_GetStrDeviceType(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "设备类型: %s\n", ptr);
 		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "档案数量: %s\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
 		break;
 
 	case CenterCmd_ReadDocInfo:			// 读档案信息
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 && cmd != 0x51){
 			break;
 		}
 		ret = RxResult_Ok;

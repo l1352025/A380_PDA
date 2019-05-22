@@ -199,10 +199,6 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	int8 lineCnt = 0, currLine = 0;
 	uint8 *lines[100], key;
 
-#if Log_On
-		LogPrintBytes("tranceiver UI in ", TmpBuf, 2);
-#endif
-
 	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
 		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
 			DispBuf[0] = NULL;
@@ -314,11 +310,11 @@ void CenterCmdFunc_CommonCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
-			//----------------------------------------------
+		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
@@ -336,130 +332,134 @@ void CenterCmdFunc_CommonCmd(void)
 			CurrCmd = (0x1010 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case CenterCmd_ReadCenterNo:	// 读集中器号
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x41;		// 命令字	41
+				ackLen = 6;					// 应答长度 6	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case CenterCmd_ReadCenterVer:	// 读集中器版本
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x40;		// 命令字	40
+				ackLen = 6;					// 应答长度 6	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case CenterCmd_ReadCenterTime:		// 读集中器时钟
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x43;		// 命令字	43
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case CenterCmd_SetCenterTime:		// 设集中器时钟
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x44;		// 命令字	44
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case CenterCmd_ReadGprsParam:		// 读GPRS参数
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x45;		// 命令字	45
+				ackLen = 40;				// 应答长度 约 40	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// "  ";
+			case CenterCmd_SetGprsParam:		// 设GPRS参数
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x46;		// 命令字	46
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearException:		// "  ";
+			case CenterCmd_ReadGprsSignal:		// 读GPRS信号强度
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x47;		// 命令字	47
+				ackLen = 50;				// 应答长度 约 50	
+				// 数据域
+				Args.lastItemLen = i - 1;
+				break;
+
+			case CenterCmd_InitCenter:			// 集中器初始化
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x48;		// 命令字	48
+				ackLen = 2;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case CenterCmd_ReadCenterWorkMode:	// 读集中器工作模式
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x49;		// 命令字	49
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
 			}
 
+			// 创建 “中继地址输入框” 后， 显示UI
+			if(false == isUiFinish){
 
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, "请先输入表号");
-				continue;
-			}
-
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
+				key = ShowUI(UiList, &currUi);
+				if (key == KEY_CANCEL){
+					break;
 				}
+
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+					sprintf(StrDstAddr, " 请输入");
+					currUi = 0;
+					continue;
+				}
+
+				isUiFinish = true;
+				continue;	// go back to get ui args
 			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
+
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -534,11 +534,11 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
-			//----------------------------------------------
+		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
@@ -547,7 +547,7 @@ void CenterCmdFunc_DocumentOperation(void)
 				uiRowIdx = 2;
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 			}
-			
+
 			// 命令参数处理
 			i = 0;	
 			Args.itemCnt = 2;
@@ -556,130 +556,107 @@ void CenterCmdFunc_DocumentOperation(void)
 			CurrCmd = (0x1020 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case CenterCmd_ReadDocCount:		// 读档案数量
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case CenterCmd_ReadDocInfo:			// 读档案信息
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 114;				// 应答长度 88/114	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case CenterCmd_AddDocInfo:			// 添加档案信息
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case CenterCmd_DeleteDocInfo:		// 删除档案信息
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case CenterCmd_ModifyDocInfo:		// 修改档案信息
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
 			}
 
+			// 创建 “中继地址输入框” 后， 显示UI
+			if(false == isUiFinish){
 
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, "请先输入表号");
-				continue;
-			}
-
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
+				key = ShowUI(UiList, &currUi);
+				if (key == KEY_CANCEL){
+					break;
 				}
+
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+					sprintf(StrDstAddr, " 请输入");
+					currUi = 0;
+					continue;
+				}
+
+				isUiFinish = true;
+				continue;	// go back to get ui args
 			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
+
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -751,11 +728,11 @@ void CenterCmdFunc_RouteSetting(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
-			//----------------------------------------------
+		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
@@ -764,7 +741,7 @@ void CenterCmdFunc_RouteSetting(void)
 				uiRowIdx = 2;
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 			}
-			
+
 			// 命令参数处理
 			i = 0;	
 			Args.itemCnt = 2;
@@ -773,130 +750,68 @@ void CenterCmdFunc_RouteSetting(void)
 			CurrCmd = (0x1030 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case CenterCmd_ReadDefinedRoute:	// 读自定义路由
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case CenterCmd_SetDefinedRoute:		// 设自定义路由
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_OpenValve:			// "  "
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-			
-			case WaterCmd_OpenValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-            case WaterCmd_CloseValve:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 114;				// 应答长度 88/114	
+				// 数据域
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
 			}
 
+			// 创建 “中继地址输入框” 后， 显示UI
+			if(false == isUiFinish){
 
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, "请先输入表号");
-				continue;
-			}
-
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
+				key = ShowUI(UiList, &currUi);
+				if (key == KEY_CANCEL){
+					break;
 				}
+
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+					sprintf(StrDstAddr, " 请输入");
+					currUi = 0;
+					continue;
+				}
+
+				isUiFinish = true;
+				continue;	// go back to get ui args
 			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
+
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -973,11 +888,11 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<< %s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
-//----------------------------------------------
+		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
@@ -986,7 +901,7 @@ void CenterCmdFunc_CommandTransfer(void)
 				uiRowIdx = 2;
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 			}
-			
+
 			// 命令参数处理
 			i = 0;	
 			Args.itemCnt = 2;
@@ -997,128 +912,133 @@ void CenterCmdFunc_CommandTransfer(void)
 			switch(CurrCmd){
 			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x02;		// 命令字	02
+				ackLen = 114;				// 应答长度 88/114	
+				// 数据域
+				Args.buf[i++] = 0x01;				// 数据格式 01/02
+				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = _GetYear()%100;		
+				Args.buf[i++] = _GetMonth();		
+				Args.buf[i++] = _GetDay();			
+				Args.buf[i++] = _GetHour();			
+				Args.buf[i++] = _GetMin();			
+				Args.buf[i++] = _GetSec();			
+				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_OpenValve:			// " 开阀 "
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_OpenValveForce:		// " 强制开阀 ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_CloseValve:		// " 关阀 ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// "  ";
+			case WaterCmd_CloseValveForce:		// " 强制关阀 ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearException:		// "  ";
+			case WaterCmd_ClearException:		// " 清异常命令 ";
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
+				if(false == isUiFinish){
 					break;
 				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x05;		// 命令字	05
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
 			}
 
+			// 创建 “中继地址输入框” 后， 显示UI
+			if(false == isUiFinish){
 
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, "请先输入表号");
-				continue;
-			}
-
-			// 6009 协议地址填写不用反序
-			GetBytesFromStringHex(DstAddr, 0, 6, StrDstAddr, 0, false);
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-			// 填充地址
-			Addrs.itemCnt = 0;
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[0];
-			memcpy(Addrs.items[Addrs.itemCnt], LocalAddr, 6);
-			Addrs.itemCnt++;
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] >= '0' && StrRelayAddr[i][0] <= '9'){
-					Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-					GetBytesFromStringHex(Addrs.items[Addrs.itemCnt], 0, 6, StrRelayAddr[i], 0, false);
-					Addrs.itemCnt++;
+				key = ShowUI(UiList, &currUi);
+				if (key == KEY_CANCEL){
+					break;
 				}
+
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+					sprintf(StrDstAddr, " 请输入");
+					currUi = 0;
+					continue;
+				}
+
+				isUiFinish = true;
+				continue;	// go back to get ui args
 			}
-			Addrs.items[Addrs.itemCnt] = &Addrs.buf[6 + i*6];
-			memcpy(Addrs.items[Addrs.itemCnt], DstAddr, 6);
-			Addrs.itemCnt++;
+
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
 			ackLen += 14 + Addrs.itemCnt * 6;
@@ -1358,7 +1278,7 @@ void WaterCmdFunc_CommonCmd(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)    ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -1670,7 +1590,7 @@ void WaterCmdFunc_TestCmd(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)    ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -1897,7 +1817,7 @@ void WaterCmdFunc_Upgrade(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)    ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -2192,7 +2112,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)    ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -2534,7 +2454,7 @@ void WaterCmdFunc_WorkingParams(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)    ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -2737,14 +2657,23 @@ void WaterCmdFunc_Other(void)
 				/*---------------------------------------------*/
 				_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 				if(false == isUiFinish){
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "路径长度:", &StrBuf[0][0], 4, 
+					if(StrBuf[1][0] == 0x00){
+						StrBuf[1][0] = '0';
+					}
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "路径长度: ", &StrBuf[0][0], 4, 
 						"2", "3", "4", "5");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "当前位置:", StrBuf[1], 1, 10*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "当前位置: ", StrBuf[1], 1, 10*8, true);
 					break;
 				}
-				u8Tmp = (uint8)StrBuf[0][0];		// 路径长度
+				if(StrBuf[1][0] > '9' || StrBuf[1][0] < '0'){
+					sprintf(StrBuf[1], " 请输入");
+					currUi = 2;
+					isUiFinish = false;
+					continue;
+				}
+				u8Tmp = (uint8)StrBuf[0][0] + 2;	// 路径长度
 				u16Tmp = (uint16) _atof(StrBuf[1]);	// 当前位置
-				if(StrBuf[0][0] < u16Tmp){
+				if(u16Tmp > u8Tmp - 2){
 					sprintf(StrBuf[1], " (此时<=%d)", (uint8)StrBuf[0][0]);
 					currUi = 2;
 					isUiFinish = false;
@@ -2752,19 +2681,23 @@ void WaterCmdFunc_Other(void)
 				}
 				while(1){
 					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-					_Printfxy(0, 2*16, "路径的各跳地址:", Color_White);
+					_Printfxy(0, 2*16, "路径的各节点地址:", Color_White);
+					(*pUiCnt) = 0;
 					uiRowIdx = 3;
+					StrBuf[0][0] = '\0';
+					StrBuf[1][0] = '\0';
 					for(i = 0; i < u8Tmp; i++){
-						PrintfXyMultiLine_VaList(0, (uiRowIdx)*16, "路径%d: %s", i+1);
+						PrintfXyMultiLine_VaList(0, (uiRowIdx)*16, "节点%d:", i);
 						if(i == u16Tmp){	// 当前位置
 							memcpy(StrBuf[i], StrDstAddr, TXTBUF_LEN);
 							_Printfxy(7*8, (uiRowIdx)*16, StrBuf[i], Color_White);
 						}
 						else{
-							TextBoxCreate(&pUi[(*pUiCnt)++], 7*8, (uiRowIdx++)*16, "", StrBuf[i], 12, 13*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 6*8, (uiRowIdx)*16, " ", StrBuf[i], 12, 13*8, true);
 						}
 						uiRowIdx++;
 					}
+					currUi = 0;
 					key = ShowUI(UiList, &currUi);
 					isUiFinish = true;
 
@@ -2796,8 +2729,8 @@ void WaterCmdFunc_Other(void)
 				// 数据域
 				Args.buf[i++] = (uint8)u16Tmp;	// 当前位置
 				Args.buf[i++] = u8Tmp;			// 路径长度
-				for(i = 0; i < u8Tmp; i++){
-					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[i], 0, false);
+				for(u16Tmp = 0; u16Tmp < u8Tmp; u16Tmp++){
+					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[u16Tmp], 0, false);
 					i += 6;
 				}
 				Args.lastItemLen = i - 1;
@@ -2813,7 +2746,7 @@ void WaterCmdFunc_Other(void)
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], " (没有则不填) ");
+						sprintf(StrRelayAddr[i], "    (可选)   ");
 					}
 				}
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -2964,7 +2897,7 @@ void MainFuncReadRealTimeData(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3093,7 +3026,7 @@ void MainFuncReadFrozenData(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3202,7 +3135,7 @@ void MainFuncReadMeterTime(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3366,7 +3299,7 @@ void MainFuncSetMeterTime(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3479,7 +3412,7 @@ void MainFuncClearException(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3593,7 +3526,7 @@ void MainFuncOpenValve(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
@@ -3707,7 +3640,7 @@ void MainFuncCloseValve(void)
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], " (没有则不填) ");
+					sprintf(StrRelayAddr[i], "    (可选)    ");
 				}
 			}
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
