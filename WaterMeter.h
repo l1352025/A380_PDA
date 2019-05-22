@@ -1561,7 +1561,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "设备类型: %s\n", ptr);
 		index += 1;
-		dispIdx += sprintf(&dispBuf[dispIdx], "档案数量: %s\n", (buf[index] + buf[index + 1] * 256));
+		dispIdx += sprintf(&dispBuf[dispIdx], "档案数量: %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
 		break;
 
@@ -1570,10 +1570,26 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		// 节点总数量
+		dispIdx += sprintf(&dispBuf[dispIdx], "节点总数量  : %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 节点总数量
+		dispIdx += sprintf(&dispBuf[dispIdx], "本次应答数量: %d\n", (buf[index]));
 		index += 1;
+		// N个节点信息
+		u8Tmp = buf[index - 1];
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+			TmpBuf[6] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+			ptr = Water6009_GetStrDeviceType(buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "   类型:%s\n", ptr);
+			index += 1;
+			ptr = (buf[index] == 0 ? "失败" : (buf[index] == 1 ? "成功" : "未知"));
+			dispIdx += sprintf(&dispBuf[dispIdx], "   抄表:%s\n", ptr);
+			index += 1;
+		}
 		break;
 
 	case CenterCmd_AddDocInfo:			// 添加档案信息
@@ -1581,21 +1597,38 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		// 设置的节点数量
+		dispIdx += sprintf(&dispBuf[dispIdx], "设置的节点数量: %d\n", (buf[index]));
 		index += 1;
+		// N个节点设置结果
+		u8Tmp = buf[index - 1];
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+			TmpBuf[6] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "   结果:%s\n", ptr);
+			index += 1;
+		}
 		break;
 
 	case CenterCmd_DeleteDocInfo:			// 删除档案信息
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 7 && cmd != 0x17){
 			break;
 		}
 		ret = RxResult_Ok;
-		// 命令状态
-		ptr = Water6009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		// N个节点设置结果
+		u8Tmp = (rxlen - index - 4) / 7;
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+			TmpBuf[6] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+			ptr = Water6009_GetStrErrorMsg(buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "   结果:%s\n", ptr);
+			index += 1;
+		}
 		break;
 
 	case CenterCmd_ModifyDocInfo:			// 修改档案信息
