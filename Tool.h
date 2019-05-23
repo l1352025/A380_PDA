@@ -62,17 +62,20 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 }
 
 /*
-* 描  述：打印日志到文件或串口No.2 , 通信串口在收发时不可打印到串口
-* 参  数：fileName	 - 文件名
-		  format	- 字符串格式
+* 描  述：打印日志到文件或串口No.3 , 通信串口在收发时不可打印到串口
+*		  	默认日志文件名定义为 #define LogName "debug.txt" ， 
+*			如需修改则在调用前重新定义 LogName 
+* 参  数：format	- 字符串格式
 		  ... 		- 可变参数
 * 返回值：void
 */
-void LogPrint(const char * fileName, const char * format, ...)
+void LogPrint(const char * format, ...)
 {
 #if Log_On
-	//static uint8 buf[512] = {0};
+	
+#if !(LogScom_On)
 	int fp;
+#endif
 	uint32 len = 0; 
 	va_list ap;
 	uint8 *buf;
@@ -85,22 +88,29 @@ void LogPrint(const char * fileName, const char * format, ...)
 	buf[len++] = '\0';
 	va_end(ap);
 	
-	if(_Access("debug.txt", 0) < 0){
-		fp = _Fopen("debug.txt", "W");
-	}else{
-		fp = _Fopen("debug.txt", "RW");
-	}
 
 #if LogScom_On
+
 	_CloseCom();
 	_ComSetTran(Trans_IR_Quick);
 	_ComSet((uint8 *)"115200,E,8,1", 2);
 	_SendComStr(buf, len);
 	_CloseCom();
+
 #else
+
+	#ifndef LogName
+		#define LogName "debug.txt"
+	#endif
+	if(_Access(LogName, 0) < 0){
+		fp = _Fopen(LogName, "W");
+	}else{
+		fp = _Fopen(LogName, "RW");
+	}
 	_Lseek(fp, 0, 2);
 	_Fwrite(buf, len, fp);
 	_Fclose(fp);
+
 #endif
 
 	_free(buf);
@@ -131,7 +141,7 @@ void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
 	}
 	tmp[i++] = '\0';
 
-	LogPrint(LogName, "%s%s", title, tmp);
+	LogPrint("%s%s", title, tmp);
 	_free(tmp);
 
 #endif
@@ -175,7 +185,7 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 		key = _ReadKey();
 
 		if((key >= KEY_0 && key <= KEY_9) 
-			||(key == KEY_DOT && idx > 0 && idx < uiItem->txtbox.dataLen -1)){
+			||(key == KEY_DOT && uiItem->txtbox.dotEnable && idx > 0 && idx < uiItem->txtbox.dataLen -1)){
 
 			if(uiItem->txtbox.isClear && cleared == false && idx == 0){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
@@ -199,8 +209,8 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 				x -= 8;
 			}
 		}
-		else if((key == KEY_RIGHT && keyBuf[idx] >= '0' && keyBuf[idx] <= '9')
-			|| (key == KEY_DOT)){
+		else if(key == KEY_RIGHT 
+			&& ((keyBuf[idx] >= '0' && keyBuf[idx] <= '9') || (keyBuf[idx] == '.'))){
 			if(idx != uiItem->txtbox.dataLen - 1){
 				idx++;
 				x += 8;
@@ -342,6 +352,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 	item->type = UI_TxtBox;
 	item->txtbox.dataLen = maxLen;
 	item->txtbox.isClear = isClear;
+	item->txtbox.dotEnable = 0;		// 默认不允许输入'.' , 如需输入则在textbox创建后设置该标志为1
 }
 
 /*
@@ -694,8 +705,8 @@ char HexToChar(uint8 b)
 		return '\0';
 	}
 }
+
 /*
-* 函数名：CharToHex
 * 描  述：字符转换成对应的16进制数
 */
 uint8 CharToHex(char c)
@@ -713,6 +724,22 @@ uint8 CharToHex(char c)
 	}
 
 	return hex;
+}
+
+/*
+* 描  述：BCD数 --转换为--> 10进制数
+*/
+uint8 BcdToDec(uint8 bcd)
+{
+	return (uint8)(bcd - (bcd >> 4) * 6);
+}
+
+/*
+* 描  述：10进制数 --转换为--> BCD数
+*/
+uint8 DecToBcd(uint8 dec)
+{
+	return (uint8)(dec + (dec / 10) * 6);
 }
 
 /*

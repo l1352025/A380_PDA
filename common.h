@@ -14,7 +14,7 @@ typedef unsigned char bool;
 
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
 #define VerInfo_RevNo   (char *)"1.0"               // 版本号
-#define VerInfo_RevDate (char *)"2019-5-16"         // 版本日期
+#define VerInfo_RevDate (char *)"2019-5-23"         // 版本日期
 //#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
@@ -99,6 +99,7 @@ typedef struct{
 	struct {
 		uint8 dataLen;
         uint8 isClear;
+        uint8 dotEnable;
 	}txtbox;
 }UI_Item;
 
@@ -115,6 +116,8 @@ uint8 GetCrc8(uint8 *Buf, int len);
 uint8 GetSum8(uint8 *buf, uint16 len);
 char HexToChar(uint8 b);
 uint8 CharToHex(char c);
+uint8 BcdToDec(uint8 bcd);
+uint8 DecToBcd(uint8 dec);
 int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse);
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse);
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
@@ -127,7 +130,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
-void LogPrint(const char * fileName, const char * format, ...);
+void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 
 //--------------------------------		全局变量	 ---------------------------------------

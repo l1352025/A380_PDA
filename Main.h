@@ -1957,6 +1957,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 				if(false == isUiFinish){
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "预缴用量:", StrBuf[0], 10, 11*8, true);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "参考用量:", StrBuf[1], 10, 11*8, true);
+					pUi[1].txtbox.dotEnable = 1;
+					pUi[2].txtbox.dotEnable = 1;
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -2247,6 +2249,7 @@ void WaterCmdFunc_WorkingParams(void)
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
 						"1", "10", "100", "1000");
+					pUi[1].txtbox.dotEnable = 1;
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -2290,6 +2293,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = 0x0B;		// 命令字	0B
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
+				Args.buf[i++] = 0x00;
 				Args.lastItemLen = i - 1;
 				break;
 			
@@ -2381,31 +2385,30 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case WaterCmd_SetMeterTime:		// 校表端时钟
 				/*---------------------------------------------*/
-				_GetDate(&TmpBuf[200], '-');
-				_GetTime(&TmpBuf[220], ':');
-				StrBuf[0][0] = TmpBuf[200];		// year
-				StrBuf[0][1] = TmpBuf[201];
-				StrBuf[0][2] = TmpBuf[202];
-				StrBuf[0][3] = TmpBuf[203];
-				StrBuf[0][4] = 0x00;
-				StrBuf[1][0] = TmpBuf[205];		// month
-				StrBuf[1][1] = TmpBuf[206];
-				StrBuf[1][2] = 0x00;
-				StrBuf[2][0] = TmpBuf[208];	// day
-				StrBuf[2][1] = TmpBuf[209];
-				StrBuf[2][2] = 0x00;
-				StrBuf[3][0] = TmpBuf[220];	// hour
-				StrBuf[3][1] = TmpBuf[221];
-				StrBuf[3][2] = 0x00;
-				StrBuf[4][0] = TmpBuf[223];	// minute
-				StrBuf[4][1] = TmpBuf[224];
-				StrBuf[4][2] = 0x00;
-				StrBuf[5][0] = TmpBuf[226];	// second
-				StrBuf[5][1] = TmpBuf[227];
-				StrBuf[5][2] = 0x00;
-
 				if(false == isUiFinish){
-					_Printfxy(0, 3*16, "时 间:             ", Color_White);
+					_GetDate(&TmpBuf[200], '-');
+					_GetTime(&TmpBuf[220], ':');
+					StrBuf[0][0] = TmpBuf[200];		// year
+					StrBuf[0][1] = TmpBuf[201];
+					StrBuf[0][2] = TmpBuf[202];
+					StrBuf[0][3] = TmpBuf[203];
+					StrBuf[0][4] = 0x00;
+					StrBuf[1][0] = TmpBuf[205];		// month
+					StrBuf[1][1] = TmpBuf[206];
+					StrBuf[1][2] = 0x00;
+					StrBuf[2][0] = TmpBuf[208];	// day
+					StrBuf[2][1] = TmpBuf[209];
+					StrBuf[2][2] = 0x00;
+					StrBuf[3][0] = TmpBuf[220];	// hour
+					StrBuf[3][1] = TmpBuf[221];
+					StrBuf[3][2] = 0x00;
+					StrBuf[4][0] = TmpBuf[223];	// minute
+					StrBuf[4][1] = TmpBuf[224];
+					StrBuf[4][2] = 0x00;
+					StrBuf[5][0] = TmpBuf[226];	// second
+					StrBuf[5][1] = TmpBuf[227];
+					StrBuf[5][2] = 0x00;
+					_Printfxy(0, 3*16, "时 间: ", Color_White);
 					uiRowIdx = 4;
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -2418,11 +2421,14 @@ void WaterCmdFunc_WorkingParams(void)
 				
 				for(i = 0; i < 6; i ++){
 					if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-						_Printfxy(0, 3*16, "时 间: 请输入有效值 ", Color_White);
+						// 请输入有效值 
 						currUi = 1;
 						isUiFinish = false;
-						continue;
+						break;
 					}
+				}
+				if(false == isUiFinish){
+					continue;
 				}
 
 				sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
@@ -2433,13 +2439,13 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = 0x14;		// 命令字	14
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
-				Args.buf[i++] = (uint8)(_GetYear()%100);		
-				Args.buf[i++] = _GetMonth();		
-				Args.buf[i++] = _GetDay();			
-				Args.buf[i++] = _GetHour();			
-				Args.buf[i++] = _GetMin();			
-				Args.buf[i++] = _GetSec();	
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
+				Args.buf[i++] = DecToBcd(_GetMonth());		
+				Args.buf[i++] = DecToBcd(_GetDay());			
+				Args.buf[i++] = DecToBcd(_GetHour());			
+				Args.buf[i++] = DecToBcd(_GetMin());			
+				Args.buf[i++] = DecToBcd(_GetSec());	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -3228,31 +3234,30 @@ void MainFuncSetMeterTime(void)
 		switch(CurrCmd){
 		case WaterCmd_SetMeterTime:		// "设置表端时钟"
 			/*---------------------------------------------*/
-			_GetDate(&TmpBuf[200], '-');
-			_GetTime(&TmpBuf[220], ':');
-			StrBuf[0][0] = TmpBuf[200];		// year
-			StrBuf[0][1] = TmpBuf[201];
-			StrBuf[0][2] = TmpBuf[202];
-			StrBuf[0][3] = TmpBuf[203];
-			StrBuf[0][4] = 0x00;
-			StrBuf[1][0] = TmpBuf[205];		// month
-			StrBuf[1][1] = TmpBuf[206];
-			StrBuf[1][2] = 0x00;
-			StrBuf[2][0] = TmpBuf[208];	// day
-			StrBuf[2][1] = TmpBuf[209];
-			StrBuf[2][2] = 0x00;
-			StrBuf[3][0] = TmpBuf[220];	// hour
-			StrBuf[3][1] = TmpBuf[221];
-			StrBuf[3][2] = 0x00;
-			StrBuf[4][0] = TmpBuf[223];	// minute
-			StrBuf[4][1] = TmpBuf[224];
-			StrBuf[4][2] = 0x00;
-			StrBuf[5][0] = TmpBuf[226];	// second
-			StrBuf[5][1] = TmpBuf[227];
-			StrBuf[5][2] = 0x00;
-
 			if(false == isUiFinish){
-				_Printfxy(0, 3*16, "时 间:             ", Color_White);
+				_GetDate(&TmpBuf[200], '-');
+				_GetTime(&TmpBuf[220], ':');
+				StrBuf[0][0] = TmpBuf[200];		// year
+				StrBuf[0][1] = TmpBuf[201];
+				StrBuf[0][2] = TmpBuf[202];
+				StrBuf[0][3] = TmpBuf[203];
+				StrBuf[0][4] = 0x00;
+				StrBuf[1][0] = TmpBuf[205];		// month
+				StrBuf[1][1] = TmpBuf[206];
+				StrBuf[1][2] = 0x00;
+				StrBuf[2][0] = TmpBuf[208];	// day
+				StrBuf[2][1] = TmpBuf[209];
+				StrBuf[2][2] = 0x00;
+				StrBuf[3][0] = TmpBuf[220];	// hour
+				StrBuf[3][1] = TmpBuf[221];
+				StrBuf[3][2] = 0x00;
+				StrBuf[4][0] = TmpBuf[223];	// minute
+				StrBuf[4][1] = TmpBuf[224];
+				StrBuf[4][2] = 0x00;
+				StrBuf[5][0] = TmpBuf[226];	// second
+				StrBuf[5][1] = TmpBuf[227];
+				StrBuf[5][2] = 0x00;
+				_Printfxy(0, 3*16, "时 间: ", Color_White);
 				uiRowIdx = 4;
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 				TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -3262,14 +3267,16 @@ void MainFuncSetMeterTime(void)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 				break;
 			}
-			
 			for(i = 0; i < 6; i ++){
 				if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-					_Printfxy(0, 3*16, "时 间: 请输入有效值 ", Color_White);
+					// 请输入有效值 
 					currUi = 1;
 					isUiFinish = false;
-					continue;
+					break;
 				}
+			}
+			if(false == isUiFinish){
+				continue;
 			}
 
 			sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
@@ -3280,15 +3287,16 @@ void MainFuncSetMeterTime(void)
 			Args.buf[i++] = 0x14;		// 命令字	14
 			ackLen = 2;					// 应答长度 2	
 			// 数据域
-			Args.buf[i++] = (uint8)(_GetYear()/100);		// 时间 - yyyy/mm/dd HH:mm:ss
-			Args.buf[i++] = (uint8)(_GetYear()%100);		
-			Args.buf[i++] = _GetMonth();		
-			Args.buf[i++] = _GetDay();			
-			Args.buf[i++] = _GetHour();			
-			Args.buf[i++] = _GetMin();			
-			Args.buf[i++] = _GetSec();	
+			Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));		// 时间 - yyyy/mm/dd HH:mm:ss
+			Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
+			Args.buf[i++] = DecToBcd(_GetMonth());		
+			Args.buf[i++] = DecToBcd(_GetDay());			
+			Args.buf[i++] = DecToBcd(_GetHour());			
+			Args.buf[i++] = DecToBcd(_GetMin());			
+			Args.buf[i++] = DecToBcd(_GetSec());	
 			Args.lastItemLen = i - 1;
 			break;
+
 		default:
 			break;
 		}

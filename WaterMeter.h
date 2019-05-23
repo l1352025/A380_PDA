@@ -520,33 +520,24 @@ char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
 */
 uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 {
-	uint16 mask = 1, i, len = 0;
+	uint16 len = 0;
 
-	for(i = 0; i < 16; i++){
+	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "垂直安装检测    :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "主动上传冻结数据:%s\n", ((stateCode & 0x0020) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "透支关阀功能    :%s\n", ((stateCode & 0x0040) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "预付费功能      :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "自动信道分配    :%s\n", ((stateCode & 0x0100) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "防锈功能        :%s\n", ((stateCode & 0x0200) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "掉电关阀功能    :%s\n", ((stateCode & 0x0400) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "RF休眠策略      :%s\n", ((stateCode & 0x0800) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "离线自动关阀    :%s\n", ((stateCode & 0x1000) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "煤气泄漏检测    :%s\n", ((stateCode & 0x2000) > 0 ? "开" : " 关"));
 
-		mask = (mask << i);
-		
-		switch(stateCode & mask){
-		case 0x01:	len += sprintf(&buf[len], "磁干扰关阀功能  : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x02:	len += sprintf(&buf[len], "上报数据加密功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x04:	len += sprintf(&buf[len], "防拆卸检测功能  : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x08:	len += sprintf(&buf[len], "垂直安装检测功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x10:	len += sprintf(&buf[len], "主动告警功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x20:	len += sprintf(&buf[len], "主动上传冻结数据: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x40:	len += sprintf(&buf[len], "透支关阀功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x80:	len += sprintf(&buf[len], "预付费功能     : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x100:	len += sprintf(&buf[len], "自动信道分配功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x200:	len += sprintf(&buf[len], "防锈功能       : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x400:	len += sprintf(&buf[len], "掉电关阀功能   : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x800:	len += sprintf(&buf[len], "RF休眠策略     : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x1000:	len += sprintf(&buf[len], "离线自动关阀功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x2000:	len += sprintf(&buf[len], "煤气泄漏检测功能: %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		case 0x4000:	break;
-		case 0x8000:	len += sprintf(&buf[len], "流速控制功能    : %s\n", ((stateCode & mask) > 0 ? "开" : "关"));	break;
-		default:	
-			break;
-		}
-	}
+	len += sprintf(&buf[len], "流速控制功能    :%s\n", ((stateCode & 0x8000) > 0 ? "开" : " 关"));
 
 	return len;
 }
@@ -710,7 +701,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		// 命令字
 		cmd = buf[index];
 		index += 1;
-		// 目标地址 跳过
+		// 表号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += 6;
 		// 转发结果
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
@@ -727,7 +721,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//-------------------------------------------------------------------------------------------------
 	//----------------------------------------		读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
-
+	case CenterCmd_ReadRealTimeData:
 		if(rxlen < index + 21 && cmd != 0x01){
 			break;
 		}
@@ -771,8 +765,12 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		//SNR 噪音比
 		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
-		//tx|rx信道、协议版本 跳过
-		index += 2;
+		//tx|rx信道
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		index += 1;
+		//协议版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
+		index += 1;
 		break;
 
 	//----------------------------------------		读取冻结数据	---------------------
@@ -872,7 +870,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
 		index += 1;
 		//协议版本
-		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %d\n", buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
 		index += 1;
 		break;
 
@@ -881,6 +879,8 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	case WaterCmd_OpenValveForce:	// 强制开阀
 	case WaterCmd_CloseValve:		// 关阀
 	case WaterCmd_CloseValveForce:	// 强制关阀
+	case CenterCmd_OpenValve:
+	case CenterCmd_CloseValve:
 		if(rxlen < index + 3 && cmd != 0x03){
 			break;
 		}
@@ -912,6 +912,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//---------------------------------------		清异常命令		---------------------
 	case WaterCmd_ClearException:	// 清异常命令 
+	case CenterCmd_ClearException:
 		if(rxlen < index + 1 && cmd != 0x05){
 			break;
 		}
@@ -1021,7 +1022,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		for(i = 0; i < u8Tmp; i++){
 			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
 			TmpBuf[12] = 0x00;
-			dispIdx += sprintf(&dispBuf[dispIdx], "%d : %s\n", i + 1, &TmpBuf[0]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "  %d: %s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 		}
 		index += (30 - u8Tmp * 6);
@@ -1034,7 +1035,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		for(i = 0; i < u8Tmp; i++){
 			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
 			TmpBuf[12] = 0x00;
-			dispIdx += sprintf(&dispBuf[dispIdx], "%d : %s\n", i + 1, &TmpBuf[0]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "  %d: %s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 		}
 		index += (30 - u8Tmp * 6);
@@ -1168,6 +1169,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
+	case CenterCmd_ReadEnableState:
 		if(rxlen < index + 2 && cmd != 0x0B){
 			break;
 		}
@@ -1566,7 +1568,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadDocInfo:			// 读档案信息
-		if(rxlen < index + 1 && cmd != 0x51){
+		if(rxlen < index + 3 && cmd != 0x51){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1593,7 +1595,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_AddDocInfo:			// 添加档案信息
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 && cmd != 0x52){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1614,7 +1616,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_DeleteDocInfo:			// 删除档案信息
-		if(rxlen < index + 7 && cmd != 0x17){
+		if(rxlen < index + 7 && cmd != 0x53){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1632,7 +1634,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ModifyDocInfo:			// 修改档案信息
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 && cmd != 0x54){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1644,7 +1646,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		路径设置：		-------------------------------------
 	case CenterCmd_ReadDefinedRoute:		// 读自定义路由
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 10 && cmd != 0x55){
 			break;
 		}
 		ret = RxResult_Ok;
@@ -1652,16 +1654,227 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		// 表号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
+		index += 6;
+		// 设备类型
+		ptr = Water6009_GetStrDeviceType(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
+		index += 1;
+		// 路径1级数
+		u8Tmp = buf[index];
+		dispIdx += sprintf(&dispBuf[dispIdx], "路径1级数: %d\n", u8Tmp);
+		index += 1;
+		// 路径1地址列表
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
+			TmpBuf[12] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "  %d: %s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+		}
+		// 路径2级数
+		u8Tmp = buf[index];
+		dispIdx += sprintf(&dispBuf[dispIdx], "路径2级数: %d\n", u8Tmp);
+		index += 1;
+		// 路径2地址列表
+		for(i = 0; i < u8Tmp; i++){
+			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
+			TmpBuf[12] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "  %d: %s\n", i + 1, &TmpBuf[0]);
+			index += 6;
+		}
 		break;
 
 	case CenterCmd_SetDefinedRoute:			// 设自定义路由
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 7 && cmd != 0x56){
 			break;
 		}
 		ret = RxResult_Ok;
+		// 表号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
+		index += 6;
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	//--------------------------------------		命令转发：		-------------------------------------
+	case CenterCmd_ReadFixedTimeData:			// 读定时定量数据
+		if(rxlen < index + 28 && cmd != 0x63){
+			break;
+		}
+		ret = RxResult_Ok;
+		// 表号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
+		index += 6;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		// 时间
+		dispIdx += sprintf(&dispBuf[dispIdx], "时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
+			, buf[index + 4], buf[index + 5], buf[index + 6]);
+		index += 7;
+		// 类型
+		ptr = Water6009_GetStrValueType((buf[index] >> 4));
+		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
+		index += 1;
+		// 正转用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "正转: %d.%03d\n", u32Tmp, u16Tmp);
+		// 反转用量
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		index += 4;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
+		//告警状态字1
+		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
+		index += 1;
+		//告警状态字2
+		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
+		index += 1;
+		//阀门状态 
+		ptr = Water6009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
+		index += 1;
+		//电池电压
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		index += 1;
+		//环境温度
+		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
+		dispIdx += sprintf(&dispBuf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
+        index += 1;
+		//SNR 噪音比
+		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
+		index += 1;
+		//tx|rx信道
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		index += 1;
+		//协议版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
+		index += 1;
+		break;
+
+	case CenterCmd_ReadFrozenData:			// 读冻结数据
+		if(rxlen < index + 7 && cmd != 0x64){
+			break;
+		}
+		ret = RxResult_Ok;
+		// 表号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
+		index += 6;
+		// 命令状态
+		ptr = Water6009_GetStrErrorMsg(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		// 冻结数据类型
+		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
+		index += 1;
+
+		if(rxlen < index + 104){	// 冻结数据格式-旧版本 1 + 78 byte
+			// 冻结数据起始序号
+			u8Tmp = buf[index] * 10;
+			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+			index += 1;
+			// 冻结数据起始时间
+			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
+				, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
+			index += 5;
+			// 冻结数据方式 ：0-按天, 1-按月
+			// 冻结数据数量 ：按天最大24条，按月最大30条
+			dispIdx += sprintf(&dispBuf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
+			index += 2;	
+			// 冻结数据时间间隔
+			if(buf[index] == 0){
+				dispIdx += sprintf(&dispBuf[dispIdx], "间隔: 每%s冻结1条\n", (buf[index - 2] == 0x01 ? "天" : "月"));
+			}
+			else{
+				dispIdx += sprintf(&dispBuf[dispIdx], "间隔: %d%s冻结1条\n", buf[index], (buf[index - 2] == 0x01 ? "小时" : "天"));
+			}
+			index += 1;
+			// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
+			dispIdx += sprintf(&dispBuf[dispIdx], "读取的10条数据如下: \n");
+			for(i = 0; i < 10; i++){
+				u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+				index += 4;
+				u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+				index += 2;
+				dispIdx += sprintf(&dispBuf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
+				index +=1;
+			}
+		}
+		else{		// 冻结数据格式-新版本	1 + 104 byte
+			// 冻结数据起始序号
+			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 倒数第%d天数据\n", buf[index] + 1);
+			index += 1;
+			// 时间信息
+			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %02X-%02X %02X:%02X\n",
+				buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+			index += 4;
+			// 累计用量
+			u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+			index += 4;
+			u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+			index += 2;
+			dispIdx += sprintf(&dispBuf[dispIdx], "累计用量: %d.%03d\n", u32Tmp, u16Tmp);
+			// 0:00 ~ 23:30 增量
+			u8Tmp = 0;
+			u16Tmp = 0x00;
+			for(i = 0; i < 47; i++){
+				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
+				u16Tmp += 0x30;
+				if(u16Tmp == 0x60){
+					u16Tmp = 0x00;
+					u8Tmp += 1;
+				}
+				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X增量:%d\n", u8Tmp, u16Tmp, (buf[index] + buf[index + 1]*256));
+				index += 2;
+			}
+		}
+
+		//告警状态字1
+		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
+		index += 1;
+		//告警状态字2
+		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
+		index += 1;
+		//阀门状态 
+		ptr = Water6009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
+		index += 1;
+		//电池电压
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		index += 1;
+		//环境温度
+		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
+		dispIdx += sprintf(&dispBuf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
+        index += 1;
+		//SNR 噪音比
+		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
+		index += 1;
+		//tx|rx信道
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		index += 1;
+		//协议版本
+		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
 		index += 1;
 		break;
 
