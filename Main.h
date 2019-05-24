@@ -31,12 +31,14 @@ UI_ItemList UiList;
 //----------------------------------	版本信息		--------------------------
 void VersionInfoFunc(void)
 {
+	_ClearScreen();
+
 	PrintfXyMultiLine_VaList(0, 0*16, "  %s ", VerInfo_Name);
 	PrintfXyMultiLine_VaList(0, 1*16, "版 本 号：%s", VerInfo_RevNo);
 	PrintfXyMultiLine_VaList(0, 2*16, "版本日期：%s", VerInfo_RevDate);
 	PrintfXyMultiLine_VaList(0, 3*16, "通信方式：%s", TransType);
 
-	_ReadKey();
+	_ReadKey();		// 任意键返回
 }
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
@@ -52,7 +54,7 @@ void VersionInfoFunc(void)
 */
 bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
-	uint8 sendCnt = 0, cmdResult;
+	uint8 sendCnt = 0, cmdResult, ret;
 	uint16 waitTime = 0, lastRxLen;
 	int fp;
 
@@ -61,7 +63,12 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	}else{
 		fp = _Fopen("system.cfg", "RW");
 	}
-	_Lseek(fp, 0, 0);
+	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
+		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
+		_Lseek(fp, 20, 0);	// 集中器号
+	}else{
+		_Lseek(fp, 0, 0);	// 表号
+	}
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	
@@ -162,6 +169,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		//------------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回  < 成功 >  继续", Color_White);
+		ret = true;
 	}
 	else{
 #if RxBeep_On
@@ -171,16 +179,17 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_SoundOff();
 #endif
 		if(cmdResult == RxResult_Failed){
-			_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		//	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		}
 		//-----------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回  < 失败 >  继续", Color_White);
+		ret = false;
 	}
 
 	_CloseCom();
 
-	return cmdResult;
+	return ret;
 }
 
 /*
@@ -277,15 +286,15 @@ void CenterCmdFunc_CommonCmd(void)
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读集中器号";
-	menuList.str[1] = "  2. 读集中器版本";
-	menuList.str[2] = "  3. 读集中器时钟";
-	menuList.str[3] = "  4. 设集中器时钟";
-	menuList.str[4] = "  5. 读GPRS参数";
-	menuList.str[5] = "  6. 设GPRS参数";
-	menuList.str[6] = "  7. 读GPRS信号强度";
-	menuList.str[7] = "  8. 集中器初始化";
-	menuList.str[8] = "  9. 读集中器工作模式";
+	menuList.str[0] = "1. 读集中器号";
+	menuList.str[1] = "2. 读集中器版本";
+	menuList.str[2] = "3. 读集中器时钟";
+	menuList.str[3] = "4. 设集中器时钟";
+	menuList.str[4] = "5. 读GPRS参数";
+	menuList.str[5] = "6. 设GPRS参数";
+	menuList.str[6] = "7. 读GPRS信号强度";
+	menuList.str[7] = "8. 集中器初始化";
+	menuList.str[8] = "9. 读集中器工作模式";
 	menuList.defbar = 1;
 
 	_CloseCom();
@@ -310,7 +319,7 @@ void CenterCmdFunc_CommonCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -320,8 +329,9 @@ void CenterCmdFunc_CommonCmd(void)
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
-				uiRowIdx = 2;
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				uiRowIdx = 3;
+				_Printfxy(0, 2*16, "集中器号:", Color_White);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "      >", StrDstAddr, 12, 13*8, true);
 			}
 
 			// 命令参数处理
@@ -368,11 +378,65 @@ void CenterCmdFunc_CommonCmd(void)
 			case CenterCmd_SetCenterTime:		// 设集中器时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					_GetDate(&TmpBuf[200], '-');
+					_GetTime(&TmpBuf[220], ':');
+					StrBuf[0][0] = TmpBuf[200];		// year
+					StrBuf[0][1] = TmpBuf[201];
+					StrBuf[0][2] = TmpBuf[202];
+					StrBuf[0][3] = TmpBuf[203];
+					StrBuf[0][4] = 0x00;
+					StrBuf[1][0] = TmpBuf[205];		// month
+					StrBuf[1][1] = TmpBuf[206];
+					StrBuf[1][2] = 0x00;
+					StrBuf[2][0] = TmpBuf[208];	// day
+					StrBuf[2][1] = TmpBuf[209];
+					StrBuf[2][2] = 0x00;
+					StrBuf[3][0] = TmpBuf[220];	// hour
+					StrBuf[3][1] = TmpBuf[221];
+					StrBuf[3][2] = 0x00;
+					StrBuf[4][0] = TmpBuf[223];	// minute
+					StrBuf[4][1] = TmpBuf[224];
+					StrBuf[4][2] = 0x00;
+					StrBuf[5][0] = TmpBuf[226];	// second
+					StrBuf[5][1] = TmpBuf[227];
+					StrBuf[5][2] = 0x00;
+					_Printfxy(0, 3*16, "时 间: ", Color_White);
+					uiRowIdx = 4;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+					TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 					break;
 				}
-				Args.buf[i++] = 0x44;		// 命令字	44
-				ackLen = 1;					// 应答长度 1	
+				for(i = 0; i < 6; i ++){
+					if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
+						// 请输入有效值 
+						currUi = 1;
+						isUiFinish = false;
+						break;
+					}
+				}
+				if(false == isUiFinish){
+					continue;
+				}
+
+				sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_SetDateTime(&TmpBuf[200]);
+
+				i = 0;
+				Args.buf[i++] = 0x14;		// 命令字	14
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
+				Args.buf[i++] = DecToBcd(_GetMonth());		
+				Args.buf[i++] = DecToBcd(_GetDay());			
+				Args.buf[i++] = DecToBcd(_GetHour());			
+				Args.buf[i++] = DecToBcd(_GetMin());			
+				Args.buf[i++] = DecToBcd(_GetSec());	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -414,12 +478,14 @@ void CenterCmdFunc_CommonCmd(void)
 			case CenterCmd_InitCenter:			// 集中器初始化
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "类型:", &StrBuf[0][0], 2, 
+						"清空档案和路径", "清空所有数据");
 					break;
 				}
 				Args.buf[i++] = 0x48;		// 命令字	48
 				ackLen = 2;					// 应答长度 1	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.buf[i++] = (uint8)StrBuf[0][0];	// 操作类型	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -738,8 +804,9 @@ void CenterCmdFunc_RouteSetting(void)
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
-				uiRowIdx = 2;
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				uiRowIdx = 3;
+				_Printfxy(0, 2*16, "集中器号:", Color_White);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "      >", StrDstAddr, 12, 13*8, true);
 			}
 
 			// 命令参数处理
@@ -753,8 +820,7 @@ void CenterCmdFunc_RouteSetting(void)
 			case CenterCmd_ReadDefinedRoute:	// 读自定义路由
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					sprintf(StrBuf[0], "0 (0-9有效)");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号: ", StrBuf[0], 12, 13*8, true);
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -762,7 +828,7 @@ void CenterCmdFunc_RouteSetting(void)
 					isUiFinish = false;
 					continue;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
+				Args.buf[i++] = 0x55;		// 命令字	55
 				ackLen = 21;				// 应答长度 21	
 				// 数据域
 				Args.buf[i++] = 0x00;				// 数据格式 00	
@@ -1066,7 +1132,13 @@ void CenterCmdFunc_CommandTransfer(void)
 void CenterCmdFunc(void)
 {
 	_GuiMenuStru menu;
-	
+	int fp;
+
+	fp = _Fopen("system.cfg", "R");
+	_Lseek(fp, 20, 0);	// byte [20 ~ 29] 集中器号 
+	_Fread(StrDstAddr, TXTBUF_LEN, fp);
+	_Fclose(fp);
+
 	menu.left=0;
 	menu.top=0;
 	menu.no=4;
@@ -1085,6 +1157,11 @@ void CenterCmdFunc(void)
 	menu.Function[3]=CenterCmdFunc_CommandTransfer;
 	menu.FunctionEx=0;
 	_Menu(&menu);	
+
+	fp = _Fopen("system.cfg", "R");
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 表号 
+	_Fread(StrDstAddr, TXTBUF_LEN, fp);
+	_Fclose(fp);
 	
 }
 
@@ -1557,7 +1634,7 @@ void WaterCmdFunc_TestCmd(void)
 					ackLen = 1;					// 应答长度 1	
 					// 数据域
 					Args.buf[i++] = 0x10;		// 命令选项 10	
-					memcpy(&Args.buf[i], VerInfo, 40);	
+					memcpy(&Args.buf[i], &VerInfo[0], 40);	
 					i += 40;					// 软件版本号
 					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[0], 0, false);
 					i += 6;						// 新地址
@@ -2813,26 +2890,29 @@ void WaterCmdFunc(void)
 	
 	menu.left=0;
 	menu.top=0;
-	menu.no=6;
-	menu.title= "<<表端操作 ";
+	menu.no=7;
+	menu.title= "<<工程调试 ";		// 工程调试 --> 即原来的 表端操作
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 测试命令 ";
 	menu.str[2]=" 程序升级 ";
 	menu.str[3]=" 预缴用量 ";
 	menu.str[4]=" 工作参数 ";
 	menu.str[5]=" 其他操作 ";
+	menu.str[6]=" 版本信息 ";
 	menu.key[0]="1";
 	menu.key[1]="2";
 	menu.key[2]="3";
 	menu.key[3]="4";
 	menu.key[4]="5";
 	menu.key[5]="6";
+	menu.key[6]="7";
 	menu.Function[0]=WaterCmdFunc_CommonCmd;
 	menu.Function[1]=WaterCmdFunc_TestCmd;
 	menu.Function[2]=WaterCmdFunc_Upgrade;
 	menu.Function[3]=WaterCmdFunc_PrepaiedVal;
 	menu.Function[4]=WaterCmdFunc_WorkingParams;
 	menu.Function[5]=WaterCmdFunc_Other;
+	menu.Function[6]=VersionInfoFunc;
 	menu.FunctionEx=0;
 	_Menu(&menu);	
 }
@@ -3732,6 +3812,7 @@ int main(void)
 	int fp;
 
 	fp = _Fopen("system.cfg", "R");
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 表号 
 	_Fread(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	
@@ -3765,7 +3846,8 @@ int main(void)
 	MainMenu.Function[4] = MainFuncOpenValve;
 	MainMenu.Function[5] = MainFuncCloseValve;
 	MainMenu.Function[6] = MainFuncBatchMeterReading;
-	MainMenu.Function[7] = MainFuncEngineerDebuging;
+	//MainMenu.Function[7] = MainFuncEngineerDebuging;
+	MainMenu.Function[7] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

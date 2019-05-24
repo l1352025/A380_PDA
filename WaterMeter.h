@@ -605,13 +605,13 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 		buf[index++] = 0x03;	// 表端APP时 发送信道
 		buf[index++] = 0x19;	// 表端APP时 接收信道
 	}else if(cmd > 0x70 && cmd < 0x74){
-		buf[index++] = 0x1E;	// 导言长度标识
-		buf[index++] = 0x03;	// 表端Boot时 发送信道
-		buf[index++] = 0x19;	// 表端Boot时 接收信道
-	}else{
 		buf[index++] = 0x00;	// 导言长度标识
-		buf[index++] = 0x19;	// 集中器 发送信道
-		buf[index++] = 0x03;	// 集中器 接收信道
+		buf[index++] = 0x0F;	// 表端Boot时 发送信道
+		buf[index++] = 0x1F;	// 表端Boot时 接收信道
+	}else{
+		buf[index++] = 0x00;	// 导言长度标识 00
+		buf[index++] = 0x19;	// 集中器 发送信道 19
+		buf[index++] = 0x19;	// 集中器 接收信道 19
 	}
 	
 	return index;
@@ -903,7 +903,13 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = RxResult_Ok;
 		index += 84;
-		memcpy(VerInfo, &buf[index], 40);
+		// #if Log_On
+		// 	LogPrintBytes("VerInfo ", &buf[index], 40);
+		// #endif
+		memcpy(&VerInfo[0], &buf[index], 40);
+		// #if Log_On
+		// 	LogPrintBytes("VerInfo ", &VerInfo[0], 40);
+		// #endif
 		memcpy(&TmpBuf[1020], &buf[index], 40);
 		TmpBuf[1060] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &TmpBuf[1020]);
@@ -1047,10 +1053,20 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = RxResult_Ok;
+		index += 1;
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		if(buf[index] == 0xAA){
+			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
+			TmpBuf[12] = 0x00;
+			dispIdx += sprintf(&dispBuf[dispIdx], "新表号: %s\n", &TmpBuf[0]);
+		}
+		else{
+			ret = RxResult_Failed;
+		}
+		index += 6;
 		break;
 
 	//--------------------------------------		预缴用量、参考用量-读取/设置	---------------------
@@ -1663,9 +1679,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
 		index += 1;
-		// 路径1级数
+		// 路径1中继数
 		u8Tmp = buf[index];
-		dispIdx += sprintf(&dispBuf[dispIdx], "路径1级数: %d\n", u8Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "路径1中继数: %d\n", u8Tmp);
 		index += 1;
 		// 路径1地址列表
 		for(i = 0; i < u8Tmp; i++){
@@ -1674,9 +1690,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			dispIdx += sprintf(&dispBuf[dispIdx], "  %d: %s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 		}
-		// 路径2级数
+		// 路径2中继数
 		u8Tmp = buf[index];
-		dispIdx += sprintf(&dispBuf[dispIdx], "路径2级数: %d\n", u8Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "路径2中继数: %d\n", u8Tmp);
 		index += 1;
 		// 路径2地址列表
 		for(i = 0; i < u8Tmp; i++){
