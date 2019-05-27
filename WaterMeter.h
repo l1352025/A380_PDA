@@ -903,16 +903,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = RxResult_Ok;
 		index += 84;
-		// #if Log_On
-		// 	LogPrintBytes("VerInfo ", &buf[index], 40);
-		// #endif
 		memcpy(&VerInfo[0], &buf[index], 40);
-		// #if Log_On
-		// 	LogPrintBytes("VerInfo ", &VerInfo[0], 40);
-		// #endif
-		memcpy(&TmpBuf[1020], &buf[index], 40);
-		TmpBuf[1060] = 0x00;
-		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &TmpBuf[1020]);
+		VerInfo[40] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
 		index += 40;
 		break;
 
@@ -1058,7 +1051,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
-		if(buf[index] == 0xAA){
+		if(buf[index - 1] == 0xAA){
 			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
 			TmpBuf[12] = 0x00;
 			dispIdx += sprintf(&dispBuf[dispIdx], "新表号: %s\n", &TmpBuf[0]);

@@ -90,13 +90,13 @@ void LogPrint(const char * format, ...)
 	
 
 #if LogScom_On
-
+#ifdef Project_6009_RF
 	_CloseCom();
 	_ComSetTran(Trans_IR_Quick);
 	_ComSet((uint8 *)"115200,E,8,1", 2);
 	_SendComStr(buf, len);
 	_CloseCom();
-
+#endif
 #else
 
 	#ifndef LogName

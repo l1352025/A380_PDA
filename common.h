@@ -13,9 +13,9 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-#define VerInfo_RevNo   (char *)"1.0"               // 版本号
-#define VerInfo_RevDate (char *)"2019-5-23"         // 版本日期
-//#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
+#define VerInfo_RevNo   (char *)"2.0"               // 版本号
+#define VerInfo_RevDate (char *)"2019-5-27"         // 版本日期
+#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
 #ifndef VerInfo_Release
@@ -24,7 +24,8 @@ typedef unsigned char bool;
 #define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define RxBeep_On   1       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
-#define RxBeep_On   1       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
+#define Log_On      0 
+#define RxBeep_On   1       
 #endif
 
 #define TXTBUF_LEN	20      // 文本输入最大字符数

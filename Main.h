@@ -74,7 +74,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
-	timeout = 2000;
+	timeout = 3000;
 	tryCnt = 3;
 #else
 	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
@@ -126,7 +126,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 				DispBuf[0] = 0x00;
 				return false;
 			}
-			waitTime += 100;
+			waitTime += 200;
 
 			if(waitTime % 1000 == 0){
 				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
@@ -145,16 +145,14 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			}
 		}while(waitTime < timeout);
 
-		if(waitTime >= timeout){
-			PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
-		}
+		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
 
 #if Log_On
 		LogPrintBytes("Tx: ", TxBuf, TxLen);
 		LogPrintBytes("Rx: ", RxBuf, RxLen);
 #endif
 
-		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, DispBuf);
+		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
 
 	}while(sendCnt < tryCnt && (cmdResult == RxResult_Timeout || cmdResult == RxResult_CrcError));
 
@@ -1641,7 +1639,7 @@ void WaterCmdFunc_TestCmd(void)
 					Args.lastItemLen = i - 1;
 
 					if(true == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
-						memcpy(DstAddr, &Args.buf[42], 6);
+						memcpy(StrDstAddr, StrBuf[0], TXTBUF_LEN);
 					}
 				}
 
@@ -1657,6 +1655,11 @@ void WaterCmdFunc_TestCmd(void)
 				break;
 
 			default: 
+				break;
+			}
+
+			if (key == KEY_CANCEL){
+				key = KEY_NOHOOK;
 				break;
 			}
 
@@ -1678,6 +1681,7 @@ void WaterCmdFunc_TestCmd(void)
 				key = ShowUI(UiList, &currUi);
 
 				if (key == KEY_CANCEL){
+					key = KEY_NOHOOK;
 					break;
 				}
 
@@ -1706,6 +1710,7 @@ void WaterCmdFunc_TestCmd(void)
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
+				key = KEY_NOHOOK;
 				break;
 			}else{
 				isUiFinish = false;
@@ -3818,17 +3823,22 @@ int main(void)
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
+#ifdef Project_6009_RF
 	MainMenu.no=8;
+#else
+	MainMenu.no=7;
+#endif 
 	MainMenu.title =  "     桑锐手持机    ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
 	MainMenu.str[2] = " 读取表端时钟 ";
 	MainMenu.str[3] = " 设置表端时钟 ";
-	//MainMenu.str[4] = " 清异常命令 ";
 	MainMenu.str[4] = " 开阀 ";
 	MainMenu.str[5] = " 关阀 ";
-	MainMenu.str[6] = " 批量抄表 ";
-	MainMenu.str[7] = " 工程调试 ";
+	MainMenu.str[6] = " 工程调试 ";
+#ifdef Project_6009_RF
+	MainMenu.str[7] = " 批量抄表 ";
+#endif 
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -3836,18 +3846,19 @@ int main(void)
 	MainMenu.key[4] = "5";
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
+#ifdef Project_6009_RF
 	MainMenu.key[7] = "8";
-	//MainMenu.key[8] = "9";
+#endif 
 	MainMenu.Function[0] = MainFuncReadRealTimeData;
 	MainMenu.Function[1] = MainFuncReadFrozenData;
 	MainMenu.Function[2] = MainFuncReadMeterTime;
 	MainMenu.Function[3] = MainFuncSetMeterTime;
-	//MainMenu.Function[4] = MainFuncClearException;
 	MainMenu.Function[4] = MainFuncOpenValve;
 	MainMenu.Function[5] = MainFuncCloseValve;
-	MainMenu.Function[6] = MainFuncBatchMeterReading;
-	//MainMenu.Function[7] = MainFuncEngineerDebuging;
-	MainMenu.Function[7] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
+#ifdef Project_6009_RF
+	MainMenu.Function[7] = MainFuncBatchMeterReading;
+#endif 
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
