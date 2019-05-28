@@ -3785,7 +3785,147 @@ void MainFuncCloseValve(void)
 // 批量抄表
 void MainFuncBatchMeterReading(void)
 {
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	_GuiLisStruEx menuList;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 * pByte;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
 
+	_ClearScreen();
+
+	// 菜单
+	menuList.title = "<<批量抄表";
+	menuList.no = 5;
+	menuList.MaxNum = 5;
+	menuList.isRt = 0;
+	menuList.x = 0;
+	menuList.y = 0;
+	menuList.with = 10 * 16;
+	menuList.str[0] = "  1. 按区域抄表";
+	menuList.str[1] = "  2. 按集中器抄表";
+	menuList.str[2] = "  3. 导入档案";
+	menuList.str[3] = "  4. 清空档案";
+	menuList.str[4] = "  5. 查询统计";
+	menuList.defbar = 1;
+
+	_CloseCom();
+	_ComSetTran(CurrPort);
+	_ComSet(CurrBaud, 2);
+
+	while(1){
+
+		_ClearScreen();
+		menuItemNo = _ListEx(&menuList);
+
+		if (menuItemNo == 0){
+			break;
+		}
+		menuList.defbar = menuItemNo;
+		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
+
+		while(1){
+			
+			_ClearScreen();
+
+			// 公共部分 :  界面显示
+			pByte = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			_Printfxy(0, 0, TmpBuf, Color_White);
+			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+			/*---------------------------------------------*/
+		 	//----------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+			if(false == isUiFinish){
+				(*pUiCnt) = 0;
+				uiRowIdx = 2;
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			}
+
+			// 命令参数处理
+			i = 0;	
+			Args.itemCnt = 2;
+			Args.items[0] = &Args.buf[0];   // 命令字
+			Args.items[1] = &Args.buf[1];	// 数据域
+			CurrCmd = (0x10 + menuItemNo);
+
+			switch(CurrCmd){
+			case WaterCmd_ReadRealTimeData:		// ""
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
+				break;
+
+
+			default: 
+				break;
+			}
+
+			// 创建 “中继地址输入框” 后， 显示UI
+			if(false == isUiFinish){
+#ifdef Project_6009_RF
+				for(i = 0; i < RELAY_MAX; i++){
+					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+						StrRelayAddr[i][0] = 0x00;
+						sprintf(StrRelayAddr[i], "    (可选)    ");
+					}
+				}
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
+#endif
+				
+				key = ShowUI(UiList, &currUi);
+
+				if (key == KEY_CANCEL){
+					break;
+				}
+
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+					sprintf(StrDstAddr, " 请输入");
+					currUi = 0;
+					continue;
+				}
+
+				isUiFinish = true;
+				continue;	// go back to get ui args
+			}
+
+			// 地址填充
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+
+			// 应答长度、超时时间、重发次数
+			ackLen += 14 + Addrs.itemCnt * 6;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 3;
+
+			// 发送、接收、结果显示
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			
+			
+			// 继续 / 返回
+			if (key == KEY_CANCEL){
+				break;
+			}else{
+				isUiFinish = false;
+				continue;
+			}
+		}
+		
+	}
+
+	_CloseCom();
 }
 
 // 工程调试		------------------------------
