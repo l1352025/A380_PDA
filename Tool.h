@@ -329,6 +329,24 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 }
 
 /*
+* 描  述：创建标签
+* 参  数：x, y		- UI组件前面的标签的起始坐标
+*		 item		- UI组件属性
+*		 title		- UI组件前面的标签
+* 返回值：void
+*/
+void LableCreate(UI_Item *item, uint8 x, uint8 y, const char *title)
+{
+	item->x = x;
+	item->y = y;
+	item->title = title;
+	item->x1 = x + strlen(title) * 8;
+	item->y1 = y;
+	item->text = NULL;
+	item->type = UI_Lable;
+}
+
+/*
 * 描  述：创建输入框
 * 参  数：x, y		- UI组件前面的标签的起始坐标
 *		 item		- UI组件属性
@@ -404,7 +422,7 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *cu
 */
 uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 {
-	const char * ZeroAddr = "000000000000";
+	const char * ZeroAddr = "0000000000000000";
 	uint8 key, x, y;
 	uint8 i;
 	UI_Item *ptr;
@@ -426,6 +444,10 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 
 	(*itemNo) = ((*itemNo) > uiList.cnt -1 ? 0 : (*itemNo));
 
+	if(uiList.items[(*itemNo)].type == UI_Lable){
+		key = KEY_DOWN;
+	}
+
 	while(1){
 
 		ptr = &uiList.items[(*itemNo)];
@@ -436,7 +458,8 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 				key = GetInputNumStr(ptr);
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
-					if(ptr->txtbox.dataLen == 12 && (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
+					if((ptr->txtbox.dataLen == 12 || ptr->txtbox.dataLen == 16)
+						&& (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
 						_leftspace(ptr->text, ptr->txtbox.dataLen, '0');
 						if(strncmp(ZeroAddr, ptr->text, ptr->txtbox.dataLen) == 0){
 							sprintf(ptr->text, " 不能为0 ");
@@ -449,6 +472,8 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		}
 		else if(ptr->type == UI_CombBox){
 			key = CombBoxGetCurrIndex(ptr);
+		}
+		else{	// UI_Lable
 		}
 
 		if(key == KEY_CANCEL || key == KEY_ENTER){

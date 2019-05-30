@@ -13,8 +13,8 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-#define VerInfo_RevNo   (char *)"2.0"               // 版本号
-#define VerInfo_RevDate (char *)"2019-5-27"         // 版本日期
+#define VerInfo_RevNo   (char *)"2.1"               // 版本号
+#define VerInfo_RevDate (char *)"2019-5-30"         // 版本日期
 #define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
@@ -55,11 +55,13 @@ typedef unsigned char bool;
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
     #define TransType   "红外透传"      // 通信方式	
+    #define AddrLen     8
 #else //defined(Project_6009_RF)
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define Timeout     Trans_IR 
     #define TransType   "Lora透传"      // 通信方式	
+    #define AddrLen     6
 #endif
 
 typedef enum{
@@ -76,7 +78,8 @@ typedef struct{
 
 typedef enum{
     UI_TxtBox,
-    UI_CombBox
+    UI_CombBox,
+    UI_Lable
 }UI_Type;
 
 typedef struct{
@@ -124,6 +127,7 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
+void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
@@ -141,8 +145,8 @@ extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint8 DispBuf[2048];
 extern uint32 RxLen, TxLen;
-extern const uint8 LocalAddr[7];
-extern uint8 DstAddr[7];
+extern const uint8 LocalAddr[9];
+extern uint8 DstAddr[9];
 extern uint8 VerInfo[41];
 extern char StrBuf[10][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];

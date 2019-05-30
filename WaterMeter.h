@@ -220,31 +220,31 @@ typedef enum{
 */
 void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char strRelayAddrs[][20])
 {
-#ifdef Project_6009_RF
+	#ifdef Project_6009_RF
 	uint8 i;
-#endif
+	#endif
 
 	// 源地址
 	addrs->itemCnt = 0;
 	addrs->items[addrs->itemCnt] = &addrs->buf[0];
-	memcpy(addrs->items[addrs->itemCnt], LocalAddr, 6);
+	memcpy(addrs->items[addrs->itemCnt], LocalAddr, AddrLen);
 	addrs->itemCnt++;
 
-#ifdef Project_6009_RF
+	#ifdef Project_6009_RF
 	// 中继地址
 	for(i = 0; i < RELAY_MAX; i++){
 		if(strRelayAddrs[i][0] >= '0' && strRelayAddrs[i][0] <= '9'){
-			addrs->items[addrs->itemCnt] = &addrs->buf[6 + i*6];
-			GetBytesFromStringHex(addrs->items[addrs->itemCnt], 0, 6, strRelayAddrs[i], 0, false);
+			addrs->items[addrs->itemCnt] = &addrs->buf[AddrLen + i*AddrLen];
+			GetBytesFromStringHex(addrs->items[addrs->itemCnt], 0, AddrLen, strRelayAddrs[i], 0, false);
 			addrs->itemCnt++;
 		}
 	}
-#endif
+	#endif
 
 	// 目的地址
-	GetBytesFromStringHex(DstAddr, 0, 6, strDstAddr, 0, false);
-	addrs->items[addrs->itemCnt] = &addrs->buf[addrs->itemCnt*6];
-	memcpy(addrs->items[addrs->itemCnt], DstAddr, 6);
+	GetBytesFromStringHex(DstAddr, 0, AddrLen, strDstAddr, 0, false);
+	addrs->items[addrs->itemCnt] = &addrs->buf[addrs->itemCnt*AddrLen];
+	memcpy(addrs->items[addrs->itemCnt], DstAddr, AddrLen);
 	addrs->itemCnt++;
 }
 
@@ -580,8 +580,8 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	buf[index++] = addrs->itemCnt & 0x0F;	// 路径信息:  当前位置|路径长度
 	// 地址域
 	for(i = 0; i < (addrs->itemCnt & 0x0F); i++){
-		memcpy(&buf[index], addrs->items[i], 6);
-		index += 6;
+		memcpy(&buf[index], addrs->items[i], AddrLen);
+		index += AddrLen;
 	}
 
 	// 数据域
@@ -640,9 +640,13 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	// 显示表号 或 集中器号
 	if(cmdId < 0x1010){
+		#if (AddrLen == 6)
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
+		#else
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: \n   %s\n", StrDstAddr);
+		#endif
 	}else{
-		dispIdx += sprintf(&dispBuf[dispIdx], "集中器号: \n      %s\n", StrDstAddr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "集中器号: \n   %s\n", StrDstAddr);
 	}
 
 	// 缓冲区多包中查找
@@ -670,7 +674,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 		// dstaddr check
 		addrsCnt = buf[index + 7];
-		if(memcmp(&buf[index + 8 + (addrsCnt - 1) * 6], dstAddr, 6) != 0){
+		if(memcmp(&buf[index + 8 + (addrsCnt - 1) * AddrLen], dstAddr, AddrLen) != 0){
 			index += length;
 			continue;
 		}
@@ -694,7 +698,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	// 跳过 长度 --> 路径信息
 	index += 8;
 	// 跳过 地址域
-	index += addrsCnt * 6;
+	index += addrsCnt * AddrLen;
 
 	// 集中器转发的命令头部
 	if(cmd == 0x4D){
@@ -702,10 +706,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		cmd = buf[index];
 		index += 1;
 		// 表号
-		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-		TmpBuf[6] = 0x00;
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, AddrLen, 0, false);
+		TmpBuf[AddrLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
-		index += 6;
+		index += AddrLen;
 		// 转发结果
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
