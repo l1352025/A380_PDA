@@ -1567,8 +1567,10 @@ void WaterCmdFunc_TestCmd(void)
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "过流电流mA:", StrBuf[0], 3, 8*8, true);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "超时时间ms:", StrBuf[1], 5, 8*8, true);
+                    _Printfxy(7*16, (uiRowIdx)*16, "mA", Color_White);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "过流电流:", StrBuf[0], 3, 8*8, true);
+					_Printfxy(7*16, (uiRowIdx)*16, "ms", Color_White);
+                    TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "超时时间:", StrBuf[1], 5, 8*8, true);
 					break;
 				}
 
@@ -2097,9 +2099,9 @@ void WaterCmdFunc_PrepaiedVal(void)
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "预缴用量:", StrBuf[0], 10, 11*8, true);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "参考用量:", StrBuf[1], 10, 11*8, true);
-					pUi[1].txtbox.dotEnable = 1;
-					pUi[2].txtbox.dotEnable = 1;
+					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+                    TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "参考用量:", StrBuf[1], 10, 11*8, true);
+					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -2332,7 +2334,7 @@ void WaterCmdFunc_WorkingParams(void)
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "1. 设表底数脉冲系数";
+	menuList.str[0] = "1. 设用量和脉冲系数";
 	menuList.str[1] = "2. 清除反转计量数据";
 	menuList.str[2] = "3. 读取功能使能状态";
 	menuList.str[3] = "4. 设置定时上传";
@@ -2397,9 +2399,9 @@ void WaterCmdFunc_WorkingParams(void)
 						StrBuf[1][0] = 0x01;
 					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
 						"1", "10", "100", "1000");
-					pUi[1].txtbox.dotEnable = 1;
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
