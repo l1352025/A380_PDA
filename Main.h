@@ -67,7 +67,11 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
 		_Lseek(fp, 20, 0);	// 集中器号
 	}else{
-		_Lseek(fp, 0, 0);	// 表号
+		#ifdef Project_6009_RF
+		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+		#else
+		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		#endif
 	}
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
@@ -121,7 +125,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 		do{
 
-			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 8);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -1451,7 +1455,7 @@ void WaterCmdFunc_TestCmd(void)
 
 	// 菜单
 	menuList.title = "<<测试命令";
-	menuList.no = 8;
+	menuList.no = 10;
 	menuList.MaxNum = 8;
 	menuList.isRt = 0;
 	menuList.x = 0;
@@ -1465,6 +1469,8 @@ void WaterCmdFunc_TestCmd(void)
 	menuList.str[5] = "  6. 读运营商编号";
 	menuList.str[6] = "  7. 读上报路径";
 	menuList.str[7] = "  8. 设置表号";
+	menuList.str[8] = "  9. 读debug信息";
+	menuList.str[9] = " 10. 清debug信息";
 	menuList.defbar = 1;
 
 	_CloseCom();
@@ -1516,6 +1522,30 @@ void WaterCmdFunc_TestCmd(void)
 			CurrCmd = (0x20 + menuItemNo);
 
 			switch(CurrCmd){
+			case WaterCmd_ReadDebugInfo:		// 读debug信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 58;				// 应答长度 58	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 命令选项 01	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ClearDebugInfo:		// 清debug信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 2;					// 应答长度 2	
+				// 数据域
+				Args.buf[i++] = 0x02;		// 命令选项 05	
+				Args.lastItemLen = i - 1;
+				break;
+
 			case WaterCmd_RebootDevice:			// "表端重启"
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -3936,6 +3966,9 @@ void MainFuncBatchMeterReading(void)
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
+	char *fileName = NULL;
+	int	fp, index;
+	uint8 fileds[15][20];
 
 	_ClearScreen();
 
@@ -4024,7 +4057,7 @@ void MainFuncBatchMeterReading(void)
 				tryCnt = 3;
 
 				// 发送、接收、结果显示
-				key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+				//key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 				
 				break;
 
@@ -4057,12 +4090,51 @@ void MainFuncBatchMeterReading(void)
 				tryCnt = 3;
 
 				// 发送、接收、结果显示
-				key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+				//key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 				
 				break;
 
 			case 3:		// 导入档案
 				// 选中档案文件
+				_SaveScreenToBuff(Screenbuff);
+				_ClearScreen();
+				fileName = _GetFileList("选|\n择|\n档|\n案|\n文|\n件|\n  |\n  |\n", "", "");
+				_ClearScreen();
+				_RestoreBuffToScreen(Screenbuff);
+
+				if (fileName == 0){
+					break;
+				}
+				
+				fp = _Fopen(fileName, "R");
+				_Lseek(fp, 0, 0);
+				_Fread(TmpBuf, 1024, fp);
+				_Fclose(fp);
+
+				#if Log_On
+					LogPrintBytes("TmpBuf-512 ", TmpBuf, 512);
+				#endif
+
+				index = 0;
+				while(TmpBuf[index]){
+
+				}
+
+				#if Log_On
+					LogPrint("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", 
+						fileds[0], fileds[1], fileds[2], fileds[3], fileds[4], 
+						fileds[5], fileds[6], fileds[7], fileds[8], fileds[9],
+						fileds[10], fileds[11], fileds[12]);
+				#endif
+					
+				index = IndexOf(TmpBuf, 1024, "\n", 1, 0, 1024);
+				if(index < 0){
+					
+					fileName = 0;                           
+				}
+				else{
+					
+				}
 
 				// 导入到数据库
 
@@ -4084,7 +4156,7 @@ void MainFuncBatchMeterReading(void)
 
 		
 
-		
+			key = _ReadKey();
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
@@ -4129,7 +4201,11 @@ int main(void)
 	int fp;
 
 	fp = _Fopen("system.cfg", "R");
-	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 表号 
+#ifdef Project_6009_RF
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+#else
+	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+#endif
 	_Fread(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	

@@ -47,6 +47,8 @@ typedef enum{
 	6	读运营商编号
 	7	读上报路径
 	8	设置表号
+	9	读debug信息
+	10	清debug信息
 	*/
 	WaterCmd_RebootDevice				= 0x21,
 	WaterCmd_ReadTemperature,
@@ -56,6 +58,8 @@ typedef enum{
 	WaterCmd_ReadOperatorNumber,	
 	WaterCmd_ReadReportRoute,
 	WaterCmd_SetMeterNumber,
+	WaterCmd_ReadDebugInfo,
+	WaterCmd_ClearDebugInfo,
 
 	/*
 	程序升级：	
@@ -101,6 +105,9 @@ typedef enum{
 	6	设置定时定量上传
 	7	读表端时钟
 	8	校表端时钟
+	9	设IP+端口+模式
+	10	读IP+端口+模式
+	11	读IMEI+CCID
 	*/
 	WaterCmd_SetBaseValPulseRatio	= 0x51,
 	WaterCmd_ClearReverseMeasureData,
@@ -110,6 +117,9 @@ typedef enum{
 	WaterCmd_SetTimedAndFixedValUpload,	
 	WaterCmd_ReadMeterTime,
 	WaterCmd_SetMeterTime,
+	WaterCmd_SetIpPortMode,
+	WaterCmd_ReadIpPortMode,
+	WaterCmd_ReadImeiAndCcid,
 
 	/*
 	其他操作：	
@@ -1064,6 +1074,78 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			ret = RxResult_Failed;
 		}
 		index += 6;
+		break;
+
+	case WaterCmd_ReadDebugInfo:		// 读debug信息
+		if(rxlen < index + 58 && cmd != 0x07){
+			break;
+		}
+		ret = RxResult_Ok;
+		index += 1;
+		// debug信息
+		dispIdx += sprintf(&dispBuf[dispIdx], "模块发射次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "模块接收次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "开/关阀次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "磁干扰次数 : %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "EEPROM写入次数: %d\n",
+			 (buf[index] + (buf[index + 1] << 8) + (buf[index + 2] << 16) + (buf[index + 3] << 24)));
+		index += 4;
+		dispIdx += sprintf(&dispBuf[dispIdx], "48小时复位次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "进入初始化次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "完成初始化次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "看门狗复位次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "CDA超100ms次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "接收超时次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "A干簧管闭合次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "B干簧管闭合次数: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "ID校验错误: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "收到非法命令字: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "申请定时器失败: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], " 命令:%02X %02X %02X %02X %02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3], buf[index + 4]);
+		index += 5;
+		dispIdx += sprintf(&dispBuf[dispIdx], "申请任务失败: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], " 命令:%02X %02X %02X %02X %02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3], buf[index + 4]);
+		index += 5;
+		dispIdx += sprintf(&dispBuf[dispIdx], "申请内存失败: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], " 命令:%02X %02X %02X %02X %02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3], buf[index + 4]);
+		index += 5;
+		for(i = 0; i < 10; i++){
+			dispIdx += sprintf(&dispBuf[dispIdx], "零时数据%c: %d\n", ('A' + i), buf[index]);
+			index += 1;
+		}
+		break;
+
+	case WaterCmd_ClearDebugInfo:		// 清debug信息
+		if(rxlen < index + 1 && cmd != 0x07){
+			break;
+		}
+		ret = RxResult_Ok;
+		index += 1;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
 		break;
 
 	//--------------------------------------		预缴用量、参考用量-读取/设置	---------------------

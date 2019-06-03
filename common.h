@@ -13,9 +13,9 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-#define VerInfo_RevNo   (char *)"2.1"               // 版本号
-#define VerInfo_RevDate (char *)"2019-5-30"         // 版本日期
-#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
+#define VerInfo_RevNo   (char *)"2.2"               // 版本号
+#define VerInfo_RevDate (char *)"2019-6-3"         // 版本日期
+//#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
 #ifndef VerInfo_Release

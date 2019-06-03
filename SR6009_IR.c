@@ -73,7 +73,11 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
 		_Lseek(fp, 20, 0);	// 集中器号
 	}else{
-		_Lseek(fp, 0, 0);	// 表号
+		#ifdef Project_6009_RF
+		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+		#else
+		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		#endif
 	}
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
@@ -527,7 +531,7 @@ void WaterCmdFunc_TestCmd(void)
 
 	// 菜单
 	menuList.title = "<<测试命令";
-	menuList.no = 8;
+	menuList.no = 10;
 	menuList.MaxNum = 8;
 	menuList.isRt = 0;
 	menuList.x = 0;
@@ -541,6 +545,8 @@ void WaterCmdFunc_TestCmd(void)
 	menuList.str[5] = "  6. 读运营商编号";
 	menuList.str[6] = "  7. 读上报路径";
 	menuList.str[7] = "  8. 设置表号";
+	menuList.str[8] = "  9. 读debug信息";
+	menuList.str[9] = " 10. 清debug信息";
 	menuList.defbar = 1;
 
 	_CloseCom();
@@ -592,6 +598,30 @@ void WaterCmdFunc_TestCmd(void)
 			CurrCmd = (0x20 + menuItemNo);
 
 			switch(CurrCmd){
+			case WaterCmd_ReadDebugInfo:		// 读debug信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 58;				// 应答长度 58	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 命令选项 01	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ClearDebugInfo:		// 清debug信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 2;					// 应答长度 2	
+				// 数据域
+				Args.buf[i++] = 0x02;		// 命令选项 05	
+				Args.lastItemLen = i - 1;
+				break;
+
 			case WaterCmd_RebootDevice:			// "表端重启"
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -2890,7 +2920,11 @@ int main(void)
 	int fp;
 
 	fp = _Fopen("system.cfg", "R");
-	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 表号 
+#ifdef Project_6009_RF
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+#else
+	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+#endif
 	_Fread(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	

@@ -171,15 +171,22 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 	static uint8 keyBuf[TXTBUF_LEN] = {0};
 	uint8 key, cleared = false;
 	char keyStr[2] = {0};
-	int idx;
+	int idx = 0;
 	int x = uiItem->x1;
 	int y = uiItem->y1;
 
 	memcpy(keyBuf, uiItem->text, TXTBUF_LEN);
 	_Printfxy(x, y, keyBuf, Color_White);
+	
+	if((uiItem->txtbox.dataLen == 12 || uiItem->txtbox.dataLen == 16)
+		&&(uiItem->text[0] >= '0' && uiItem->text[0] <= '9')){
+		idx = strlen(uiItem->text);
+		idx = (idx > 0 ? idx - 1 : idx);
+	}
+	x = x + idx * 8;
 	_toxy(x, y + uiItem->height);
 	_ShowCur();
-	idx = 0;
+	
 
 	while(1){
 		key = _ReadKey();
