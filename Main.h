@@ -4116,16 +4116,47 @@ void MainFuncBatchMeterReading(void)
 				#endif
 
 				index = 0;
-				while(TmpBuf[index]){
+				i = 0;
+				pByte = &fileds[i][0];
 
+				while(TmpBuf[index]){
+					
+					*pByte = TmpBuf[index];
+
+					if(*pByte == ','){
+						*pByte = 0x00;
+						i++;
+						pByte = &fileds[i][0];
+						
+					}
+					else if(*pByte == '\r' && *pByte == '\n'){
+						*pByte = 0x00;
+						i++;
+						pByte = &fileds[i][0];
+						index++;
+					}
+					else{
+						pByte++;
+					}
+
+					if(i == 13){
+						#if Log_On
+							LogPrint("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", 
+								fileds[0], fileds[1], fileds[2], fileds[3], fileds[4], 
+								fileds[5], fileds[6], fileds[7], fileds[8], fileds[9],
+								fileds[10], fileds[11], fileds[12]);
+						#endif
+
+						break;
+					}
+
+					index++;
 				}
 
 				#if Log_On
-					LogPrint("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", 
-						fileds[0], fileds[1], fileds[2], fileds[3], fileds[4], 
-						fileds[5], fileds[6], fileds[7], fileds[8], fileds[9],
-						fileds[10], fileds[11], fileds[12]);
+					LogPrint("%s,%s,%s,%s\n", "选择", "用户编号", "用户名称", "地址");
 				#endif
+				
 					
 				index = IndexOf(TmpBuf, 1024, "\n", 1, 0, 1024);
 				if(index < 0){
