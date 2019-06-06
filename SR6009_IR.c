@@ -82,15 +82,6 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	
-	// 应答长度、超时时间、重发次数
-#ifdef Project_6009_IR
-	timeout = 3000;
-	tryCnt = 3;
-#else
-	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
-	tryCnt = 3;
-#endif
-
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 #if (AddrLen == 6)
 	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
@@ -220,6 +211,15 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	int8 lineCnt = 0, currLine = 0;
 	uint8 *lines[100], key;
 
+	// 应答长度、超时时间、重发次数
+#ifdef Project_6009_IR
+	timeout = 3000;
+	tryCnt = 3;
+#else
+	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
+	tryCnt = 3;
+#endif
+
 	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
 		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
 			DispBuf[0] = NULL;
@@ -287,30 +287,26 @@ void WaterCmdFunc_CommonCmd(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
+	uint16 ackLen = 0, timeout, u16Tmp;
+	uint32 u32Tmp;
 
 	_ClearScreen();
 
 	// 菜单
 	menuList.title = "<<常用命令";
-	menuList.no = 7;
-	menuList.MaxNum = 7;
+	menuList.no = 6;
+	menuList.MaxNum = 6;
 	menuList.isRt = 0;
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读取用户用量";
-	menuList.str[1] = "  2. 读取冻结数据";
-	menuList.str[2] = "  3. 开阀";
-	menuList.str[3] = "  4. 强制开阀";
-	menuList.str[4] = "  5. 关阀";
-	menuList.str[5] = "  6. 强制关阀";
-	menuList.str[6] = "  7. 清异常命令";
+	menuList.str[0] = "1. 读累计用量";
+	menuList.str[1] = "2. 读冻结数据";
+	menuList.str[2] = "3. 设用量和脉冲系数";
+	menuList.str[3] = "4. 开阀";
+	menuList.str[4] = "5. 关阀";
+	menuList.str[5] = "6. 清异常命令";
 	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -330,7 +326,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -354,10 +350,10 @@ void WaterCmdFunc_CommonCmd(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x10 + menuItemNo);
 
-			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			switch(menuItemNo){
+			case 1: 
+				CurrCmd = WaterCmd_ReadRealTimeData;		// "读取用户用量"
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -369,7 +365,8 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
+			case 2: 
+				CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					sprintf(StrBuf[0], "0 (0-9有效)");
@@ -397,7 +394,43 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// " 开阀 "
+			case 3: 
+				CurrCmd = WaterCmd_SetBaseValPulseRatio;	// 设表底数脉冲系数
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					if(StrBuf[1][0] == 0x00){
+						StrBuf[1][0] = 0x01;
+					}
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
+						"1", "10", "100", "1000");
+					break;
+				}
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], " 请输入");
+					currUi = uiRowIdx - 2 - 2;
+					isUiFinish = false;
+					continue;
+				}
+
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				u32Tmp = (uint32) _atof(StrBuf[0]);
+				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 4: 
+				CurrCmd = WaterCmd_OpenValve;			// " 开阀 "
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -409,21 +442,9 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
 				Args.lastItemLen = i - 1;
 				break;
-			
-			case WaterCmd_OpenValveForce:		// " 强制开阀 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
 
-            case WaterCmd_CloseValve:		// " 关阀 ";
+            case 5: 
+				CurrCmd = WaterCmd_CloseValve;			// " 关阀 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -436,20 +457,8 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_CloseValveForce:		// " 强制关阀 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_ClearException:		// " 清异常命令 ";
+			case 6: 
+				CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -511,8 +520,6 @@ void WaterCmdFunc_CommonCmd(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 2	测试命令
@@ -531,27 +538,19 @@ void WaterCmdFunc_TestCmd(void)
 
 	// 菜单
 	menuList.title = "<<测试命令";
-	menuList.no = 10;
-	menuList.MaxNum = 8;
+	menuList.no = 6;
+	menuList.MaxNum = 6;
 	menuList.isRt = 0;
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 表端重启";
-	menuList.str[1] = "  2. 读表温度";
-	menuList.str[2] = "  3. 读表电压";
-	menuList.str[3] = "  4. 清预缴参考量";
-	menuList.str[4] = "  5. 设置过流超时";
-	menuList.str[5] = "  6. 读运营商编号";
-	menuList.str[6] = "  7. 读上报路径";
-	menuList.str[7] = "  8. 设置表号";
-	menuList.str[8] = "  9. 读debug信息";
-	menuList.str[9] = " 10. 清debug信息";
+	menuList.str[0] = "  1. 读debug信息";
+	menuList.str[1] = "  2. 清debug信息";
+	menuList.str[2] = "  3. 表端重启";
+	menuList.str[3] = "  4. 读表温度";
+	menuList.str[4] = "  5. 读表电压";
+	menuList.str[5] = "  6. 设置阀控参数";
 	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -595,10 +594,10 @@ void WaterCmdFunc_TestCmd(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x20 + menuItemNo);
 
-			switch(CurrCmd){
-			case WaterCmd_ReadDebugInfo:		// 读debug信息
+			switch(menuItemNo){
+			case 1: 
+				CurrCmd = WaterCmd_ReadDebugInfo;		// 读debug信息
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -610,7 +609,8 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearDebugInfo:		// 清debug信息
+			case 2: 
+				CurrCmd = WaterCmd_ClearDebugInfo;		// 清debug信息
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -622,7 +622,8 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_RebootDevice:			// "表端重启"
+			case 3: 
+				CurrCmd = WaterCmd_RebootDevice;			// "表端重启"
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -634,7 +635,8 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadTemperature:			// " 读表温度 "
+			case 4: 
+				CurrCmd = WaterCmd_ReadTemperature;			// " 读表温度 "
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -646,7 +648,8 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadVoltage:				// " 读表电压 "
+			case 5: 
+				CurrCmd = WaterCmd_ReadVoltage;				// " 读表电压 "
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -658,19 +661,8 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_ClearPrepaidRefVal:		// " 清预缴参考量 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 2;					// 应答长度 2	
-				// 数据域
-				Args.buf[i++] = 0x08;		// 命令选项 08	
-				Args.lastItemLen = i - 1;
-				break;
-
-            case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
+            case 6: 
+				CurrCmd = WaterCmd_SetOverCurrentTimeout;		// " 设置阀控参数 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
                     _Printfxy(7*16, (uiRowIdx)*16, "mA", Color_White);
@@ -715,18 +707,6 @@ void WaterCmdFunc_TestCmd(void)
 				Args.buf[i++] = (uint8)u16Tmp;			// 过流电流 0~255	
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	// 超时时间 0~65535	
 				Args.buf[i++] = (uint8)(u32Tmp >> 8);
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_ReadOperatorNumber:		// " 读运营商编号 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 4;					// 应答长度 5	
-				// 数据域
-				Args.buf[i++] = 0x0A;		// 命令选项 0A	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -861,8 +841,6 @@ void WaterCmdFunc_TestCmd(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 3	程序升级
@@ -1402,20 +1380,24 @@ void WaterCmdFunc_WorkingParams(void)
 
 	// 菜单
 	menuList.title = "<<工作参数";
-	menuList.no = 8;
+	menuList.no = 12;
 	menuList.MaxNum = 8;
 	menuList.isRt = 0;
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "1. 设用量和脉冲系数";
-	menuList.str[1] = "2. 清除反转计量数据";
-	menuList.str[2] = "3. 读取功能使能状态";
-	menuList.str[3] = "4. 设置定时上传";
-	menuList.str[4] = "5. 设置定量上传";
-	menuList.str[5] = "6. 设置定时定量上传";
-	menuList.str[6] = "7. 读表端时钟";
-	menuList.str[7] = "8. 校表端时钟";
+	menuList.str[0] = "1. 设IP+端口+模式";
+	menuList.str[1] = "2. 读IP+端口+模式";
+	menuList.str[2] = "3. 读运营商编号";
+	menuList.str[3] = "4. 读IMEI+CCID";
+	menuList.str[4] = "5. 清除反转计量数据";
+	menuList.str[5] = "6. 读取功能使能状态";
+	menuList.str[6] = "7. 设置定时上传";
+	menuList.str[7] = "8. 设置定量上传";
+	menuList.str[8] = "9. 设置定时定量上传";
+	menuList.str[9] = "10.读表端时钟";
+	menuList.str[10] = "11.校表端时钟";
+	menuList.str[11] = "12.读收发磁扰阀控数";
 	menuList.defbar = 1;
 
 	_CloseCom();
@@ -1463,10 +1445,10 @@ void WaterCmdFunc_WorkingParams(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x50 + menuItemNo);
 
-			switch(CurrCmd){
-			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
+			switch(menuItemNo){
+			case 1: 
+				CurrCmd = WaterCmd_SetIpPortMode;			// 设IP+端口+模式
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					if(StrBuf[1][0] == 0x00){
@@ -1500,7 +1482,69 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
+			case 2: 
+				CurrCmd = WaterCmd_ReadIpPortMode;			// 读IP+端口+模式
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 4;					// 应答长度 5	
+				// 数据域
+				Args.buf[i++] = 0x0A;		// 命令选项 0A	
+				Args.lastItemLen = i - 1;
+				break;
+				
+			case 3: 
+				CurrCmd = WaterCmd_ReadOperatorNumber;		// " 读运营商编号 ";
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x07;		// 命令字	07
+				ackLen = 4;					// 应答长度 5	
+				// 数据域
+				Args.buf[i++] = 0x0A;		// 命令选项 0A	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 4: 
+				CurrCmd = WaterCmd_ReadImeiAndCcid;			// 读IMEI+CCID
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					if(StrBuf[1][0] == 0x00){
+						StrBuf[1][0] = 0x01;
+					}
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
+						"1", "10", "100", "1000");
+					break;
+				}
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					sprintf(StrBuf[0], " 请输入");
+					currUi = uiRowIdx - 2 - 2;
+					isUiFinish = false;
+					continue;
+				}
+
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				u32Tmp = (uint32) _atof(StrBuf[0]);
+				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 5: 
+				CurrCmd = WaterCmd_ClearReverseMeasureData;	// 清除反转计量数据
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -1511,7 +1555,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
+			case 6: 
+				CurrCmd = WaterCmd_ReadFuncEnableState;		// 读取功能使能状态
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -1523,7 +1568,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_SetTimedUpload:		// 设置定时上传
+			case 7: 
+				CurrCmd = WaterCmd_SetTimedUpload;		// 设置定时上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
@@ -1544,7 +1590,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_SetFixedValUpload:	// 设置定量上传
+            case 8: 
+				CurrCmd = WaterCmd_SetFixedValUpload;		// 设置定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					_Printfxy(7*16, (uiRowIdx)*16, "立方米", Color_White);
@@ -1566,7 +1613,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
+			case 9: 
+				CurrCmd = WaterCmd_SetTimedAndFixedValUpload;	// 设置定时定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
@@ -1597,7 +1645,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadMeterTime:	// 读表端时钟
+			case 10: 
+				CurrCmd = WaterCmd_ReadMeterTime;			// 读表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -1609,7 +1658,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_SetMeterTime:		// 校表端时钟
+			case 11: 
+				CurrCmd = WaterCmd_SetMeterTime;			// 校表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					_GetDate(&TmpBuf[200], '-');
@@ -1674,7 +1724,8 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_ReadRxTxMgnDistbCnt:		// 读收/发/磁扰次数
+            case 12: 
+				CurrCmd = WaterCmd_ReadRxTxMgnDistbCnt;		// 读收/发/磁扰次数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;

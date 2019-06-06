@@ -2241,7 +2241,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " 请输入");
+					sprintf(StrBuf[0], " 请输??");
 					currUi = 1;
 					isUiFinish = false;
 					continue;
@@ -4157,7 +4157,6 @@ void MainFuncBatchMeterReading(void)
 					LogPrint("%s,%s,%s,%s\n", "选择", "用户编号", "用户名称", "地址");
 				#endif
 				
-					
 				index = IndexOf(TmpBuf, 1024, "\n", 1, 0, 1024);
 				if(index < 0){
 					
