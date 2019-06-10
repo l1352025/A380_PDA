@@ -178,7 +178,7 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 	memcpy(keyBuf, uiItem->text, TXTBUF_LEN);
 	_Printfxy(x, y, keyBuf, Color_White);
 	
-	if((uiItem->txtbox.dataLen == 12 || uiItem->txtbox.dataLen == 16)
+	if((uiItem->ui.txtbox.dataLen == 12 || uiItem->ui.txtbox.dataLen == 16)
 		&&(uiItem->text[0] >= '0' && uiItem->text[0] <= '9')){
 		idx = strlen(uiItem->text);
 		idx = (idx > 0 ? idx - 1 : idx);
@@ -192,9 +192,9 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 		key = _ReadKey();
 
 		if((key >= KEY_0 && key <= KEY_9) 
-			||(key == KEY_DOT && uiItem->txtbox.dotEnable && idx > 0 && idx < uiItem->txtbox.dataLen -1)){
+			||(key == KEY_DOT && uiItem->ui.txtbox.dotEnable && idx > 0 && idx < uiItem->ui.txtbox.dataLen -1)){
 
-			if(uiItem->txtbox.isClear && cleared == false && idx == 0){
+			if(uiItem->ui.txtbox.isClear && cleared == false && idx == 0){
 				memset(keyBuf, 0x00, TXTBUF_LEN);
 				_GUIRectangleFill(uiItem->x1, uiItem->y1, 
 					(uiItem->x1 + uiItem->width), 
@@ -205,7 +205,7 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 			keyBuf[idx] = key;
 			keyStr[0] = key;
 			_Printfxy(x, y, keyStr, Color_White);
-			if(idx != uiItem->txtbox.dataLen -1){
+			if(idx != uiItem->ui.txtbox.dataLen -1){
 				idx++;
 				x += 8;
 			}
@@ -218,19 +218,19 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 		}
 		else if(key == KEY_RIGHT 
 			&& ((keyBuf[idx] >= '0' && keyBuf[idx] <= '9') || (keyBuf[idx] == '.'))){
-			if(idx != uiItem->txtbox.dataLen - 1){
+			if(idx != uiItem->ui.txtbox.dataLen - 1){
 				idx++;
 				x += 8;
 			}
 		}
 		else if(key == KEY_DELETE){
-			if(false == uiItem->txtbox.isClear){
+			if(false == uiItem->ui.txtbox.isClear){
 				keyBuf[idx] = '0';
 				_Printfxy(x, y, "0", Color_White);
 				idx--;
 				x -= 8;
 			}
-			else if(idx == uiItem->txtbox.dataLen -1 && keyBuf[idx] != 0x00){
+			else if(idx == uiItem->ui.txtbox.dataLen -1 && keyBuf[idx] != 0x00){
 				keyBuf[idx] = 0x00;
 				_Printfxy(x, y, " ", Color_White);
 			}
@@ -280,14 +280,14 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 	uint8 key, isShowIcon = 1, cnt = 0;
 	uint8 x, y, idx, lastIdx = 0xFF;
 
-	idx = *uiItem->combox.currIdx;
+	idx = *uiItem->ui.combox.currIdx;
 	
 	while(1){
 
 		key = _GetKeyExt();
 
 		if(idx != lastIdx){
-			uiItem->text = uiItem->combox.strs[idx];
+			uiItem->text = uiItem->ui.combox.strs[idx];
 			x = uiItem->x1 + (uiItem->width - strlen(uiItem->text)*8)/2;
 			y = uiItem->y1;
 			_GUIRectangleFill(uiItem->x1 + 16, y, uiItem->x1 + uiItem->width - 16, y + 16, Color_White);
@@ -315,7 +315,7 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 			}
 		}
 		if(key == KEY_RIGHT){
-			if(idx < uiItem->combox.cnt -1){
+			if(idx < uiItem->ui.combox.cnt -1){
 				idx++;
 			}
 		}
@@ -330,7 +330,88 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 
 	_Printfxy(uiItem->x1, uiItem->y1, "<<", Color_White);
 	_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, ">>", Color_White);
-	*uiItem->combox.currIdx = idx;
+	*uiItem->ui.combox.currIdx = idx;
+
+	return key;
+}
+
+/*
+* 描  述：获取列表框当前选项
+* 参  数：uiItem - Ui组件结构指针
+* 返回值：uint8  - 退出Ui组件时返回的按键 ： 确认键，取消键
+*/
+uint8 ListBoxShow(ListBox *lbx)
+{
+	const uint8 lineStep = 7, lineMax = 7;
+	int8 lineCnt = 0, dispStartIdx = 0, lastLine = 0xFF;
+	uint8 **lines, key, i;
+
+	lineCnt = (lbx->totalCnt > 90 ? 90 : lbx->totalCnt);
+	lines = lbx->strs;
+	dispStartIdx = lbx->currIdx % 90;
+
+	// 上/下滚动显示   ▲ ▼  △ ▽
+	while(1){
+
+		if(dispStartIdx != lastLine){
+			
+			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+			/*--------------------------------------------▼---*/
+			_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+			for(i = 0; i < lineMax && i < lineCnt; i++){
+				_Printfxy(0, i * 16 + 8, lines[dispStartIdx], Color_White);
+			}
+			//--------------------------------------------▲---
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+
+			if(lineCnt > lineMax){
+				if(dispStartIdx < lineCnt - lineMax){
+					PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
+				}else{
+					_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
+				}
+
+				if(dispStartIdx > 0){
+					PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
+				}else{
+					_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
+				}
+			}
+		}
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+		else if(key == KEY_UP && lineCnt > lineMax){
+			dispStartIdx -= 1;
+			if(dispStartIdx < 0){
+				dispStartIdx = 0;
+			}
+		}
+		else if(key == KEY_DOWN && lineCnt > lineMax){
+			dispStartIdx += 1;
+			if(dispStartIdx > lineCnt - lineMax){
+				dispStartIdx = lineCnt - lineMax;
+			}
+		}
+		else if(key == KEY_LEFT && lineCnt > lineMax){
+			dispStartIdx -= lineStep;
+			if(dispStartIdx > lineCnt - lineMax){
+				dispStartIdx = lineCnt - lineMax;
+			}
+		}
+		else if(key == KEY_RIGHT && lineCnt > lineMax){
+			dispStartIdx += lineStep;
+			if(dispStartIdx > lineCnt - lineMax){
+				dispStartIdx = lineCnt - lineMax;
+			}
+		}
+		else{
+			continue;
+		}
+	}
 
 	return key;
 }
@@ -375,9 +456,9 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 	item->width = width;
 	item->height = 16;
 	item->type = UI_TxtBox;
-	item->txtbox.dataLen = maxLen;
-	item->txtbox.isClear = isClear;
-	item->txtbox.dotEnable = 0;		// 默认不允许输入'.' , 如需输入则在textbox创建后设置该标志为1
+	item->ui.txtbox.dataLen = maxLen;
+	item->ui.txtbox.isClear = isClear;
+	item->ui.txtbox.dotEnable = 0;		// 默认不允许输入'.' , 如需输入则在textbox创建后设置该标志为1
 }
 
 /*
@@ -401,7 +482,7 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *cu
 		if(ptr == NULL){
 			break;
 		}
-		item->combox.strs[i] = ptr;
+		item->ui.combox.strs[i] = ptr;
 	}
 
 	if(*currIdx > i -1){
@@ -417,8 +498,8 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *cu
 	item->width = 160 - item->x1;
 	item->height = 16;
 	item->type = UI_CombBox;
-	item->combox.cnt = (uint8)i;
-	item->combox.currIdx = currIdx;
+	item->ui.combox.cnt = (uint8)i;
+	item->ui.combox.currIdx = currIdx;
 }
 
 /*
@@ -440,7 +521,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
 
 		if(ptr->type == UI_CombBox){
-			ptr->text = ptr->combox.strs[*ptr->combox.currIdx];
+			ptr->text = ptr->ui.combox.strs[*ptr->ui.combox.currIdx];
 			x = ptr->x1 + (ptr->width - strlen(ptr->text)*8)/2;
 			y = ptr->y1;
 			_Printfxy(x, y, ptr->text, Color_White);
@@ -465,10 +546,10 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 				key = GetInputNumStr(ptr);
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
-					if((ptr->txtbox.dataLen == 12 || ptr->txtbox.dataLen == 16)
+					if((ptr->ui.txtbox.dataLen == 12 || ptr->ui.txtbox.dataLen == 16)
 						&& (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
-						_leftspace(ptr->text, ptr->txtbox.dataLen, '0');
-						if(strncmp(ZeroAddr, ptr->text, ptr->txtbox.dataLen) == 0){
+						_leftspace(ptr->text, ptr->ui.txtbox.dataLen, '0');
+						if(strncmp(ZeroAddr, ptr->text, ptr->ui.txtbox.dataLen) == 0){
 							sprintf(ptr->text, " 不能为0 ");
 							key = 0xFF;
 						}

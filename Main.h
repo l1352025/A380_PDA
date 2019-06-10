@@ -2129,9 +2129,9 @@ void WaterCmdFunc_PrepaiedVal(void)
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "预缴用量:", StrBuf[0], 10, 11*8, true);
-					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
                     TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "参考用量:", StrBuf[1], 10, 11*8, true);
-					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -2429,7 +2429,7 @@ void WaterCmdFunc_WorkingParams(void)
 						StrBuf[1][0] = 0x01;
 					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
-					pUi[(*pUiCnt) -1].txtbox.dotEnable = 1;
+					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
 						"1", "10", "100", "1000");
 					break;

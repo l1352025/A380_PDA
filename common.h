@@ -94,23 +94,40 @@ typedef struct{
     uint8 height;   // UI high
     UI_Type type;
     
-    struct{
-        char *strs[10];
-		uint8 cnt;
-		uint8 *currIdx;
-	}combox;
+    union {
+        struct{
+            char *strs[10];
+            uint8 cnt;
+            uint8 *currIdx;
+        }combox;
 
-	struct {
-		uint8 dataLen;
-        uint8 isClear;
-        uint8 dotEnable;
-	}txtbox;
+        struct{
+            uint8 dataLen;
+            uint8 isClear;
+            uint8 dotEnable;
+        }txtbox;
+    }ui;
 }UI_Item;
 
 typedef struct{
     UI_Item items[UI_MAX];
     uint8 cnt;
 }UI_ItemList;
+
+typedef struct{
+    uint8 x;        
+    uint8 y;
+    uint8 width;   
+    uint8 isCircle;     // 可循环列表标识
+    uint8 dispMax;      // 一页最多显示行数 ： 最大8
+    uint8 dispIdx;      // 当前选择项所在该页的行序号：0-7
+    uint16 totalCnt;
+    uint16 currIdx;
+    char *title;
+    char **strs;
+    void (*callback)(ListBox *list);    // 翻页时回调函数
+
+}ListBox;
 
 
 //---------------------------------		函数声明	 -----------------------------------------
