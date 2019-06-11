@@ -336,42 +336,72 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 }
 
 /*
+* 描  述：内存交换
+* 参  数：m1	- 内存1地址
+*		  m2	- 内存2地址
+*		  size	- 要交换的内存大小
+* 返回值：void
+*/
+void memSwitch(uint8 *m1, uint8 *m2, uint32 size)
+{
+	uint8 *p;
+
+	while(size--){
+		*p = *m1;
+		*m1 = *m2;
+		*m2 = *p;
+		m1++;
+		m2++;
+	}
+}
+
+/*
 * 描  述：获取列表框当前选项
 * 参  数：uiItem - Ui组件结构指针
 * 返回值：uint8  - 退出Ui组件时返回的按键 ： 确认键，取消键
 */
 uint8 ListBoxShow(ListBox *lbx)
 {
-	const uint8 lineStep = 7, lineMax = 7;
-	int8 lineCnt = 0, dispStartIdx = 0, lastLine = 0xFF;
-	uint8 **lines, key, i;
+	uint16 toIndex, fromIndex, lastStartIdx = 0xFFFF;
+	uint8 key, i, fillCnt;
+	uint8 **lines = lbx->strs;
 
-	lineCnt = (lbx->totalCnt > 90 ? 90 : lbx->totalCnt);
-	lines = lbx->strs;
-	dispStartIdx = lbx->currIdx % 90;
+	if(lines[0] == NULL){
+		for(i = 0; i < ListBufLen; i++){
+			lines[i] = (char *) _malloc(30);
+		}
+	}
 
+	lbx->currIdx = 0;
+	lbx->strsCnt = (lbx->totalCnt < ListBufLen ? lbx->totalCnt : ListBufLen);
+	lbx->strsIdx = 0;
+	
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
 
-		if(dispStartIdx != lastLine){
-			
+		if(lbx->dispStartIdx != lastStartIdx){
+			lastStartIdx = lbx->dispStartIdx;
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*--------------------------------------------▼---*/
 			_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-			for(i = 0; i < lineMax && i < lineCnt; i++){
-				_Printfxy(0, i * 16 + 8, lines[dispStartIdx], Color_White);
+			for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
+				if(lbx->strsIdx == lbx->dispStartIdx + i){
+					_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_Black);
+				}else{
+					_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+				}
 			}
 			//--------------------------------------------▲---
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 
-			if(lineCnt > lineMax){
-				if(dispStartIdx < lineCnt - lineMax){
+			if(lbx->strsCnt > lbx->dispMax){
+				if(lbx->dispStartIdx < lbx->strsCnt - lbx->dispMax){
 					PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
 				}else{
 					_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
 				}
 
-				if(dispStartIdx > 0){
+				if(lbx->dispStartIdx > 0){
 					PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
 				}else{
 					_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
@@ -384,33 +414,82 @@ uint8 ListBoxShow(ListBox *lbx)
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
-		else if(key == KEY_UP && lineCnt > lineMax){
-			dispStartIdx -= 1;
-			if(dispStartIdx < 0){
-				dispStartIdx = 0;
-			}
+
+		if(lbx->strsCnt <= lbx->dispMax){
+			continue;
 		}
-		else if(key == KEY_DOWN && lineCnt > lineMax){
-			dispStartIdx += 1;
-			if(dispStartIdx > lineCnt - lineMax){
-				dispStartIdx = lineCnt - lineMax;
-			}
+
+		if(key == KEY_UP){
+			lbx->strsIdx--;
+			lbx->currIdx--;
 		}
-		else if(key == KEY_LEFT && lineCnt > lineMax){
-			dispStartIdx -= lineStep;
-			if(dispStartIdx > lineCnt - lineMax){
-				dispStartIdx = lineCnt - lineMax;
-			}
+		else if(key == KEY_DOWN){
+			lbx->strsIdx++;
+			lbx->currIdx++;
 		}
-		else if(key == KEY_RIGHT && lineCnt > lineMax){
-			dispStartIdx += lineStep;
-			if(dispStartIdx > lineCnt - lineMax){
-				dispStartIdx = lineCnt - lineMax;
-			}
+		else if(key == KEY_LEFT){
+			lbx->strsIdx -= lbx->dispMax;
+			lbx->currIdx -= lbx->dispMax;
+		}
+		else if(key == KEY_RIGHT){
+			lbx->strsIdx += lbx->dispMax;
+			lbx->currIdx += lbx->dispMax;
 		}
 		else{
 			continue;
 		}
+
+		// record index
+		if(lbx->currIdx < 0){
+			lbx->currIdx = (lbx->isCircle ? lbx->totalCnt - 1 : 0);
+		}
+		else if(lbx->currIdx > lbx->totalCnt - 1){
+			lbx->currIdx = (lbx->isCircle ? 0 : lbx->totalCnt - 1);
+		}
+
+		// disp index
+		if(lbx->strsIdx < 0){
+			
+			fillCnt = (lbx->currIdx >= ListBufLen - 1 ? ListBufLen : lbx->currIdx + 1);
+
+			if(lbx->isCircle){
+				lbx->strsCnt = fillCnt;
+				lbx->strsIdx = lbx->strsCnt - 1;
+			}
+			else{
+				lbx->strsCnt = fillCnt;
+				lbx->strsIdx = 0;
+			}
+			fromIndex = lbx->currIdx + 1 - fillCnt;
+			toIndex = 0;
+			
+			if(lbx->fillStrsFunc != NULL){
+				(*lbx->fillStrsFunc)(lbx->strs, toIndex, fromIndex, fillCnt);
+			}
+
+		}
+		else if(lbx->strsIdx > lbx->strsCnt - 1){
+			lbx->strsIdx = lbx->strsCnt - 1;
+
+
+			lbx->strsCnt = (lbx->totalCnt < ListBufLen * 2 ? lbx->totalCnt : (ListBufLen * 2 ));
+			lbx->strsIdx = (lbx->currIdx < ListBufLen ? lbx->currIdx : (ListBufLen + lbx->currIdx % ListBufLen));
+			
+		}
+
+		// switch bank and fill strs
+		if(lbx->strsIdx == 0 && lbx->currIdx > 0){
+			
+
+		}
+		else if(lbx->strsIdx == lbx->strsCnt - 1 && lbx->currIdx < lbx->totalCnt - 1){
+			// switch bank1 --> bank2
+			
+			
+		}
+
+		lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
+
 	}
 
 	return key;

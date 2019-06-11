@@ -269,6 +269,11 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	return key;
 }
 
+void fillStrsFunc(char **strs, int16 *strsIdx, int16 *currIdx, uint16 cnt)
+{
+
+}
+
 
 // --------------------------------  集中器模块通信  -----------------------------------------
 // 1	常用命令

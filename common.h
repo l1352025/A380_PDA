@@ -31,6 +31,7 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10      // 最大UI控件数
+#define ListBufLen  100     // 列表缓冲区长度
 
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
@@ -114,18 +115,21 @@ typedef struct{
     uint8 cnt;
 }UI_ItemList;
 
+
 typedef struct{
     uint8 x;        
     uint8 y;
     uint8 width;   
     uint8 isCircle;     // 可循环列表标识
     uint8 dispMax;      // 一页最多显示行数 ： 最大8
-    uint8 dispIdx;      // 当前选择项所在该页的行序号：0-7
-    uint16 totalCnt;
-    uint16 currIdx;
+    uint16 dispStartIdx; // 当前页显示的第一条记录在显示缓冲区的位置 
+    uint16 totalCnt;    // 所有记录总数
+    int16 currIdx;     // 在所有记录中当前记录的位置
+    uint16 strsCnt;     // 显示缓冲区中记录总数
+    int16 strsIdx;     // 在显示缓冲区中当前记录的位置 
     char *title;
-    char **strs;
-    void (*callback)(ListBox *list);    // 翻页时回调函数
+    char *strs[ListBufLen];    // 显示缓冲区
+    void ( *fillStrsFunc )(char **strs, int16 toIdx, int16 fromIdx, uint16 cnt);   // 翻页时回调函数
 
 }ListBox;
 
