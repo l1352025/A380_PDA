@@ -90,13 +90,11 @@ void LogPrint(const char * format, ...)
 	
 
 #if LogScom_On
-#ifdef Project_6009_RF
 	_CloseCom();
-	_ComSetTran(Trans_IR_Quick);
+	_ComSetTran(LogPort);
 	_ComSet((uint8 *)"115200,E,8,1", 2);
 	_SendComStr(buf, len);
 	_CloseCom();
-#endif
 #else
 
 	#ifndef LogName
@@ -336,87 +334,91 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 }
 
 /*
-* 描  述：内存交换
-* 参  数：m1	- 内存1地址
-*		  m2	- 内存2地址
-*		  size	- 要交换的内存大小
+* 描  述：创建列表视图
+* 参  数：lbx		- 列表视图结构指针
+*		  totalCnt	- 记录总数
+*		  dispMax	- 一页显示记录条数
+*		  fillStrsFunc	- 填充列表的回调函数
+*		  title		- 列表标题
+*		  initCnt	- 初始化记录数量
+*		  ...		- 初始化记录列表
 * 返回值：void
 */
-void memSwitch(uint8 *m1, uint8 *m2, uint32 size)
+void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 initCnt, ...)
 {
-	uint8 *p;
+	uint16 i;
+	va_list ap;
+	char *ptr;
 
-	while(size--){
-		*p = *m1;
-		*m1 = *m2;
-		*m2 = *p;
-		m1++;
-		m2++;
+	lbx->x = 0;
+	lbx->y = 0;
+	lbx->width = 10 * 16;
+	lbx->currIdx = 0;
+	lbx->totalCnt = totalCnt;
+	lbx->dispMax = dispMax;
+	lbx->fillStrsFunc = fillStrsFunc;
+	lbx->title = title;
+
+	// init value
+	va_start(ap, initCnt);
+	for(i = 0; i < ListBufLen; i++){
+		if(i < initCnt){
+			ptr = va_arg(ap, char *);
+			if(ptr == NULL){
+				break;
+			}
+			lbx->strs[i] = ptr;
+		}
+		else{
+			lbx->strs[i] = ListBuf[i];		
+			sprintf(lbx->strs[i], "  列表项 %d", i + 1);
+		}
 	}
 }
 
 /*
-* 描  述：获取列表框当前选项
-* 参  数：uiItem - Ui组件结构指针
-* 返回值：uint8  - 退出Ui组件时返回的按键 ： 确认键，取消键
+* 描  述：获取列表视图当前选项
+* 参  数：lbx	- 列表视图结构指针
+* 返回值：uint16  - 选择的列表视图当前选项 ： 取消键 - 返回0 ，  确认键 - 返回当前选项
 */
-uint8 ListBoxShow(ListBox *lbx)
+uint16 ListBoxShow(ListBox *lbx)
 {
-	uint16 toIndex, fromIndex, lastStartIdx = 0xFFFF;
-	uint8 key, i, fillCnt;
+	uint16 retNum, dstIndex, srcIndex, lastStartIdx = 0xFFFF;
+	uint8 key, i;
 	uint8 **lines = lbx->strs;
+	uint16 fillMax = ListBufLen - (ListBufLen % lbx->dispMax);
+	uint16 fillCnt = 0;
 
-	if(lines[0] == NULL){
-		for(i = 0; i < ListBufLen; i++){
-			lines[i] = (char *) _malloc(30);
-		}
-	}
-
-	lbx->currIdx = 0;
-	lbx->strsCnt = (lbx->totalCnt < ListBufLen ? lbx->totalCnt : ListBufLen);
-	lbx->strsIdx = 0;
+	lbx->currIdx = (lbx->currIdx > 0 ? lbx->currIdx : 0);
+	lbx->strsCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
+	lbx->strsIdx = (lbx->currIdx % fillMax);
+	lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
 	
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
 
-		if(lbx->dispStartIdx != lastStartIdx){
-			lastStartIdx = lbx->dispStartIdx;
-			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			/*--------------------------------------------▼---*/
-			_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-			for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
-				if(lbx->strsIdx == lbx->dispStartIdx + i){
-					_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_Black);
-				}else{
-					_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
-				}
-			}
-			//--------------------------------------------▲---
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_ClearScreen();
 
-			if(lbx->strsCnt > lbx->dispMax){
-				if(lbx->dispStartIdx < lbx->strsCnt - lbx->dispMax){
-					PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
-				}else{
-					_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
-				}
-
-				if(lbx->dispStartIdx > 0){
-					PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
-				}else{
-					_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
-				}
-			}
+		PrintfXyMultiLine_VaList(0, 0, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*--------------------------------------------▼---*/
+		//_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
+			_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
 		}
+		_Printfxy(0, (lbx->strsIdx - lbx->dispStartIdx) * 16 + 16 + 8, lines[lbx->strsIdx], Color_Black);
+		//--------------------------------------------▲---
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 
 		key = _ReadKey();
 
-		if(key == KEY_CANCEL || key == KEY_ENTER){
+		if(key == KEY_CANCEL){
+			retNum = 0;
 			break;
 		}
-
-		if(lbx->strsCnt <= lbx->dispMax){
-			continue;
+		if(key == KEY_ENTER){
+			retNum = lbx->currIdx + 1;
+			break;
 		}
 
 		if(key == KEY_UP){
@@ -439,7 +441,8 @@ uint8 ListBoxShow(ListBox *lbx)
 			continue;
 		}
 
-		// record index
+		// record index check
+		lbx->isCircle = 1;
 		if(lbx->currIdx < 0){
 			lbx->currIdx = (lbx->isCircle ? lbx->totalCnt - 1 : 0);
 		}
@@ -447,52 +450,43 @@ uint8 ListBoxShow(ListBox *lbx)
 			lbx->currIdx = (lbx->isCircle ? 0 : lbx->totalCnt - 1);
 		}
 
-		// disp index
+		// disp index check 	and 	re-fill strs
 		if(lbx->strsIdx < 0){
-			
-			fillCnt = (lbx->currIdx >= ListBufLen - 1 ? ListBufLen : lbx->currIdx + 1);
 
-			if(lbx->isCircle){
+			if(lbx->totalCnt > fillMax){
+				fillCnt = (lbx->currIdx % fillMax) + 1;
+				srcIndex = lbx->currIdx + 1 - fillCnt;
+				dstIndex = 0;
 				lbx->strsCnt = fillCnt;
-				lbx->strsIdx = lbx->strsCnt - 1;
 			}
-			else{
-				lbx->strsCnt = fillCnt;
-				lbx->strsIdx = 0;
-			}
-			fromIndex = lbx->currIdx + 1 - fillCnt;
-			toIndex = 0;
+			lbx->strsIdx = lbx->strsCnt - 1;
 			
-			if(lbx->fillStrsFunc != NULL){
-				(*lbx->fillStrsFunc)(lbx->strs, toIndex, fromIndex, fillCnt);
+			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
+				(*lbx->fillStrsFunc)(lbx->strs, dstIndex, srcIndex, fillCnt);
+				fillCnt = 0;
 			}
-
 		}
 		else if(lbx->strsIdx > lbx->strsCnt - 1){
-			lbx->strsIdx = lbx->strsCnt - 1;
 
-
-			lbx->strsCnt = (lbx->totalCnt < ListBufLen * 2 ? lbx->totalCnt : (ListBufLen * 2 ));
-			lbx->strsIdx = (lbx->currIdx < ListBufLen ? lbx->currIdx : (ListBufLen + lbx->currIdx % ListBufLen));
+			if(lbx->totalCnt > fillMax){
+				fillCnt = (lbx->totalCnt - lbx->currIdx >= fillMax ? fillMax : (lbx->totalCnt - lbx->currIdx));
+				srcIndex = lbx->currIdx;
+				dstIndex = 0;
+				lbx->strsCnt = fillCnt;
+			}
+			lbx->strsIdx = 0;
 			
-		}
-
-		// switch bank and fill strs
-		if(lbx->strsIdx == 0 && lbx->currIdx > 0){
-			
-
-		}
-		else if(lbx->strsIdx == lbx->strsCnt - 1 && lbx->currIdx < lbx->totalCnt - 1){
-			// switch bank1 --> bank2
-			
-			
+			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
+				(*lbx->fillStrsFunc)(lbx->strs, dstIndex, srcIndex, fillCnt);
+				fillCnt = 0;
+			}
 		}
 
 		lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
 
 	}
 
-	return key;
+	return retNum;
 }
 
 /*

@@ -15,7 +15,7 @@ typedef unsigned char bool;
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
 #define VerInfo_RevNo   (char *)"2.2"               // 版本号
 #define VerInfo_RevDate (char *)"2019-6-3"         // 版本日期
-#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
 #ifndef VerInfo_Release
@@ -31,7 +31,8 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10      // 最大UI控件数
-#define ListBufLen  100     // 列表缓冲区长度
+#define ListBufLen  20     // 列表缓冲区长度
+#define STR_Size    50      // 默认字符串字节数
 
 
 /*  串口物理端口： NO.1 / NO.2 / NO.3
@@ -57,12 +58,14 @@ typedef unsigned char bool;
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
     #define TransType   "红外透传"      // 通信方式	
     #define AddrLen     8
+    #define LogPort     Trans_IR_Quick // 日志输出串口
 #else //defined(Project_6009_RF)
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
-    #define Timeout     Trans_IR 
+    //#define Timeout     Trans_IR 
     #define TransType   "Lora透传"      // 通信方式	
     #define AddrLen     6
+    #define LogPort     Trans_IR_Quick // 日志输出串口
 #endif
 
 typedef enum{
@@ -115,12 +118,12 @@ typedef struct{
     uint8 cnt;
 }UI_ItemList;
 
-
+typedef void (*FillListFunc)(char **strs, int16 dstIdx, int16 srcIdx, uint16 cnt);
 typedef struct{
     uint8 x;        
     uint8 y;
     uint8 width;   
-    uint8 isCircle;     // 可循环列表标识
+    uint8 isCircle;     // 可循环列表标识 : 默认可循环
     uint8 dispMax;      // 一页最多显示行数 ： 最大8
     uint16 dispStartIdx; // 当前页显示的第一条记录在显示缓冲区的位置 
     uint16 totalCnt;    // 所有记录总数
@@ -128,8 +131,8 @@ typedef struct{
     uint16 strsCnt;     // 显示缓冲区中记录总数
     int16 strsIdx;     // 在显示缓冲区中当前记录的位置 
     char *title;
-    char *strs[ListBufLen];    // 显示缓冲区
-    void ( *fillStrsFunc )(char **strs, int16 toIdx, int16 fromIdx, uint16 cnt);   // 翻页时回调函数
+    char *strs[ListBufLen];         // 显示缓冲区
+    FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
 
@@ -152,6 +155,8 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
+void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 initCnt, ...);
+uint16 ListBoxShow(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
@@ -165,6 +170,7 @@ extern uint8 TmpBuf[1080];
 extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint8 DispBuf[2048];
+extern uint8 ListBuf[ListBufLen][STR_Size];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[9];
 extern uint8 DstAddr[9];

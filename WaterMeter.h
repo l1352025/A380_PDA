@@ -133,7 +133,15 @@ typedef enum{
 	WaterCmd_ReadRxdAndTxdChanel,
 	WaterCmd_SetRxdAndTxdChanel, 
 	WaterCmd_SetOperatorNumber,
-	WaterCmd_SetDefinedRoute
+	WaterCmd_SetDefinedRoute,
+
+	/*
+	UART表端模块测试：	
+	1	读取模块运行参数
+	2	设置模块运行参数
+	*/
+	WaterCmd_ReadModuleRunningParams	= 0x71,
+	WaterCmd_SetModuleRunningParams
 }WaterCmdDef;
 
 

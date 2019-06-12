@@ -269,9 +269,13 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	return key;
 }
 
-void fillStrsFunc(char **strs, int16 *strsIdx, int16 *currIdx, uint16 cnt)
+void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
+	int i = strsIdx;
 
+	for(i = strsIdx; i < strsIdx + cnt; i++){
+		sprintf(strs[i], "ÁÐ±íÏî %d", i);
+	}
 }
 
 
