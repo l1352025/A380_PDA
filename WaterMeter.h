@@ -5,6 +5,91 @@
 #include "Common.h"
 
 
+// --------------------------------  全局变量  -----------------------------------------
+char Screenbuff[160*(160/3+1)*2]; 
+uint8 TmpBuf[1080];
+uint8 TxBuf[1080];
+uint8 RxBuf[1080];
+uint8 DispBuf[2048];
+uint32 RxLen, TxLen;
+const uint8 LocalAddr[9] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
+uint8 DstAddr[9];
+uint8 VerInfo[41];
+uint16 CurrCmd;
+ParamsBuf Addrs;		
+ParamsBuf Args;
+char StrBuf[10][TXTBUF_LEN];    // extend input buffer
+char StrDstAddr[TXTBUF_LEN];
+char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
+UI_ItemList UiList;
+
+typedef enum{
+	Idx_Id	= 0,
+	Idx_UserId
+}DB_Field_Index;
+
+const char *Fileds[] = {
+	"ID",		// ID
+	"HH",		// 户号
+	"HM",		// 户名
+	"DZ",		// 地址
+	"MPH",		// 门牌号
+	"TEL",		// 电话
+	"MOBILE",	// 手机
+	"CBQY",		// 抄表区域
+	"ZDBH",		// 采集器 编号
+	"ZDMC",		// 采集器 名称
+	"ZDDZ",		// 采集器 位置
+	"CBYJFZBH",		// 抄表小区 编号
+	"CBYJFZMC",		// 抄表小区 名称
+	"CBEJFZBH",		// 抄表楼栋 编号
+	"CBEJFZMC",		// 抄表楼栋 名称
+	"BH",		// 表号
+	"FLXS",		// 
+	"FLA",		// 表读数 FL[A-J] 10个 》》
+	"FLB",		// 
+	"FLC",		// 
+	"FLD",		// 
+	"FLE",		// 
+	"FLF",		// 
+	"FLG",		// 
+	"FLH",		// 
+	"FLI",		// 
+	"FLJ",		// 表读数 FL[A-J] 10个 《《
+	"LYXS",		// 
+	"LYA",		// LY[A-J] 10个 >>
+	"LYB",		// 
+	"LYC",		// 
+	"LYD",		// 
+	"LYE",		// 
+	"LYF",		// 
+	"LYG",		// 
+	"LYH",		// 
+	"LYI",		// 
+	"LYJ",		// LY[A-J] 10个 <<
+	"BLXHEX",		// 
+	"BLXSTR",		// 
+	"BZTHEX",		// 表状态 HEX
+	"BZTSTR",		// 表状态 STR
+	"DCDY",		// 电池电压
+	"MCCS",		// 
+	"SGCQ",		// 抄表方式 ？
+	"QF",		// 
+	"XHQD",		// 信号强度
+	"CBSJ",		// 抄表时间
+	"CBZT",		// 抄表状态
+	"BLZDA",		// BLZD[A-J] 10个 》》
+	"BLZDB",		// 
+	"BLZDC",		// 集中器 编号
+	"BLZDD",		// 集中器 名称
+	"BLZDE",		// 
+	"BLZDF",		// 
+	"BLZDG",		// 
+	"BLZDH",		// 
+	"BLZDI",		// 
+	"BLZDJ"			// BLZD[A-J] 10个 《《
+}
+
 //----------------------------------------  表端命令  ------------------------
 /*
 表端操作：	
@@ -134,13 +219,12 @@ typedef enum{
 	WaterCmd_SetRxdAndTxdChanel, 
 	WaterCmd_SetOperatorNumber,
 	WaterCmd_SetDefinedRoute,
-
 	/*
 	UART表端模块测试：	
 	1	读取模块运行参数
 	2	设置模块运行参数
 	*/
-	WaterCmd_ReadModuleRunningParams	= 0x71,
+	WaterCmd_ReadModuleRunningParams,
 	WaterCmd_SetModuleRunningParams
 }WaterCmdDef;
 
@@ -326,16 +410,43 @@ char * Water6009_GetStrValueType(uint8 typeId)
 }
 
 /*
-* 描  述：解析6009水表-告警状态字1
-* 参  数：status	- 状态字
+* 描  述：获取6009水表 计量传感器类型
+* 参  数：typeId	- 类型ID
 * 返回值：char *	- 解析后的字符串
 */
-char * Water6009_GetStrAlarmStatus1(uint8 status)
+char * Water6009_GetStrSensorType(uint8 typeId)
+{
+	char * str = NULL;
+	
+	switch(typeId){
+	case 0x00:	str = "单干簧管/霍尔";	break;
+	case 0x01:	str = "双干簧管/霍尔";	break;
+	case 0x02:	str = "三干簧管/霍尔";	break;
+	case 0x03:	str = "骏普4位光电直读";	break;
+	case 0x04:	str = "厚膜直读表头";	break;
+	case 0x05:	str = "骏普1位光电直读";	break;
+	case 0x06:	str = "188协议光电直读";	break;
+	case 0x07:	str = "188协议无磁直读";	break;
+	case 0x08:	str = "霍尔竟达传感器";	break;
+	default:	str = "未知";	break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：解析6009水表-告警状态字
+* 参  数：status	- 状态字
+* 		  buf		- 字符串显示缓冲区
+* 返回值：uint16	- 解析后的字符串总长度
+*/
+uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 {
 	char * str = NULL;
 	uint8 mask = 1, i;
+	uint16 len = 0;
 
-	for(i = 0; i < 8; i++){
+	for(i = 0; i < 14; i++){
 
 		mask = (1 << i);
 		
@@ -344,61 +455,31 @@ char * Water6009_GetStrAlarmStatus1(uint8 status)
 		case 0x02:	str = "阀到位故障";	break;
 		case 0x04:	str = "传感器线断开";	break;
 		case 0x08:	str = "电池欠压";	break;
-		case 0x10:	str = "光电表，一组光管坏";	break;
+		case 0x10:	str = "光电表,一组光管坏";	break;
 		case 0x20:	str = "磁干扰标志";	break;
-		case 0x40:	str = "光电表，多组光管坏";	break;
-		case 0x80:	str = "光电表，正强光干扰";	break;
+		case 0x40:	str = "光电表,多组光管坏";	break;
+		case 0x80:	str = "光电表,正强光干扰";	break;
+		case 0x0100:	str = "水表反转";	break;
+		case 0x0200:	str = "水表被拆卸";	break;
+		case 0x0400:	str = "水表被垂直安装";	break;
+		case 0x0800:	str = "EEPROM异常";	break;
+		case 0x1000:	str = "煤气泄漏";	break;
+		case 0x2000:	str = "欠费标志";	break;
 		default:
 			break;
 		}
 
 		if(str != NULL){
-			break;
+			len += sprintf(&buf[len], "  %s\n", str);
+			str = NULL;
 		}
 	}
 
-	if(str == NULL){
-		str = " ";
+	if(len == 0){
+		len += sprintf(&buf[len], "  \n");
 	}
 
-	return str;
-}
-
-/*
-* 描  述：解析6009水表-告警状态字2
-* 参  数：status	- 状态字
-* 返回值：char *	- 解析后的字符串
-*/
-char * Water6009_GetStrAlarmStatus2(uint8 status)
-{
-	char * str = NULL;
-	uint8 mask = 1, i;
-
-	for(i = 0; i < 6; i++){
-
-		mask = (1 << i);
-		
-		switch(status & mask){
-		case 0x01:	str = "水表反转";	break;
-		case 0x02:	str = "水表被拆卸";	break;
-		case 0x04:	str = "水表被垂直安装";	break;
-		case 0x08:	str = "EEPROM异常";	break;
-		case 0x10:	str = "煤气泄漏";	break;
-		case 0x20:	str = "欠费标志";	break;
-		default:	
-			break;
-		}
-
-		if(str != NULL){
-			break;
-		}
-	}
-
-	if(str == NULL){
-		str = " ";
-	}
-	
-	return str;
+	return len;
 }
 
 /*
@@ -490,12 +571,14 @@ char * Water6009_GetStrErrorMsg(uint8 errorCode)
 /*
 * 描  述：获取6009水表 阀控失败原因
 * 参  数：errorCode	- 错误码
-* 返回值：char *	- 解析后的字符串
+* 		  buf		- 字符串显示缓冲区
+* 返回值：uint16	- 解析后的字符串总长度
 */
-char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
+uint16 Water6009_GetStrValveCtrlFailed(uint16 errorCode, char * buf)
 {
 	char * str = NULL;
 	uint16 mask = 1, i;
+	uint16 len = 0;
 
 	for(i = 0; i < 12; i++){
 
@@ -519,21 +602,22 @@ char * Water6009_GetStrValveCtrlFailed(uint16 errorCode)
 		}
 
 		if(str != NULL){
-			break;
+			len += sprintf(&buf[len], "  %s\n", str);
+			str = NULL;
 		}
 	}
 
-	if(str == NULL){
-		str = " ";
+	if(len == 0){
+		len += sprintf(&buf[len], "  \n");
 	}
 
-	return str;
+	return len;
 }
 
 /*
 * 描  述：获取6009水表 功能使能状态
 * 参  数：stateCode	- 使能状态码
-* 		  buf		- 使能状态码字符串输出缓冲区
+* 		  buf		- 字符串显示缓冲区
 * 返回值：uint16	- 解析后的字符串总长度
 */
 uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
@@ -556,6 +640,29 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "煤气泄漏检测    :%s\n", ((stateCode & 0x2000) > 0 ? "开" : " 关"));
 
 	len += sprintf(&buf[len], "流速控制功能    :%s\n", ((stateCode & 0x8000) > 0 ? "开" : " 关"));
+
+	return len;
+}
+
+/*
+* 描  述：获取6009水表 模块测试状态
+* 参  数：statusCode	- 测试状态码
+* 		  buf		- 字符串显示缓冲区
+* 返回值：uint16	- 解析后的字符串总长度
+*/
+uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
+{
+	uint16 len = 0;
+
+	len += sprintf(&buf[len], " 休眠电流测试  : %s\n", ((statusCode & 0x0001) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 频率测试      : %s\n", ((statusCode & 0x0002) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 功率测试      : %s\n", ((statusCode & 0x0004) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 发射功率测试  : %s\n", ((statusCode & 0x0008) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 接收灵敏度测试: %s\n", ((statusCode & 0x0010) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 接收电流测试  : %s\n", ((statusCode & 0x0020) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 阀控电路测试  : %s\n", ((statusCode & 0x0040) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " 计量电路测试  : %s\n", ((statusCode & 0x0080) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " LCD 测试     : %s\n", ((statusCode & 0x0100) > 0 ? "OK" : " NG"));
 
 	return len;
 }
@@ -606,8 +713,14 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	memcpy(&buf[index], args->items[args->itemCnt -1], args->lastItemLen);
 	index += args->lastItemLen;
 
-	buf[index++] = 0x00;		// 下行场强
-	buf[index++] = 0x00;		// 上行场强
+	if(cmd > 0x3A && cmd < 0x3F){
+		buf[index++] = 0x55;		// 下行场强
+		buf[index++] = 0xAA;		// 上行场强
+	}else{
+		buf[index++] = 0x00;		// 下行场强
+		buf[index++] = 0x00;		// 上行场强
+	}
+	
     // 长度计算
 	buf[2] = (uint8)(index & 0xFF);	
 	buf[3] = (uint8)(index >> 8);	
@@ -765,14 +878,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
-		//告警状态字1
-		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
-		index += 1;
-		//告警状态字2
-		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
-		index += 1;
+		//告警状态字
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		//阀门状态 
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
@@ -866,14 +976,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			}
 		}
 
-		//告警状态字1
-		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
-		index += 1;
-		//告警状态字2
-		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
-		index += 1;
+		//告警状态字
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		//阀门状态 
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
@@ -910,11 +1017,13 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		// 命令状态
 		ptr = Water6009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		if(buf[index] == 0xAB){
-			ptr = Water6009_GetStrValveCtrlFailed(((buf[index + 1] << 8) + buf[index + 2]));
-			dispIdx += sprintf(&dispBuf[dispIdx], "原因: %s\n", ptr);
+		index += 1;
+		if(buf[index - 1] == 0xAB){
+			u16Tmp = (buf[index] + buf[index + 1] * 256);
+			dispIdx += sprintf(&dispBuf[dispIdx], "原因: ");
+			dispIdx += Water6009_GetStrValveCtrlFailed(u16Tmp, &dispBuf[dispIdx]);
+			index += 2;
 		}
-		index += 3;
 		break;
 
 	//----------------------------------------		读取表端配置信息		-------------
@@ -1277,6 +1386,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = RxResult_Ok;
+		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += Water6009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
@@ -1842,14 +1952,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
-		//告警状态字1
-		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
-		index += 1;
-		//告警状态字2
-		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
-		index += 1;
+		//告警状态字
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		//阀门状态 
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
@@ -1951,14 +2058,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			}
 		}
 
-		//告警状态字1
-		ptr = Water6009_GetStrAlarmStatus1(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: %s ", ptr);
-		index += 1;
-		//告警状态字2
-		ptr = Water6009_GetStrAlarmStatus2(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", ptr);
-		index += 1;
+		//告警状态字
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		//阀门状态 
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
@@ -1978,6 +2082,146 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		//协议版本
 		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
+		index += 1;
+		break;
+
+	//--------------------------------------		UART表端模块测试：		---------------------
+	case WaterCmd_ReadModuleRunningParams:		// 读取模块运行参数
+		if(rxlen < index + 124 && cmd != 0x3A){
+			break;
+		}
+		ret = RxResult_Ok;
+		// 模块运行参数
+		ptr = Water6009_GetStrDeviceType(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "仪表类型: %s\n", ptr);
+		index += 1;
+		switch (buf[index]){
+		case 0x00:	u16Tmp = 1;	break;
+		case 0x01:	u16Tmp = 10;	break;
+		case 0x02:	u16Tmp = 100;	break;
+		case 0x03:	u16Tmp = 1000;	break;
+		default:  u16Tmp = buf[index];	break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d脉冲/方\n", u16Tmp);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "磁干扰开阀时间: %d s\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "计量脉冲闭合时间: %d ms\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "开关阀时间 : %d ms\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "过流阀值: %d mA\n",buf[index]);
+		index += 1;
+		switch (buf[index]){
+		case 0x00:	ptr = "3.6 v";	break;
+		case 0x01:	ptr = "6.0 v";	break;
+		case 0x02:	ptr = "4.5 v";	break;
+		default:  ptr = "未知";	break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压类型: %s\n", ptr);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "定时上传间隔: %d h\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "定量上传间隔: %d m3\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "每天上传次数: %d\n", buf[index]);
+		index += 1;
+		ptr = Water6009_GetStrSensorType(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "计量传感器类型: \n  %s\n", ptr);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-IP地址: \n  %d.%d.%d.%d\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-端口号: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "水表防锈间隔: %d天\n", (buf[index] + buf[index + 1] * 256));
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "系统调试级别: %d\n", buf[index]);
+		index += 1;
+		GetStringHexFromBytes(TmpBuf, buf, index, 4, 0, false);
+		if(TmpBuf[3] == '0' && TmpBuf[4] == '4'){
+			ptr = "中国移到";
+		}else if(TmpBuf[3] == '0' && TmpBuf[4] == '1'){
+			ptr = "中国联通";
+		}else if(TmpBuf[3] == '1' && TmpBuf[4] == '1'){
+			ptr = "中国电信";
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "运营商编号: %s\n", TmpBuf);
+		dispIdx += sprintf(&dispBuf[dispIdx], " SIM卡类型: %s\n", ptr);
+		index += 4;
+		dispIdx += sprintf(&dispBuf[dispIdx], "当前系统时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
+			, buf[index + 4], buf[index + 5], buf[index + 6]);
+		index += 7;
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信频段: Band %d\n", buf[index]);
+		index += 1;
+		switch (buf[index]){
+		case 0x01:	ptr = "COAP";	break;
+		case 0x02:	ptr = "UDP";	break;
+		default:  ptr = "未知";	break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "连接方式: %s\n", ptr);
+		index += 1;
+		index += 2; // 保留
+		dispIdx += sprintf(&dispBuf[dispIdx], "报警限值: %d\n", buf[index]);
+		index += 1;
+		u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "关阀限值: %s%d\n", 
+			((u16Tmp & 0x8000) > 0 ? "-" : ""), (u16Tmp & 0x7FFF));
+		index += 2;
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "预缴用量:%d.%03d\n", u32Tmp, u16Tmp);
+		index += 6;
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "参考用量:%d.%03d\n", u32Tmp, u16Tmp);
+		index += 6;
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "模块测试状态如下\n");
+		dispIdx += Water6009_GetStrTestStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
+		index += 2; // 保留
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "正转用量:%d.%03d\n", u32Tmp, u16Tmp);
+		index += 6;
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "反转用量:%d.%03d\n", u32Tmp, u16Tmp);
+		index += 6;
+		ptr = Water6009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s\n", ptr);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
+		dispIdx += Water6009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态如下\n");
+		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
+		u8Tmp = buf[index];
+		dispIdx += sprintf(&dispBuf[dispIdx], "按日按月设置: 按%s\n", (u8Tmp == 0x01 ? "日" : "月"));
+		index += 1;	
+		dispIdx += sprintf(&dispBuf[dispIdx], "侦听起始时间: %02d %s\n",  buf[index], (u8Tmp == 0x01 ? "点" : "号"));
+		index += 1;	
+		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d %s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
+		index += 1;	
+		index += 10; // 保留
+		memcpy(&VerInfo[0], &buf[index], 40);
+		VerInfo[40] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
+		index += 40;
+		break;
+
+	case WaterCmd_SetModuleRunningParams:		// 设置模块运行参数
+		if(rxlen < index + 1 && cmd != 0x3F){
+			break;
+		}
+		ret = RxResult_Ok;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 
@@ -2001,6 +2245,250 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	
 	
 	return ret;
+}
+
+//----------------------------------	版本信息		--------------------------
+void VersionInfoFunc(void)
+{
+	_ClearScreen();
+
+	_Printfxy(0, 0, "<<版本信息", Color_White);
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);
+	//--------------------------------------------------
+	PrintfXyMultiLine_VaList(0, 2*16, "  %s ", VerInfo_Name);
+	PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
+	PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
+	PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+
+	_ReadKey();		// 任意键返回
+}
+
+//--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
+/*
+* 描述： 命令发送/接收解析		- 执行完成后，返回结果
+* 参数： cmdid	- 当前命令标识
+*		addrs	- 地址域		
+*		args	- 命令参数：args->items[0] - 命令ID, args->items[1] - 数据域
+*		ackLen	- 应答长度 (byte)
+*		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
+*		tryCnt	- 重试次数 默认3次
+* 返回： bool  - 命令执行结果： true - 成功， false - 失败		
+*/
+bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+{
+	uint8 sendCnt = 0, cmdResult, ret;
+	uint16 waitTime = 0, lastRxLen;
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		fp = _Fopen("system.cfg", "W");
+	}else{
+		fp = _Fopen("system.cfg", "RW");
+	}
+	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
+		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
+		_Lseek(fp, 20, 0);	// 集中器号
+	}else{
+		#ifdef Project_6009_RF
+		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+		#else
+		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		#endif
+	}
+	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
+	_Fclose(fp);
+	
+	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+#if (AddrLen == 6)
+	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
+#else
+	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号:\n   %s ", StrDstAddr);
+#endif
+
+	do{
+		_CloseCom();
+		_ComSetTran(CurrPort);
+		_ComSet(CurrBaud, 2);
+
+		// 发送 
+		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, sendCnt);
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		_SendComStr(TxBuf, TxLen);
+		sendCnt++;
+		if(sendCnt == 1){
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			//_Printfxy(0, 9*16, "状态: 命令发送      ", Color_White);
+			_Printfxy(0, 9*16, " <  命令发送...  >  ", Color_White);
+		}
+		else{
+			//------------------------------------------------------
+			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+			//PrintfXyMultiLine_VaList(0, 9*16, "状态: 命令重发 %d    ", sendCnt);
+			PrintfXyMultiLine_VaList(0, 9*16, " <  命令重发...%d  > ", sendCnt);
+		}
+
+		// 接收
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		RxLen = 0;
+		waitTime = 0;
+		lastRxLen = 0;
+		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
+
+		do{
+
+			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 8);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			if(KEY_CANCEL == _GetKeyExt()){
+				//------------------------------------------------------
+				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+				_Printfxy(0, 6*16, "命令已取消         ", Color_White);
+				_Printfxy(0, 9*16, "返回  <已取消>  继续", Color_White);
+				DispBuf[0] = 0x00;
+				return false;
+			}
+			waitTime += 100;
+
+			if(waitTime % 1000 == 0){
+				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
+				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
+			}
+
+			if(lastRxLen > 0){
+				if(lastRxLen != RxLen){
+					lastRxLen = RxLen;
+					continue;
+				}else{
+					break;
+				}
+			}else{
+				lastRxLen = RxLen;
+			}
+		}while(waitTime < timeout);
+
+		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
+
+#if Log_On
+		LogPrintBytes("Tx: ", TxBuf, TxLen);
+		LogPrintBytes("Rx: ", RxBuf, RxLen);
+#endif
+
+		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
+
+	}while(sendCnt < tryCnt && (cmdResult == RxResult_Timeout || cmdResult == RxResult_CrcError));
+
+	// 显示结果
+#if RxBeep_On
+	_SoundOn();
+	_Sleep(50);
+	_SoundOff();
+#endif
+	if(cmdResult == RxResult_Ok){
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		//------------------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回  < 成功 >  继续", Color_White);
+		ret = true;
+	}
+	else{
+#if RxBeep_On
+		_Sleep(30);
+		_SoundOn();
+		_Sleep(30);
+		_SoundOff();
+#endif
+		if(cmdResult == RxResult_Failed){
+		//	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		}
+		//-----------------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回  < 失败 >  继续", Color_White);
+		ret = false;
+	}
+
+	_CloseCom();
+
+	return ret;
+}
+
+/*
+* 描述： 命令发送/接收解析	- 执行完成后，等待按键：上/下键 - 滚动显示， 确认/取消键 - 返回
+* 参数： cmdid	- 当前命令标识
+*		addrs	- 地址域		
+*		args	- 命令参数：args->items[0] - 命令ID, args->items[1] - 数据域
+*		ackLen	- 应答长度 (byte)
+*		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
+*		tryCnt	- 重试次数 默认3次
+* 返回： uint8	- 界面退出时的按键值：确认键，取消键	
+*/
+uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+{
+	const uint8 lineStep = 7, lineMax = 7;
+	int8 lineCnt = 0, currLine = 0;
+	uint8 *lines[100], key;
+
+	// 应答长度、超时时间、重发次数
+#ifdef Project_6009_IR
+	timeout = 3000;
+	tryCnt = 3;
+#else
+	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
+	tryCnt = 3;
+#endif
+
+	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
+		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
+			DispBuf[0] = NULL;
+			lines[0] = NULL;
+		}
+	}
+
+	lineCnt = GetPrintLines(0, DispBuf, lines);
+	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
+
+	// 上/下滚动显示   ▲ ▼  △ ▽
+	while(1){
+
+		if(lineCnt > lineMax){
+			if(currLine < lineCnt - lineMax){
+				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
+			}else{
+				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
+			}
+
+			if(currLine > 0){
+				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
+			}else{
+				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
+			}
+		}
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+		else if(key == KEY_UP && lineCnt > lineMax){
+			currLine -= lineStep;
+			if(currLine < 0){
+				currLine = 0;
+			}
+		}
+		else if(key == KEY_DOWN && lineCnt > lineMax){
+			currLine += lineStep;
+			if(currLine > lineCnt - lineMax){
+				currLine = lineCnt - lineMax;
+			}
+		}
+		else{
+			continue;
+		}
+
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+	}
+
+	return key;
 }
 
 #endif

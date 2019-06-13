@@ -346,6 +346,7 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 */
 void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 initCnt, ...)
 {
+	static uint8 ListBuf[ListBufLen][STR_Size];
 	uint16 i;
 	va_list ap;
 	char *ptr;
@@ -383,7 +384,7 @@ void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fi
 */
 uint16 ListBoxShow(ListBox *lbx)
 {
-	uint16 retNum, dstIndex, srcIndex, lastStartIdx = 0xFFFF;
+	uint16 retNum, dstIndex, srcIndex;
 	uint8 key, i;
 	uint8 **lines = lbx->strs;
 	uint16 fillMax = ListBufLen - (ListBufLen % lbx->dispMax);
@@ -402,7 +403,6 @@ uint16 ListBoxShow(ListBox *lbx)
 		PrintfXyMultiLine_VaList(0, 0, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*--------------------------------------------¨‹---*/
-		//_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
 			_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
 		}

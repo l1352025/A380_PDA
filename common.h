@@ -170,7 +170,6 @@ extern uint8 TmpBuf[1080];
 extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint8 DispBuf[2048];
-extern uint8 ListBuf[ListBufLen][STR_Size];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[9];
 extern uint8 DstAddr[9];
