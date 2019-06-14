@@ -3734,6 +3734,7 @@ void MainFuncBatchMeterReading(void)
 	char *fileName = NULL;
 	int	fp, index;
 	uint8 fileds[15][20];
+	uint32 recCnt, recIdx, readOkCnt;
 
 	_ClearScreen();
 
@@ -3747,14 +3748,16 @@ void MainFuncBatchMeterReading(void)
 	menuList.with = 10 * 16;
 	menuList.str[0] = "  1. 按区域抄表";
 	menuList.str[1] = "  2. 按集中器抄表";
-	menuList.str[2] = "  3. 导入档案";
-	menuList.str[3] = "  4. 清空档案";
+	menuList.str[2] = "  3. 清空所有档案";
+	menuList.str[3] = "  4. 重置抄表时间";
 	menuList.str[4] = "  5. 查询统计";
 	menuList.defbar = 1;
 
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	// 打开数据库
+	_Select(1);
+	_Use("jk.dbf");
+	recCnt = _Reccount();
+	recIdx = _Recno();
 
 	while(1){
 
@@ -3772,6 +3775,12 @@ void MainFuncBatchMeterReading(void)
 			
 			_ClearScreen();
 
+			if(recCnt == 0){
+				PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n请先下载抄表档案，再进行批量操作");
+				_Sleep(1000);
+				break;
+			}
+
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[5]);
@@ -3782,8 +3791,6 @@ void MainFuncBatchMeterReading(void)
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 
-
-			
 
 			switch(menuItemNo){
 			case 1:		// 按区域抄表
@@ -3859,85 +3866,25 @@ void MainFuncBatchMeterReading(void)
 				
 				break;
 
-			case 3:		// 导入档案
-				// 选中档案文件
-				_SaveScreenToBuff(Screenbuff);
-				_ClearScreen();
-				fileName = _GetFileList("选|\n择|\n档|\n案|\n文|\n件|\n  |\n  |\n", "", "");
-				_ClearScreen();
-				_RestoreBuffToScreen(Screenbuff);
-
-				if (fileName == 0){
-					break;
-				}
-				
-				fp = _Fopen(fileName, "R");
-				_Lseek(fp, 0, 0);
-				_Fread(TmpBuf, 1024, fp);
-				_Fclose(fp);
-
-				#if Log_On
-					LogPrintBytes("TmpBuf-512 ", TmpBuf, 512);
-				#endif
-
-				index = 0;
-				i = 0;
-				pByte = &fileds[i][0];
-
-				while(TmpBuf[index]){
-					
-					*pByte = TmpBuf[index];
-
-					if(*pByte == ','){
-						*pByte = 0x00;
-						i++;
-						pByte = &fileds[i][0];
-						
-					}
-					else if(*pByte == '\r' && *pByte == '\n'){
-						*pByte = 0x00;
-						i++;
-						pByte = &fileds[i][0];
-						index++;
-					}
-					else{
-						pByte++;
-					}
-
-					if(i == 13){
-						#if Log_On
-							LogPrint("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", 
-								fileds[0], fileds[1], fileds[2], fileds[3], fileds[4], 
-								fileds[5], fileds[6], fileds[7], fileds[8], fileds[9],
-								fileds[10], fileds[11], fileds[12]);
-						#endif
-
-						break;
-					}
-
-					index++;
-				}
-
-				#if Log_On
-					LogPrint("%s,%s,%s,%s\n", "选择", "用户编号", "用户名称", "地址");
-				#endif
-				
-				index = IndexOf(TmpBuf, 1024, "\n", 1, 0, 1024);
-				if(index < 0){
-					
-					fileName = 0;                           
-				}
-				else{
-					
-				}
-
-				// 导入到数据库
-
+			case 3:		// 清空所有档案
+				// 清空数据库
+				_Zap();
+				recCnt = _Reccount();
+				_Printfxy(0, 3*16, "  所有档案已清空！", Color_White);
+				_Sleep(1000);
 				break;
 
-			case 4:		// 清空档案
-				// 清空数据库
-				
+			case 4:		// 重置抄表时间
+				// 遍历所有记录，清空抄表时间
+				_Go(0);
+				do{
+					_Replace(Idx_MeterValue, "");
+					_Replace(Idx_MeterReadStatus, "0");
+					_Replace(Idx_MeterReadTime, "");
+					_Skip(1);
+				}while(_Eof() == false);
+				_Printfxy(0, 3*16, "  抄表时间已重置！", Color_White);
+				_Sleep(1000);
 				break;
 
 			case 5:		// 查询统计
@@ -3964,7 +3911,8 @@ void MainFuncBatchMeterReading(void)
 		
 	}
 
-	_CloseCom();
+	// 关闭数据库
+	_Use("");
 }
 
 // 工程调试		------------------------------
