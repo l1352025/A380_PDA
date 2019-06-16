@@ -68,7 +68,7 @@ typedef enum{
 	Idx_MeterStatusStr,		// "BZTSTR",	// 表状态 STR
 	Idx_BatVoltage,			// "DCDY",		// 电池电压
 	Idx_MCCS,				// "MCCS",		// 
-	Idx_MeterReadType,		// "SGCQ",		// 抄表方式 1 - 掌机抄表 ， 2 - 集中器抄表
+	Idx_MeterReadType,		// "SGCQ",		// 抄表方式 0 - 掌机抄表 ， 1 - 集中器抄表
 	Idx_QF,					// "QF",		// 
 	Idx_SignalValue,		// "XHQD",		// 信号强度
 	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间

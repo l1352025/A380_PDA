@@ -3747,10 +3747,10 @@ void MainFuncBatchMeterReading(void)
 	menuList.y = 0;
 	menuList.with = 10 * 16;
 	menuList.str[0] = "  1. 按区域抄表";
-	menuList.str[1] = "  2. 按集中器抄表";
-	menuList.str[2] = "  3. 清空所有档案";
-	menuList.str[3] = "  4. 重置抄表时间";
-	menuList.str[4] = "  5. 查询统计";
+	menuList.str[1] = "  2. 清空所有档案";
+	menuList.str[2] = "  3. 重置抄表时间";
+	menuList.str[3] = "  4. 查询";
+	menuList.str[4] = "  5. 统计";
 	menuList.defbar = 1;
 
 	// 打开数据库
