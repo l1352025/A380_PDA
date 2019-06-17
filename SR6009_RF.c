@@ -7,12 +7,12 @@
 
 #include "HJLIB.H"
 #include "string.h"
-#include "dbf.h"
 #include "stdio.h"
 
 #include "Common.h"
 #include "Tool.h"
 #include "WaterMeter.h"
+#include "MeterDocDBF.h"
 
 
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
@@ -3798,6 +3798,7 @@ void MainFuncBatchMeterReading(void)
 				// 查询并显示区域列表
 
 				// 查询并显示某区域的小区列表
+				_ReadFieldEx(Idx_DistrictName, "");
 
 				// 查询并显示某小区的楼栋列表
 
@@ -3833,39 +3834,6 @@ void MainFuncBatchMeterReading(void)
 				
 				break;
 
-			case 2:		// 按集中器抄表
-				/*---------------------------------------------*/
-				// 查询并显示集中器列表
-				
-				// 轮抄选定集中器下的所有户表
-
-			
-				// 命令参数处理
-				i = 0;	
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   // 命令字
-				Args.items[1] = &Args.buf[1];	// 数据域
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
-				// 数据域
-				Args.buf[i++] = 0x00;				// 数据格式 00	
-				Args.lastItemLen = i - 1;
-
-
-				// 地址填充
-				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-				PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-				// 应答长度、超时时间、重发次数
-				ackLen += 14 + Addrs.itemCnt * AddrLen;
-				timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-				tryCnt = 3;
-
-				// 发送、接收、结果显示
-				//key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-				
-				break;
-
 			case 3:		// 清空所有档案
 				// 清空数据库
 				_Zap();
@@ -3887,8 +3855,11 @@ void MainFuncBatchMeterReading(void)
 				_Sleep(1000);
 				break;
 
-			case 5:		// 查询统计
-
+			case 5:		// 抄表统计
+				meterInfo.DbIndex = 0;
+				devList.cnt = 0;
+				buildingList.cnt = 0;
+				distctList.cnt = 0;
 				break;
 
 
