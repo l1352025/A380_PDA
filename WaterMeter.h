@@ -82,7 +82,7 @@ typedef enum{
 	Idx_BLZDG,				// "BLZDG",		// 
 	Idx_BLZDH,				// "BLZDH",		// 
 	Idx_BLZDI,				// "BLZDI",		// 
-	Idx_BLZDJ,				// "BLZDJ"		// BLZD[A-J] 10¸ö ¡¶¡¶
+	Idx_BLZDJ				// "BLZDJ"		// BLZD[A-J] 10¸ö ¡¶¡¶
 }DB_Field_Index;
 
 const char *Fields[] = {

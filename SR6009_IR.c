@@ -1091,7 +1091,7 @@ void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
 	int i;
 
-	for(i = 0; i < cnt && strsIdx + cnt <= ListBufLen; i++){
+	for(i = 0; i < cnt; i++){
 		sprintf(strs[strsIdx + i], "  ÁÐ±íÏî %d", srcIdx + i + 1);
 	}
 }

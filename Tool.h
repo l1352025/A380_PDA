@@ -340,13 +340,12 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 *		  dispMax	- 一页显示记录条数
 *		  fillStrsFunc	- 填充列表的回调函数
 *		  title		- 列表标题
-*		  initCnt	- 初始化记录数量
-*		  ...		- 初始化记录列表
+*		  strsLen	- 字符串列表长度
+*		  ...		- 字符串列表
 * 返回值：void
 */
-void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 initCnt, ...)
+void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsLen, ...)
 {
-	static uint8 ListBuf[ListBufLen][STR_Size];
 	uint16 i;
 	va_list ap;
 	char *ptr;
@@ -361,20 +360,40 @@ void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fi
 	lbx->title = title;
 
 	// init value
-	va_start(ap, initCnt);
-	for(i = 0; i < ListBufLen; i++){
-		if(i < initCnt){
-			ptr = va_arg(ap, char *);
-			if(ptr == NULL){
-				break;
-			}
-			lbx->strs[i] = ptr;
+	va_start(ap, strsLen);
+	for(i = 0; i < strsLen; i++){
+		ptr = va_arg(ap, char *);
+		if(ptr == NULL){
+			break;
 		}
-		else{
-			lbx->strs[i] = ListBuf[i];		
-			sprintf(lbx->strs[i], "  列表项 %d", i + 1);
-		}
+		lbx->strs[i] = ptr;
 	}
+	lbx->strsLen = strsLen;
+}
+
+/*
+* 描  述：创建列表视图-扩展
+* 参  数：lbx		- 列表视图结构指针
+*		  totalCnt	- 记录总数
+*		  dispMax	- 一页显示记录条数
+*		  fillStrsFunc	- 填充列表的回调函数
+*		  title		- 列表标题
+*		  strs		- 字符串列表缓冲区
+*		  strsLen	- 字符串列表长度
+* 返回值：void
+*/
+void ListBoxCreateEx(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsLen)
+{
+	lbx->x = 0;
+	lbx->y = 0;
+	lbx->width = 10 * 16;
+	lbx->currIdx = 0;
+	lbx->totalCnt = totalCnt;
+	lbx->dispMax = dispMax;
+	lbx->fillStrsFunc = fillStrsFunc;
+	lbx->title = title;
+	lbx->strs = strs;
+	lbx->strsLen = strsLen;
 }
 
 /*
@@ -387,7 +406,7 @@ uint16 ListBoxShow(ListBox *lbx)
 	uint16 retNum, dstIndex, srcIndex;
 	uint8 key, i;
 	uint8 **lines = lbx->strs;
-	uint16 fillMax = ListBufLen - (ListBufLen % lbx->dispMax);
+	uint16 fillMax = lbx->strsLen - (lbx->strsLen % lbx->dispMax);
 	uint16 fillCnt = 0;
 
 	lbx->currIdx = (lbx->currIdx > 0 ? lbx->currIdx : 0);

@@ -3721,6 +3721,109 @@ void MainFuncCloseValve(void)
 	_CloseCom();
 }
 
+// dbf 查询结构
+typedef struct {
+	uint8 queryType;	// 查询类型：0-小区列表， 1-楼栋列表； 2-抄表情况列表 , 3 - 户表信息
+	char *districNum;	// 小区编号
+	char *buildingNum;	// 楼栋编号
+	char *meterReadStatus;	// 抄表状态
+	char *meterNum;		// 表号
+	char *userNum;		// 户号
+	char *roomNum;		// 门牌号
+	uint32 dbSelectIdx;	// 选择的数据库记录索引
+
+	uint32	dbCurrIdx;	// 数据库当前位置
+	uint32	reqMaxCnt;	// 最大请求数
+	uint32	resultCnt;	// 查询的结果记录数
+	uint8	errorCode;	// 0 - ok,  其他 - 出错
+}DB_QuerySt;
+
+// 查询小区列表
+typedef struct{
+	uint32 	dbIdx[20];		// 列表项对应的数据库索引
+	char 	nums[20][12];	// 列表项字符串：楼栋编号
+	char 	names[20][50];	// 列表项字符串：楼栋名称
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+}DistrictListSt;
+
+// 查询xx小区-楼栋列表
+typedef struct{
+	uint32 	dbIdx[50];		// 列表项对应的数据库索引
+	char 	nums[50][12];	// 列表项字符串：楼栋编号
+	char 	names[50][50];	// 列表项字符串：楼栋名称
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+	char 	*districNum;	// 小区编号
+}BuildingListSt;
+
+// 查询xx小区-xx楼栋-抄表情况
+typedef struct{
+	uint32 	dbIdx[200];		// 列表项对应的数据库索引
+	char 	strs[200][50];	// 列表项字符串：表号/户号/门牌号/户名/地址
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+	uint8 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
+	char 	*districNum;		// 小区编号
+	char 	*buildingNum;		// 楼栋编号
+	char 	*meterReadStatus;	// 抄表状态
+	uint8 	meterCnt;		// 当前楼栋表总数
+	uint8 	readOkCnt;	// 已抄数量
+	uint8 	readNgCnt;	// 未抄数量
+}MeterReadListSt;
+
+// 查询小区列表
+void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
+{
+
+}
+
+// 查询xx小区-楼栋列表
+void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：显示xx小区-xx楼栋-抄表统计情况
+* 参 数：meters		- 抄表情况列表
+* 返 回：void
+*/
+void QueryMeterReadCountInfo(MeterReadListSt *meters, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：显示xx小区-xx楼栋-抄表统计情况
+* 参 数：meters		- 抄表情况列表
+* 返 回：uint8 	- 按键值： 返回键 ， 确认键
+*/
+uint8 ShowMeterReadCountInfo(MeterReadListSt *meters)
+{
+
+}
+
+/*
+* 描 述：查询户表信息
+* 参 数：meterInfo	- 户表信息
+* 返 回：void
+*/
+void QueryMeterInfo(MeterReadListSt *meterInfo, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：显示户表信息
+* 参 数：meterInfo	- 户表信息
+* 返 回：uint8 	- 按键值： 返回键 ， 确认键
+*/
+uint8 QueryMeterInfo(MeterReadListSt *meterInfo)
+{
+
+}
+
 // 批量抄表
 void MainFuncBatchMeterReading(void)
 {
@@ -3746,18 +3849,19 @@ void MainFuncBatchMeterReading(void)
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 按区域抄表";
+	menuList.str[0] = "  1. 按楼栋抄表";
 	menuList.str[1] = "  2. 清空所有档案";
 	menuList.str[2] = "  3. 重置抄表时间";
-	menuList.str[3] = "  4. 查询";
-	menuList.str[4] = "  5. 统计";
+	menuList.str[3] = "  4. 户表查询";
+	menuList.str[4] = "  5. 抄表统计";
 	menuList.defbar = 1;
 
-	// 打开数据库
+	
 	_Select(1);
-	_Use("jk.dbf");
+	_Use("jk.dbf");	// 打开数据库
 	recCnt = _Reccount();
 	recIdx = _Recno();
+	_Use("");		// 关闭数据库
 
 	while(1){
 
@@ -3833,49 +3937,21 @@ void MainFuncBatchMeterReading(void)
 				
 				break;
 
-			case 2:		// 按集中器抄表
-				/*---------------------------------------------*/
-				// 查询并显示集中器列表
-				
-				// 轮抄选定集中器下的所有户表
-
-			
-				// 命令参数处理
-				i = 0;	
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   // 命令字
-				Args.items[1] = &Args.buf[1];	// 数据域
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
-				// 数据域
-				Args.buf[i++] = 0x00;				// 数据格式 00	
-				Args.lastItemLen = i - 1;
-
-
-				// 地址填充
-				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-				PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-
-				// 应答长度、超时时间、重发次数
-				ackLen += 14 + Addrs.itemCnt * AddrLen;
-				timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-				tryCnt = 3;
-
-				// 发送、接收、结果显示
-				//key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-				
-				break;
-
-			case 3:		// 清空所有档案
+			case 2:		// 清空所有档案
 				// 清空数据库
+				_Select(1);
+				_Use("jk.dbf");	// 打开数据库
 				_Zap();
-				recCnt = _Reccount();
+				recCnt = _Reccount();	
+				_Use("");		// 关闭数据库
 				_Printfxy(0, 3*16, "  所有档案已清空！", Color_White);
 				_Sleep(1000);
 				break;
 
-			case 4:		// 重置抄表时间
+			case 3:		// 重置抄表时间
 				// 遍历所有记录，清空抄表时间
+				_Select(1);
+				_Use("jk.dbf");	// 打开数据库
 				_Go(0);
 				do{
 					_Replace(Idx_MeterValue, "");
@@ -3883,11 +3959,16 @@ void MainFuncBatchMeterReading(void)
 					_Replace(Idx_MeterReadTime, "");
 					_Skip(1);
 				}while(_Eof() == false);
+				_Use("");		// 关闭数据库
 				_Printfxy(0, 3*16, "  抄表时间已重置！", Color_White);
 				_Sleep(1000);
 				break;
 
-			case 5:		// 查询统计
+			case 4:		// 户表查询
+				
+				break;
+
+			case 5:		// 抄表统计
 
 				break;
 
@@ -3911,8 +3992,8 @@ void MainFuncBatchMeterReading(void)
 		
 	}
 
-	// 关闭数据库
-	_Use("");
+	
+	
 }
 
 // 工程调试		------------------------------
