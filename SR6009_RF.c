@@ -3764,7 +3764,7 @@ void MainFuncBatchMeterReading(void)
 
 	
 	_Select(1);
-	_Use("jk.dbf");	// 打开数据库
+	_Use(MeterDocDB);	// 打开数据库
 	recCnt = _Reccount();
 	recIdx = _Recno();
 	_Use("");		// 关闭数据库
@@ -3846,7 +3846,7 @@ void MainFuncBatchMeterReading(void)
 			case 2:		// 清空所有档案
 				// 清空数据库
 				_Select(1);
-				_Use("jk.dbf");	// 打开数据库
+				_Use(MeterDocDB);	// 打开数据库
 				_Zap();
 				recCnt = _Reccount();	
 				_Use("");		// 关闭数据库
@@ -3857,7 +3857,7 @@ void MainFuncBatchMeterReading(void)
 			case 3:		// 重置抄表时间
 				// 遍历所有记录，清空抄表时间
 				_Select(1);
-				_Use("jk.dbf");	// 打开数据库
+				_Use(MeterDocDB);	// 打开数据库
 				_Go(0);
 				do{
 					_Replace(Idx_MeterValue, "");
@@ -3875,7 +3875,7 @@ void MainFuncBatchMeterReading(void)
 				break;
 
 			case 5:		// 抄表统计
-				meterInfo.DbIndex = 0;
+				meterInfo.dbIdx = 0;
 				meterList.cnt = 0;
 				buildingList.cnt = 0;
 				distctList.cnt = 0;

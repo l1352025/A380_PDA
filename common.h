@@ -162,6 +162,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
+uint8 ShowScrollStr(char *strBuf, uint8 lineStep);
 void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 

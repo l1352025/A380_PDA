@@ -9,16 +9,18 @@
 #include "Common.h"
 
 
+#define	MeterDocDB "jk.dbf"
+
 //---------------	dbf 查询结构
 typedef struct {
-	uint8 queryType;	// 查询类型：0-小区列表， 1-楼栋列表； 2-抄表情况列表 , 3 - 户表信息
-	char *districNum;	// 小区编号
-	char *buildingNum;	// 楼栋编号
-	char *meterReadStatus;	// 抄表状态
-	char *meterNum;		// 表号
-	char *userNum;		// 户号
-	char *roomNum;		// 门牌号
-	uint32 dbSelectIdx;	// 选择的数据库记录索引
+	// uint8 queryType;	// 查询类型：0-小区列表， 1-楼栋列表； 2-抄表情况列表 , 3 - 户表信息
+	// char *districNum;	// 小区编号
+	// char *buildingNum;	// 楼栋编号
+	// char *meterReadStatus;	// 抄表状态
+	// char *meterNum;		// 表号
+	// char *userNum;		// 户号
+	// char *roomNum;		// 门牌号
+	// uint32 dbSelectIdx;	// 选择的数据库记录索引
 
 	uint32	dbCurrIdx;	// 数据库当前位置
 	uint32	reqMaxCnt;	// 最大请求数
@@ -31,7 +33,6 @@ typedef struct {
 #define	Size_DistrictNum			16	// 小区编号 长度
 #define	Size_DistrictName			21	// 小区名称 长度
 typedef struct{
-	uint32 	dbIdx[District_Max];		// 列表项对应的数据库索引
 	char 	nums[District_Max][Size_DistrictNum];	// 列表项字符串：楼栋编号
 	char 	names[District_Max][Size_DistrictName];	// 列表项字符串：楼栋名称
 	uint8 	idx;			// 列表项索引
@@ -43,27 +44,26 @@ typedef struct{
 #define	Size_BuildingNum			16	// 楼栋编号 长度
 #define	Size_BuildingName			21	// 楼栋名称 长度
 typedef struct{
-	uint32 	dbIdx[Building_Max];		// 列表项对应的数据库索引
 	char 	nums[Building_Max][Size_BuildingNum];		// 列表项字符串：楼栋编号
 	char 	names[Building_Max][Size_BuildingName];		// 列表项字符串：楼栋名称
 	uint8 	idx;			// 列表项索引
 	uint8	cnt;			// 列表项总数
-	char 	*districNum;	// 小区编号
+	char 	*qryDistricNum;	// 小区编号
 }BuildingListSt;
 
 //---------------	xx小区 - xx楼栋 - 户表列表（表号/户号/门牌号/户名） 
 #define Meter_Max					200	// 一栋楼-最大表数
-#define	Size_MeterShowStr			21	// 户表显示的字符串 长度
+#define	Size_ListStr				21	// 户表显示的字符串 长度
 typedef struct{
 	uint32 	dbIdx[Meter_Max];		// 列表项对应的数据库索引
-	char 	strs[Meter_Max][Size_MeterShowStr];	// 列表项字符串：表号/户号/门牌号/户名/地址
+	char 	strs[Meter_Max][Size_ListStr];	// 列表项字符串：表号/户号/门牌号/户名/地址
 	uint8 	idx;			// 列表项索引
 	uint8	cnt;			// 列表项总数
 	uint8 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
-	char 	*districNum;		// 小区编号
-	char 	*buildingNum;		// 楼栋编号
-	char 	*meterReadStatus;	// 抄表状态
-	uint8 	meterCnt;		// 当前楼栋表总数
+	char 	*qryDistricNum;		// 小区编号：空值表示所有
+	char 	*qryBuildingNum;		// 楼栋编号：空值表示所有
+	char 	*qryMeterReadStatus;	// 抄表状态
+	uint8 	meterCnt;		// 当前表总数
 	uint8 	readOkCnt;	// 已抄数量
 	uint8 	readNgCnt;	// 未抄数量
 }MeterListSt;
@@ -71,7 +71,7 @@ typedef struct{
 
 //---------------	户表信息
 #define	Size_MeterNum				16	//表号长度
-#define	Size_UserId               	16	//户号长度
+#define	Size_UserNum               	16	//户号长度
 #define Size_RoomNum              	16	//门牌号长度
 #define Size_MeterReadStatus        1	//抄表状态长度	0 - 未抄  1 - 已抄 
 #define	Size_UserName               40	//户名长度
@@ -84,22 +84,27 @@ typedef struct{
 #define Size_BatteryVoltage         5   //电池电压长度
 #define Size_SignalValue           	5 	//信号强度长度
 
+#define Invalid_Idx		(0xFFFFFFFF)	// 无效索引
+
 typedef struct 
 {
-	uint32	DbIndex;				// 记录在数据库中索引
-	char	MeterNum[Size_MeterNum];
-	char	UserId[Size_UserId];
-	char	RoomNum[Size_RoomNum];
-	char	MeterReadStatus[Size_MeterReadStatus];
-	char	UserName[Size_UserName];
-	char	MobileNum[Size_MobileNum];
-	char	UserAddr[Size_UserAddr];
-	char	MeterReadType[Size_MeterReadType];
-	char	MeterReadTime[Size_MeterReadTime];
-	char	MeterValue[Size_MeterValue];
-	char	MeterStaus[Size_MeterStaus];
-	char	BatteryVoltage[Size_BatteryVoltage];
-	char	SignalValue[Size_SignalValue];
+	uint32	dbIdx;		// 记录在数据库中索引
+	char	*qryMeterNum;		// 表号
+	char 	*qryUserNum;		// 户号
+	char 	*qryRoomNum;		// 门牌号
+	char	meterNum[Size_MeterNum];
+	char	userNum[Size_UserNum];
+	char	roomNum[Size_RoomNum];
+	char	meterReadStatus[Size_MeterReadStatus];
+	char	userName[Size_UserName];
+	char	mobileNum[Size_MobileNum];
+	char	userAddr[Size_UserAddr];
+	char	meterReadType[Size_MeterReadType];
+	char	meterReadTime[Size_MeterReadTime];
+	char	meterValue[Size_MeterValue];
+	char	meterStaus[Size_MeterStaus];
+	char	batteryVoltage[Size_BatteryVoltage];
+	char	signalValue[Size_SignalValue];
 
 }MeterInfoSt;
 
@@ -108,7 +113,7 @@ typedef struct
 // 字段索引
 typedef enum{
 	Idx_Id	= 0,		// "ID",		// ID
-	Idx_UserId,			// "HH",		// 户号
+	Idx_UserNum,		// "HH",		// 户号
 	Idx_UserName,		// "HM",		// 户名
 	Idx_UserAddrs,		// "DZ",		// 地址
 	Idx_UserRoomNum,	// "MPH",		// 门牌号
@@ -165,7 +170,8 @@ typedef enum{
 	Idx_BLZDG,				// "BLZDG",		// 
 	Idx_BLZDH,				// "BLZDH",		// 
 	Idx_BLZDI,				// "BLZDI",		// 
-	Idx_BLZDJ				// "BLZDJ"		// BLZD[A-J] 10个 《《
+	Idx_BLZDJ,				// "BLZDJ"		// BLZD[A-J] 10个 《《
+	Idx_Invalid	= 0xFF	// 无效字段	
 }DB_Field_Index;
 
 // 字段名
@@ -235,6 +241,30 @@ const char *Fields[] = {
 //----------------------	数据库信息-操作函数		-------------------------------------
 
 /*
+* 描 述：字符串列表中查找字符串
+* 参 数：strs		- 字符串列表
+*		strsLen		- 字符串列表长度
+*		dstStr		- 查找的字符串
+*		cmpMaxLen	- 比较的最大长度
+* 返 回：int	- 找到的字符串在列表中的索引： -1 - 未找到， 0~n - 找到	
+*/
+int FindStrInList(char ** strs, uint16 strsLen, const char *dstStr, uint16 cmpMaxLen)
+{
+	int i = -1;
+
+	for(i = 0; i < strsLen; i++){
+		if(strncmp(strs[i], dstStr, cmpMaxLen) == 0){
+			break;
+		}
+	}
+	if(i >= strsLen){
+		i = -1;
+	}
+
+	return i;
+}
+
+/*
 * 描 述：查询小区列表
 * 参 数：districts	- 小区列表
 *		 query		- 数据库查询结构
@@ -242,7 +272,44 @@ const char *Fields[] = {
 */
 void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
 {
+	uint32 i, j, recCnt, resultCnt;
+	char strTmp1[Size_DistrictNum];
+	char strTmp2[Size_DistrictName];
+	uint8 isReapet;
 
+	_Select(1);
+	_Use(MeterDocDB);	// 打开数据库
+	recCnt = _Reccount();
+	_Go(0);
+	districts->cnt = 0;
+	districts->idx = 0;
+	query->resultCnt = 0;
+	query->errorCode = 0;
+	for(i = 0; i < recCnt; i++){
+		_ReadFieldEx(Idx_DistrictNum, strTmp1);		// 小区编号
+		strTmp1[Size_DistrictNum - 1] = '\0';
+
+		if(-1 != FindStrInList(districts->nums, districts->cnt, strTmp1, Size_DistrictNum)){
+			
+			query->resultCnt++;
+			if(query->resultCnt > query->reqMaxCnt){
+				query->errorCode = 1;
+				break;
+			}
+
+			strncpy(districts->nums[districts->cnt], strTmp1, Idx_DistrictNum);
+
+			_ReadFieldEx(Idx_DistrictName, strTmp2);	// 小区名称
+			strTmp2[Size_DistrictName -1] = '\0';
+			strncpy(districts->names[districts->cnt], strTmp2, Size_DistrictName);
+
+			districts->cnt++;
+			
+		}
+	}
+	_Use("");		// 关闭数据库
+
+	query->dbCurrIdx = i;
 }
 
 /*
@@ -253,7 +320,52 @@ void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
 */
 void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
 {
+	uint32 i, j, recCnt, resultCnt;
+	char strTmp[20];
+	char strTmp1[Size_BuildingNum];
+	char strTmp2[Size_BuildingName];
+	uint8 isReapet;
 
+	_Select(1);
+	_Use(MeterDocDB);	// 打开数据库
+	recCnt = _Reccount();
+	_Go(0);
+	buildings->cnt = 0;
+	buildings->idx = 0;
+	query->resultCnt = 0;
+	query->errorCode = 0;
+	for(i = 0; i < recCnt; i++){
+
+		_ReadFieldEx(Idx_DistrictNum, strTmp);		// 小区编号 过滤
+		strTmp[Size_DistrictNum - 1] = '\0';
+		if(strcmp(buildings->qryDistricNum, strTmp) != 0){
+			continue;
+		}
+
+		_ReadFieldEx(Idx_BuildingNum, strTmp1);		// 楼栋编号
+		strTmp1[Size_BuildingNum - 1] = '\0';
+
+		if(-1 != FindStrInList(buildings->nums, buildings->cnt, strTmp1, Size_BuildingNum)){
+			
+			query->resultCnt++;
+			if(query->resultCnt > query->reqMaxCnt){
+				query->errorCode = 1;
+				break;
+			}
+
+			strncpy(buildings->nums[buildings->cnt], strTmp1, Size_BuildingNum);
+
+			_ReadFieldEx(Idx_BuildingName, strTmp2);	// 楼栋名称
+			strTmp2[Size_BuildingName -1] = '\0';
+			strncpy(buildings->names[buildings->cnt], strTmp2, Size_BuildingName);
+
+			buildings->cnt++;
+			
+		}
+	}
+	_Use("");		// 关闭数据库
+
+	query->dbCurrIdx = i;
 }
 
 /*
@@ -264,7 +376,88 @@ void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
 */
 void QueryMeterReadCountInfo(MeterListSt *meters, DB_QuerySt *query)
 {
+	uint32 i, j, recCnt, resultCnt;
+	char strTmp[50];
+	char strTmp1[Size_BuildingNum];
+	char strTmp2[Size_BuildingName];
+	uint8 showStrSize;
 
+	_Select(1);
+	_Use(MeterDocDB);	// 打开数据库
+	recCnt = _Reccount();
+	_Go(0);
+	meters->cnt = 0;
+	meters->idx = 0;
+	meters->meterCnt = 0;
+	meters->readOkCnt = 0;
+	meters->readNgCnt = 0;
+	query->resultCnt = 0;
+	query->errorCode = 0;
+	for(i = 0; i < recCnt; i++){
+
+		if(meters->qryDistricNum != NULL){
+			_ReadFieldEx(Idx_DistrictNum, strTmp);		// 小区编号 过滤
+			strTmp[Size_DistrictNum - 1] = '\0';
+			if(strcmp(meters->qryDistricNum, strTmp) != 0){
+				continue;
+			}
+		}
+		if(meters->qryBuildingNum != NULL){
+			_ReadFieldEx(Idx_DistrictNum, strTmp);		// 楼栋编号 过滤
+			strTmp[Size_BuildingNum - 1] = '\0';
+			if(strcmp(meters->qryBuildingNum, strTmp) != 0){
+				continue;
+			}
+		}
+
+		meters->meterCnt++;		// 当前表总数
+		
+		if(meters->qryMeterReadStatus != NULL){
+			_ReadFieldEx(Idx_DistrictNum, strTmp);		// 抄表状态 过滤  NULL - 所有， ‘0’ - 未抄， ‘1’ - 已抄
+			strTmp[Size_MeterReadStatus - 1] = '\0';
+			if(strcmp(strTmp, "1") != 0){
+				meters->readNgCnt++;		// 未抄数量
+			}else{
+				meters->readOkCnt++;		// 已抄数量
+			}
+			if(strcmp(meters->qryMeterReadStatus, strTmp) != 0){
+				continue;
+			}
+		}
+
+		
+		if(meters->selectField == Idx_Invalid){	// 未选择字段，则不构建列表
+			continue;
+		}
+
+		switch (meters->selectField)		// 列表类型：默认为表号列表
+		{
+		case Idx_MeterNum:
+		case Idx_UserNum:
+		case Idx_UserRoomNum:
+		case Idx_UserName:
+		case Idx_UserAddrs:
+		default: 
+			meters->selectField = Idx_MeterNum;
+			break;
+		}
+		_ReadFieldEx(meters->selectField, strTmp);	// 读取字段：表号/户号/门牌号/户名/地址
+		strTmp[Size_ListStr - 1] = '\0';			// 最多显示一行
+
+		query->resultCnt++;
+		if(query->resultCnt > query->reqMaxCnt){
+			query->errorCode = 1;
+			break;
+		}
+
+		strncpy(meters->strs[meters->cnt], strTmp, Size_ListStr);	// 添加到显示列表
+		meters->dbIdx[meters->cnt] = i;								// 添加到DB索引列表
+		meters->cnt++;
+
+	}
+	_Use("");		// 关闭数据库
+
+	query->dbCurrIdx = i;
 }
 
 /*
@@ -285,7 +478,133 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 */
 void QueryMeterInfo(MeterInfoSt *meterInfo, DB_QuerySt *query)
 {
+	uint32 i, j, recCnt, resultCnt;
+	char strTmp[50];
 
+	_Select(1);
+	_Use(MeterDocDB);	// 打开数据库
+	recCnt = _Reccount();
+	_Go(0);
+	query->resultCnt = 0;
+	query->errorCode = 0;
+
+	if(meterInfo->dbIdx != Invalid_Idx){	// 数据库记录索引 是否有效？
+		if(meterInfo->dbIdx > recCnt -1){
+			meterInfo->dbIdx = Invalid_Idx;
+		}
+	}
+
+	if(meterInfo->dbIdx == Invalid_Idx){	// 数据库记录索引无效时 执行查询
+
+		#if 0
+		for(i = 0; i < recCnt; i++){
+			if(meterInfo->qryMeterNum != NULL){
+				_ReadFieldEx(Idx_MeterNum, strTmp);		// 按表号查询
+				strTmp[Size_MeterNum - 1] = '\0';
+				if(strcmp(meterInfo->qryMeterNum, strTmp) == 0){
+					meterInfo->dbIdx = i;
+					break;
+				}
+			}
+			else if(meterInfo->qryUserNum != NULL){
+				_ReadFieldEx(Idx_UserNum, strTmp);		// 按户号查询
+				strTmp[Size_UserNum - 1] = '\0';
+				if(strcmp(meterInfo->qryUserNum, strTmp) == 0){
+					meterInfo->dbIdx = i;
+					break;
+				}
+			}
+			else if(meterInfo->qryRoomNum != NULL){
+				_ReadFieldEx(Idx_UserRoomNum, strTmp);	// 按门牌号查询
+				strTmp[Size_RoomNum - 1] = '\0';
+				if(strcmp(meterInfo->qryRoomNum, strTmp) == 0){
+					meterInfo->dbIdx = i;
+					break;
+				}
+			}
+		}
+		#endif
+
+		if(meterInfo->qryMeterNum != NULL
+			&& _LocateEx(Idx_MeterNum, '=', meterInfo->qryMeterNum, 1, recCnt, 0) > 0){ 
+			// 按表号查询
+			meterInfo->dbIdx = _Recno();
+		}
+		else if(meterInfo->qryMeterNum != NULL
+			&& _LocateEx(Idx_UserNum, '=', meterInfo->qryMeterNum, 1, recCnt, 0) > 0){ 
+			// 按表号查询
+			meterInfo->dbIdx = _Recno();
+		}
+		else if(meterInfo->qryRoomNum != NULL
+			&& _LocateEx(Idx_UserRoomNum, '=', meterInfo->qryRoomNum, 1, recCnt, 0) > 0){ 
+			// 按表号查询
+			meterInfo->dbIdx = _Recno();
+		}
+
+		if(i >= recCnt){
+			meterInfo->dbIdx = Invalid_Idx;
+		}
+	}
+
+	if(meterInfo->dbIdx != Invalid_Idx){	// 数据库记录索引有效时 读取记录
+		query->resultCnt = 1;
+
+		_ReadFieldEx(Idx_MeterNum, strTmp);					// 表号
+		strTmp[Size_MeterNum - 1] = '\0';
+		strncpy(meterInfo->meterNum, strTmp, Size_ListStr);	
+
+		_ReadFieldEx(Idx_UserNum, strTmp);					// 户号
+		strTmp[Size_UserNum - 1] = '\0';
+		strncpy(meterInfo->userNum, strTmp, Size_UserNum);	
+
+		_ReadFieldEx(Idx_UserRoomNum, strTmp);				// 门牌号
+		strTmp[Size_RoomNum - 1] = '\0';
+		strncpy(meterInfo->roomNum, strTmp, Size_RoomNum);	
+
+		_ReadFieldEx(Idx_MeterReadStatus, strTmp);			// 抄表状态
+		strTmp[Size_MeterReadStatus - 1] = '\0';
+		strncpy(meterInfo->meterReadStatus, strTmp, Size_MeterReadStatus);	
+
+		_ReadFieldEx(Idx_UserName, strTmp);					// 户名
+		strTmp[Size_UserName - 1] = '\0';
+		strncpy(meterInfo->userName, strTmp, Size_UserName);	
+
+		_ReadFieldEx(Idx_UserMobileNum, strTmp);			// 手机号
+		strTmp[Size_MobileNum - 1] = '\0';
+		strncpy(meterInfo->mobileNum, strTmp, Size_MobileNum);	
+
+		_ReadFieldEx(Idx_UserAddrs, strTmp);				// 地址
+		strTmp[Size_UserAddr - 1] = '\0';
+		strncpy(meterInfo->userAddr, strTmp, Size_UserAddr);	
+
+		_ReadFieldEx(Idx_MeterReadType, strTmp);			// 抄表方式
+		strTmp[Size_MeterReadType - 1] = '\0';
+		strncpy(meterInfo->meterReadType, strTmp, Size_MeterReadType);	
+
+		_ReadFieldEx(Idx_MeterReadTime, strTmp);			// 抄表时间
+		strTmp[Size_MeterReadTime - 1] = '\0';
+		strncpy(meterInfo->meterReadTime, strTmp, Size_MeterReadTime);	
+
+		_ReadFieldEx(Idx_MeterValue, strTmp);				// 表读数
+		strTmp[Size_MeterValue - 1] = '\0';
+		strncpy(meterInfo->meterValue, strTmp, Size_MeterValue);	
+
+		_ReadFieldEx(Idx_MeterStatusStr, strTmp);			// 表状态
+		strTmp[Size_MeterStaus - 1] = '\0';
+		strncpy(meterInfo->meterStaus, strTmp, Size_MeterStaus);	
+
+		_ReadFieldEx(Idx_BatteryVoltage, strTmp);			// 电池电压
+		strTmp[Size_BatteryVoltage - 1] = '\0';
+		strncpy(meterInfo->batteryVoltage, strTmp, Size_BatteryVoltage);	
+
+		_ReadFieldEx(Idx_SignalValue, strTmp);				// 信号强度
+		strTmp[Size_SignalValue - 1] = '\0';
+		strncpy(meterInfo->signalValue, strTmp, Size_SignalValue);	
+	}
+
+	_Use("");		// 关闭数据库
+
+	query->dbCurrIdx = i;
 }
 
 /*
@@ -295,7 +614,13 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DB_QuerySt *query)
 */
 uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 {
-
+	_Printfxy(0, 0, "<<户表信息", Color_White);
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+	_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 }
 
 

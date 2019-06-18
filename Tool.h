@@ -32,7 +32,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
     int index = -1, i, j;
 	
     if (dstBytes == NULL || dstLen == 0) return index;
-
+ 
     if(offset > (srcLen - startIndex))
     {
         offset = (srcLen - startIndex);
@@ -822,6 +822,76 @@ void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
 			x1++;
 		}
 	}
+}
+
+/*
+* 描  述：显示可滚动的字符串	- 可自动换行：遇到 \n 或 到达屏幕边界时
+* 参  数：strBuf	- 字符串缓冲区
+*		 lineStep	- 按上下键时滚动的行数，最大7行
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
+*/
+uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
+{
+	const uint8 lineMax = 7;
+	int8 lineCnt = 0, currLine = 0;
+	uint8 *lines[150], key;
+
+	// lineStep check
+	if(lineStep > lineMax){
+		lineStep = lineMax;
+	}
+
+	lineCnt = GetPrintLines(0, strBuf, lines);
+
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+	
+	// 上/下滚动显示   ▲ ▼  △ ▽
+	while(1){
+
+		if(lineCnt > lineMax){
+			if(currLine < lineCnt - lineMax){
+				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
+			}else{
+				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
+			}
+
+			if(currLine > 0){
+				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
+			}else{
+				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
+			}
+		}
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+		else if(key == KEY_UP && lineCnt > lineMax){
+			currLine -= lineStep;
+			if(currLine < 0){
+				currLine = 0;
+			}
+		}
+		else if(key == KEY_DOWN && lineCnt > lineMax){
+			currLine += lineStep;
+			if(currLine > lineCnt - lineMax){
+				currLine = lineCnt - lineMax;
+			}
+		}
+		else{
+			continue;
+		}
+
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+	}
+
+	return key;
 }
 
 /*
