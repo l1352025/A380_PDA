@@ -15,6 +15,12 @@
 #include "MeterDocDBF.h"
 
 
+MeterInfoSt meterInfo;
+DistrictListSt distctList;
+BuildingListSt buildingList;
+MeterListSt meterList;
+
+
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
 	int i = strsIdx;
@@ -25,6 +31,7 @@ void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 }
 
 
+#ifdef	Use_CenterCmd
 // --------------------------------  集中器模块通信  -----------------------------------------
 // 1	常用命令
 void CenterCmdFunc_CommonCmd(void)
@@ -943,6 +950,7 @@ void CenterCmdFunc(void)
 	_Fclose(fp);
 	
 }
+#endif
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
@@ -2799,6 +2807,7 @@ void WaterCmdFunc(void)
 	_Menu(&menu);	
 }
 
+
 //-----------------------------------	主菜单	---------------------------
 // 读取用户用量
 void MainFuncReadRealTimeData(void)
@@ -3746,18 +3755,19 @@ void MainFuncBatchMeterReading(void)
 	menuList.x = 0;
 	menuList.y = 0;
 	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 按区域抄表";
+	menuList.str[0] = "  1. 按楼栋抄表";
 	menuList.str[1] = "  2. 清空所有档案";
 	menuList.str[2] = "  3. 重置抄表时间";
-	menuList.str[3] = "  4. 查询";
-	menuList.str[4] = "  5. 统计";
+	menuList.str[3] = "  4. 户表查询";
+	menuList.str[4] = "  5. 抄表统计";
 	menuList.defbar = 1;
 
-	// 打开数据库
+	
 	_Select(1);
-	_Use("jk.dbf");
+	_Use("jk.dbf");	// 打开数据库
 	recCnt = _Reccount();
 	recIdx = _Recno();
+	_Use("");		// 关闭数据库
 
 	while(1){
 
@@ -3798,7 +3808,6 @@ void MainFuncBatchMeterReading(void)
 				// 查询并显示区域列表
 
 				// 查询并显示某区域的小区列表
-				_ReadFieldEx(Idx_DistrictName, "");
 
 				// 查询并显示某小区的楼栋列表
 
@@ -3834,16 +3843,21 @@ void MainFuncBatchMeterReading(void)
 				
 				break;
 
-			case 3:		// 清空所有档案
+			case 2:		// 清空所有档案
 				// 清空数据库
+				_Select(1);
+				_Use("jk.dbf");	// 打开数据库
 				_Zap();
-				recCnt = _Reccount();
+				recCnt = _Reccount();	
+				_Use("");		// 关闭数据库
 				_Printfxy(0, 3*16, "  所有档案已清空！", Color_White);
 				_Sleep(1000);
 				break;
 
-			case 4:		// 重置抄表时间
+			case 3:		// 重置抄表时间
 				// 遍历所有记录，清空抄表时间
+				_Select(1);
+				_Use("jk.dbf");	// 打开数据库
 				_Go(0);
 				do{
 					_Replace(Idx_MeterValue, "");
@@ -3851,13 +3865,18 @@ void MainFuncBatchMeterReading(void)
 					_Replace(Idx_MeterReadTime, "");
 					_Skip(1);
 				}while(_Eof() == false);
+				_Use("");		// 关闭数据库
 				_Printfxy(0, 3*16, "  抄表时间已重置！", Color_White);
 				_Sleep(1000);
 				break;
 
+			case 4:		// 户表查询
+				
+				break;
+
 			case 5:		// 抄表统计
 				meterInfo.DbIndex = 0;
-				devList.cnt = 0;
+				meterList.cnt = 0;
 				buildingList.cnt = 0;
 				distctList.cnt = 0;
 				break;
@@ -3882,13 +3901,14 @@ void MainFuncBatchMeterReading(void)
 		
 	}
 
-	// 关闭数据库
-	_Use("");
+	
+	
 }
 
 // 工程调试		------------------------------
 void MainFuncEngineerDebuging(void)
 {
+	#ifdef Use_CenterCmd
 	_GuiMenuStru menu;
 
 	menu.top = 0;
@@ -3906,6 +3926,7 @@ void MainFuncEngineerDebuging(void)
 	menu.Function[2] = VersionInfoFunc;
 	menu.FunctionEx = 0;
 	_Menu(&menu);
+	#endif
 }
 
 // --------------------------------   主函数   -----------------------------------------------

@@ -3,8 +3,6 @@
 
 #include "stdio.h"
 #include "Common.h"
-#include "MeterDocDBF.h"
-
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
@@ -23,11 +21,6 @@ char StrBuf[10][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
-MeterInfo meterInfo;
-DistrictList distctList;
-BuildingList buildingList;
-DevList devList;
-
 
 
 //----------------------------------------  表端命令  ------------------------

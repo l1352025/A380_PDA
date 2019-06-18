@@ -8,40 +8,68 @@
 
 #include "Common.h"
 
-//---------------------- 小区列表
+
+//---------------	dbf 查询结构
+typedef struct {
+	uint8 queryType;	// 查询类型：0-小区列表， 1-楼栋列表； 2-抄表情况列表 , 3 - 户表信息
+	char *districNum;	// 小区编号
+	char *buildingNum;	// 楼栋编号
+	char *meterReadStatus;	// 抄表状态
+	char *meterNum;		// 表号
+	char *userNum;		// 户号
+	char *roomNum;		// 门牌号
+	uint32 dbSelectIdx;	// 选择的数据库记录索引
+
+	uint32	dbCurrIdx;	// 数据库当前位置
+	uint32	reqMaxCnt;	// 最大请求数
+	uint32	resultCnt;	// 查询的结果记录数
+	uint8	errorCode;	// 0 - ok,  其他 - 出错
+}DB_QuerySt;
+
+//---------------	小区列表
 #define District_Max				20	// 最大小区数
 #define	Size_DistrictNum			16	// 小区编号 长度
 #define	Size_DistrictName			21	// 小区名称 长度
 typedef struct{
-	char nums[District_Max][Size_DistrictNum];
-	char names[District_Max][Size_DistrictName];
-	uint8 cnt;
-	uint8 idx;
-}DistrictList;
+	uint32 	dbIdx[District_Max];		// 列表项对应的数据库索引
+	char 	nums[District_Max][Size_DistrictNum];	// 列表项字符串：楼栋编号
+	char 	names[District_Max][Size_DistrictName];	// 列表项字符串：楼栋名称
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+}DistrictListSt;
 
-//---------------------- xx小区 - 楼栋列表
+//--------------	xx小区 - 楼栋列表
 #define Building_Max				50	// 一个小区-最大楼栋数
 #define	Size_BuildingNum			16	// 楼栋编号 长度
 #define	Size_BuildingName			21	// 楼栋名称 长度
 typedef struct{
-	char nums[Building_Max][Size_BuildingNum];
-	char names[Building_Max][Size_BuildingName];
-	uint8 cnt;
-	uint8 idx;
-}BuildingList;
+	uint32 	dbIdx[Building_Max];		// 列表项对应的数据库索引
+	char 	nums[Building_Max][Size_BuildingNum];		// 列表项字符串：楼栋编号
+	char 	names[Building_Max][Size_BuildingName];		// 列表项字符串：楼栋名称
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+	char 	*districNum;	// 小区编号
+}BuildingListSt;
 
-//---------------------- xx楼栋 - 设备列表（表号/户号/门牌号/户名） 
-#define Dev_Max					256	// 一栋楼-最大表数
-#define	Size_DevShowStr			21	// 楼栋名称 长度
+//---------------	xx小区 - xx楼栋 - 户表列表（表号/户号/门牌号/户名） 
+#define Meter_Max					200	// 一栋楼-最大表数
+#define	Size_MeterShowStr			21	// 户表显示的字符串 长度
 typedef struct{
-	uint32 dbIndex[Dev_Max];
-	char strs[Dev_Max][Size_DevShowStr];
-	uint8 cnt;
-	uint8 idx;
-}DevList;
+	uint32 	dbIdx[Meter_Max];		// 列表项对应的数据库索引
+	char 	strs[Meter_Max][Size_MeterShowStr];	// 列表项字符串：表号/户号/门牌号/户名/地址
+	uint8 	idx;			// 列表项索引
+	uint8	cnt;			// 列表项总数
+	uint8 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
+	char 	*districNum;		// 小区编号
+	char 	*buildingNum;		// 楼栋编号
+	char 	*meterReadStatus;	// 抄表状态
+	uint8 	meterCnt;		// 当前楼栋表总数
+	uint8 	readOkCnt;	// 已抄数量
+	uint8 	readNgCnt;	// 未抄数量
+}MeterListSt;
 
 
-//---------------------- 户表信息
+//---------------	户表信息
 #define	Size_MeterNum				16	//表号长度
 #define	Size_UserId               	16	//户号长度
 #define Size_RoomNum              	16	//门牌号长度
@@ -55,7 +83,6 @@ typedef struct{
 #define Size_MeterStaus           	40	//表状态长度
 #define Size_BatteryVoltage         5   //电池电压长度
 #define Size_SignalValue           	5 	//信号强度长度
-
 
 typedef struct 
 {
@@ -74,10 +101,11 @@ typedef struct
 	char	BatteryVoltage[Size_BatteryVoltage];
 	char	SignalValue[Size_SignalValue];
 
-}MeterInfo;
+}MeterInfoSt;
 
 
-//---------------------- 数据库信息		- 表字段
+//----------------------	数据库信息	- 表字段
+// 字段索引
 typedef enum{
 	Idx_Id	= 0,		// "ID",		// ID
 	Idx_UserId,			// "HH",		// 户号
@@ -140,6 +168,7 @@ typedef enum{
 	Idx_BLZDJ				// "BLZDJ"		// BLZD[A-J] 10个 《《
 }DB_Field_Index;
 
+// 字段名
 const char *Fields[] = {
 	"ID",		// ID
 	"HH",		// 户号
@@ -202,25 +231,79 @@ const char *Fields[] = {
 	"BLZDJ"			// BLZD[A-J] 10个 《《
 };
 
-//---------------------- 数据库信息		- 查询条件	-------------------------------------
 
-
-
-//------------------------		外部接口	-------------------------------------
+//----------------------	数据库信息-操作函数		-------------------------------------
 
 /*
-* 描  述：显示户表信息界面 
-* 参  数：meterInfo	- 户表信息结构
-* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
+* 描 述：查询小区列表
+* 参 数：districts	- 小区列表
+*		 query		- 数据库查询结构
+* 返 回：void
 */
-uint8 ShowMeterInfoUI(MeterInfo *meterInfo)
+void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
 {
 
 }
 
-extern MeterInfo meterInfo;
-extern DistrictList distctList;
-extern BuildingList buildingList;
-extern DevList devList;
+/*
+* 描 述：查询xx小区-楼栋列表
+* 参 数：buildings	- 楼栋列表
+*		 query		- 数据库查询结构
+* 返 回：void
+*/
+void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：查询xx小区-xx楼栋-抄表统计情况
+* 参 数：meters		- 抄表情况列表
+*		 query		- 数据库查询结构
+* 返 回：void
+*/
+void QueryMeterReadCountInfo(MeterListSt *meters, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：显示xx小区-xx楼栋-抄表统计情况
+* 参 数：meters		- 抄表情况列表
+* 返 回：uint8 	- 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
+*/
+uint8 ShowMeterReadCountInfo(MeterListSt *meters)
+{
+
+}
+
+/*
+* 描 述：查询户表信息
+* 参 数：meterInfo	- 户表信息
+*		 query		- 数据库查询结构
+* 返 回：void
+*/
+void QueryMeterInfo(MeterInfoSt *meterInfo, DB_QuerySt *query)
+{
+
+}
+
+/*
+* 描 述：显示户表信息
+* 参 数：meterInfo	- 户表信息
+* 返 回：uint8 	- 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
+*/
+uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
+{
+
+}
+
+
+//------------------------		外部接口声明	-------------------------------------
+
+extern MeterInfoSt meterInfo;
+extern DistrictListSt distctList;
+extern BuildingListSt buildingList;
+extern MeterListSt meterList;
 
 #endif

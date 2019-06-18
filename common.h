@@ -31,7 +31,6 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10      // 最大UI控件数
-#define ListBufLen  20     // 列表缓冲区长度
 #define STR_Size    50      // 默认字符串字节数
 
 
@@ -131,7 +130,8 @@ typedef struct{
     uint16 strsCnt;     // 显示缓冲区中记录总数
     int16 strsIdx;     // 在显示缓冲区中当前记录的位置 
     char *title;
-    char *strs[ListBufLen];         // 显示缓冲区
+    char **strs;       // 字符串列表显示缓冲区
+    uint8 strsLen;      // 字符串列表长度
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
@@ -155,7 +155,8 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
-void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 initCnt, ...);
+void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsLen, ...);
+void ListBoxCreateEx(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsLen);
 uint16 ListBoxShow(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
