@@ -340,18 +340,18 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 *		  dispMax	- 一页显示记录条数
 *		  fillStrsFunc	- 填充列表的回调函数
 *		  title		- 列表标题
-*		  strsLen	- 字符串列表长度
+*		  strsCnt	- 字符串数量
 *		  ...		- 字符串列表
 * 返回值：void
 */
-void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsLen, ...)
+void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsCnt, ...)
 {
 	uint16 i;
 	va_list ap;
 	char *ptr;
 
-	lbx->x = 0;
-	lbx->y = 0;
+	lbx->x = x;		// 默认 0
+	lbx->y = y;		// 默认 0
 	lbx->width = 10 * 16;
 	lbx->currIdx = 0;
 	lbx->totalCnt = totalCnt;
@@ -360,40 +360,43 @@ void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fi
 	lbx->title = title;
 
 	// init value
-	va_start(ap, strsLen);
-	for(i = 0; i < strsLen; i++){
+	va_start(ap, strsCnt);
+	lbx->strCnt = strsCnt;
+	for(i = 0; i < lbx->strCnt; i++){
 		ptr = va_arg(ap, char *);
 		if(ptr == NULL){
 			break;
 		}
-		lbx->strs[i] = ptr;
+		lbx->str[i] = ptr;
 	}
-	lbx->strsLen = strsLen;
+	
 }
 
 /*
 * 描  述：创建列表视图-扩展
 * 参  数：lbx		- 列表视图结构指针
+* 		  x			- x 坐标
+*		  y			- y 坐标
 *		  totalCnt	- 记录总数
 *		  dispMax	- 一页显示记录条数
 *		  fillStrsFunc	- 填充列表的回调函数
 *		  title		- 列表标题
 *		  strs		- 字符串列表缓冲区
-*		  strsLen	- 字符串列表长度
+*		  strsCnt	- 字符串数量
 * 返回值：void
 */
-void ListBoxCreateEx(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsLen)
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsCnt)
 {
-	lbx->x = 0;
-	lbx->y = 0;
+	lbx->x = x;		// 默认 0
+	lbx->y = y;		// 默认 0
 	lbx->width = 10 * 16;
 	lbx->currIdx = 0;
 	lbx->totalCnt = totalCnt;
 	lbx->dispMax = dispMax;
 	lbx->fillStrsFunc = fillStrsFunc;
 	lbx->title = title;
-	lbx->strs = strs;
-	lbx->strsLen = strsLen;
+	lbx->str = strs;
+	lbx->strCnt = strsCnt;
 }
 
 /*
@@ -404,30 +407,36 @@ void ListBoxCreateEx(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc 
 uint16 ListBoxShow(ListBox *lbx)
 {
 	uint16 retNum, dstIndex, srcIndex;
-	uint8 key, i;
-	uint8 **lines = lbx->strs;
-	uint16 fillMax = lbx->strsLen - (lbx->strsLen % lbx->dispMax);
+	uint8 key, i, recX, recY, fillX, fillY;
+	uint8 **lines = lbx->str;
+	uint16 fillMax = lbx->strCnt - (lbx->strCnt % lbx->dispMax);
 	uint16 fillCnt = 0;
 
 	lbx->currIdx = (lbx->currIdx > 0 ? lbx->currIdx : 0);
 	lbx->strsCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
 	lbx->strsIdx = (lbx->currIdx % fillMax);
 	lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
+
+	recX = (lbx->x - 4 <= 0 ? 0 : lbx->x - 4);
+	recY = (lbx->y - 4 <= 0 ? 0 : lbx->y - 4);
+	fillX = (lbx->x - 16 <= 0 ? 0 : lbx->x - 16);
+	fillY = (lbx->y - 16 <= 0 ? 0 : lbx->y - 16);
 	
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
 
-		_ClearScreen();
+		_GUIRectangleFill(fillX, fillY, 160, 9*16, Color_White);	// 清空区域
+		_GUIRectangle(recX, recY, 160, 9*16 - 4, Color_Black);		// 绘制方框
 
-		PrintfXyMultiLine_VaList(0, 0, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		PrintfXyMultiLine_VaList(lbx->x, lbx->y, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
+		_GUIHLine(lbx->x, lbx->y + 16 + 4, 160, Color_Black);	
 		/*--------------------------------------------▼---*/
 		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
-			_Printfxy(0, i * 16 + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+			_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
 		}
-		_Printfxy(0, (lbx->strsIdx - lbx->dispStartIdx) * 16 + 16 + 8, lines[lbx->strsIdx], Color_Black);
+		_Printfxy(0, (lbx->strsIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strsIdx], Color_Black);
 		//--------------------------------------------▲---
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_GUIHLine(lbx->x, 9*16 - 4, 160, Color_Black);
 
 		key = _ReadKey();
 
@@ -481,7 +490,7 @@ uint16 ListBoxShow(ListBox *lbx)
 			lbx->strsIdx = lbx->strsCnt - 1;
 			
 			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
-				(*lbx->fillStrsFunc)(lbx->strs, dstIndex, srcIndex, fillCnt);
+				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
 				fillCnt = 0;
 			}
 		}
@@ -496,7 +505,7 @@ uint16 ListBoxShow(ListBox *lbx)
 			lbx->strsIdx = 0;
 			
 			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
-				(*lbx->fillStrsFunc)(lbx->strs, dstIndex, srcIndex, fillCnt);
+				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
 				fillCnt = 0;
 			}
 		}

@@ -32,7 +32,7 @@ void WaterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
 		"<<常用命令",
 		6,
 		"1. 读累计用量",
@@ -60,7 +60,7 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -272,7 +272,7 @@ void WaterCmdFunc_TestCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
 		"<<测试命令",
 		6,
 		"1. 读debug信息",
@@ -301,7 +301,7 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -589,7 +589,7 @@ void WaterCmdFunc_Upgrade(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
 		"<<程序升级",
 		6,
 		"1. 单表升级",
@@ -621,7 +621,7 @@ void WaterCmdFunc_Upgrade(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -810,7 +810,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 	_ClearScreen();
 
 	// 菜单`
-	ListBoxCreate(&menuList, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
 		"<<预缴用量",
 		6,
 		"1. 读预缴参考用量",
@@ -842,7 +842,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1110,7 +1110,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 14, 7, FillStrsFunc,
+	ListBoxCreate(&menuList, 0, 0, 14, 7, FillStrsFunc,
 		"<<工作参数",
 		14,
 		"1. 设置IP+端口+模式",
@@ -1150,7 +1150,7 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1635,7 +1635,7 @@ void WaterCmdFunc_Other(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 5, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 5, 7, NULL,
 		"<<其他操作",
 		5,
 		"1. 读收发磁扰阀控数",
@@ -1666,7 +1666,7 @@ void WaterCmdFunc_Other(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.strs[menuItemNo - 1];
+			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	

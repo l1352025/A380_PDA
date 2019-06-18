@@ -130,8 +130,8 @@ typedef struct{
     uint16 strsCnt;     // 显示缓冲区中记录总数
     int16 strsIdx;     // 在显示缓冲区中当前记录的位置 
     char *title;
-    char **strs;       // 字符串列表显示缓冲区
-    uint8 strsLen;      // 字符串列表长度
+    char **str;       // 字符串列表显示缓冲区
+    uint8 strCnt;      // 字符串列表长度
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
@@ -155,8 +155,8 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
-void ListBoxCreate(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsLen, ...);
-void ListBoxCreateEx(ListBox *lbx, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsLen);
+void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsCnt, ...);
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsCnt);
 uint16 ListBoxShow(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);

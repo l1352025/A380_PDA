@@ -55,17 +55,17 @@ typedef struct{
 #define Meter_Max					200	// 一栋楼-最大表数
 #define	Size_ListStr				21	// 户表显示的字符串 长度
 typedef struct{
-	uint32 	dbIdx[Meter_Max];		// 列表项对应的数据库索引
+	uint32 	dbIdx[Meter_Max];				// 列表项对应的数据库索引
 	char 	strs[Meter_Max][Size_ListStr];	// 列表项字符串：表号/户号/门牌号/户名/地址
 	uint8 	idx;			// 列表项索引
 	uint8	cnt;			// 列表项总数
 	uint8 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
-	char 	*qryDistricNum;		// 小区编号：空值表示所有
+	char 	*qryDistricNum;			// 小区编号：空值表示所有
 	char 	*qryBuildingNum;		// 楼栋编号：空值表示所有
 	char 	*qryMeterReadStatus;	// 抄表状态
 	uint8 	meterCnt;		// 当前表总数
-	uint8 	readOkCnt;	// 已抄数量
-	uint8 	readNgCnt;	// 未抄数量
+	uint8 	readOkCnt;		// 已抄数量
+	uint8 	readNgCnt;		// 未抄数量
 }MeterListSt;
 
 
@@ -272,10 +272,9 @@ int FindStrInList(char ** strs, uint16 strsLen, const char *dstStr, uint16 cmpMa
 */
 void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
 {
-	uint32 i, j, recCnt, resultCnt;
+	uint32 i, recCnt;
 	char strTmp1[Size_DistrictNum];
 	char strTmp2[Size_DistrictName];
-	uint8 isReapet;
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -320,11 +319,10 @@ void QueryDistrictList(DistrictListSt *districts, DB_QuerySt *query)
 */
 void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
 {
-	uint32 i, j, recCnt, resultCnt;
+	uint32 i, recCnt;
 	char strTmp[20];
 	char strTmp1[Size_BuildingNum];
 	char strTmp2[Size_BuildingName];
-	uint8 isReapet;
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -376,11 +374,8 @@ void QueryBuildingList(BuildingListSt *buildings, DB_QuerySt *query)
 */
 void QueryMeterReadCountInfo(MeterListSt *meters, DB_QuerySt *query)
 {
-	uint32 i, j, recCnt, resultCnt;
+	uint32 i, recCnt;
 	char strTmp[50];
-	char strTmp1[Size_BuildingNum];
-	char strTmp2[Size_BuildingName];
-	uint8 showStrSize;
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -478,7 +473,7 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 */
 void QueryMeterInfo(MeterInfoSt *meterInfo, DB_QuerySt *query)
 {
-	uint32 i, j, recCnt, resultCnt;
+	uint32 i, recCnt;
 	char strTmp[50];
 
 	_Select(1);
@@ -612,15 +607,156 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DB_QuerySt *query)
 * 参 数：meterInfo	- 户表信息
 * 返 回：uint8 	- 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
 */
-uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
+uint8 ShowMeterInfoUI(MeterInfoSt *meterInfo)
 {
-	_Printfxy(0, 0, "<<户表信息", Color_White);
-	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-	/*---------------------------------------------*/
+	uint8 key, i;
+	uint16 dispIdx = 0, menuItemNo;
+	ListBox menuList;
+	uint8 * pByte, tryCnt;
+	uint16 ackLen = 0, timeout;
+	char *dispBuf = &DispBuf;
+
+	// 命令菜单
+	ListBoxCreate(&menuList, 2*16, 4*16, 4, 4, NULL, 
+		"户表命令", 
+		4, 
+		"1.抄表",
+		"2.开阀",
+		"3.关阀",
+		"4.清异常");
+
+	// 表号设置
+	strcpy(StrDstAddr, meterInfo->meterNum);
+
+	// 中继清空
+	for(i = 0; i < RELAY_MAX; i++){
+		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+			StrRelayAddr[i][0] = 0x00;
+		}
+	}
+
+	while(1){
+
+		_ClearScreen();
+
+		_Printfxy(0, 0, "<<户表信息", Color_White);
+		/*---------------------------------------------*/
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", meterInfo->meterNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "户号: %s\n", meterInfo->userNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "门牌号: %s\n", meterInfo->roomNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表状态: %s\n", meterInfo->meterReadStatus);
+		dispIdx += sprintf(&dispBuf[dispIdx], "户名: %s\n", meterInfo->userNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "手机: %s\n", meterInfo->mobileNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "地址: %s\n", meterInfo->userAddr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表方式: %s\n", meterInfo->meterReadType);
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表时间: %s\n", meterInfo->meterReadTime);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %s\n", meterInfo->meterValue);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表状态: %s\n", meterInfo->meterStaus);
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %s\n", meterInfo->batteryVoltage);
+		dispIdx += sprintf(&dispBuf[dispIdx], "信号强度: %s\n", meterInfo->signalValue);
+		key = ShowScrollStr(&DispBuf,  7);
+		//----------------------------------------------
+		_Printfxy(0, 9*16, "返回        户表命令", Color_White);
+
+		if(key == KEY_CANCEL){
+			break;
+		}
+		else if(key == KEY_ENTER){
+
+			while(1){
+
+				menuItemNo = ListBoxShow(&menuList);
+
+				// 显示标题
+				pByte = menuList.str[menuItemNo - 1];
+				sprintf(TmpBuf, "<<%s",&pByte[5]);
+				_Printfxy(0, 0, TmpBuf, Color_White);
+				//------------------------------------
+
+				// 命令参数处理
+				i = 0;	
+				Args.itemCnt = 2;
+				Args.items[0] = &Args.buf[0];   // 命令字
+				Args.items[1] = &Args.buf[1];	// 数据域
+
+				switch(menuItemNo){
+
+				case 1:
+					CurrCmd = WaterCmd_ReadRealTimeData;		// "读取用户用量"
+					/*---------------------------------------------*/
+					Args.buf[i++] = 0x01;		// 命令字	01
+					ackLen = 21;				// 应答长度 21	
+					// 数据域
+					Args.buf[i++] = 0x00;				// 数据格式 00	
+					Args.lastItemLen = i - 1;
+					break;
+
+				case 2:
+					CurrCmd = WaterCmd_OpenValve;			// " 开阀 "
+					/*---------------------------------------------*/
+					Args.buf[i++] = 0x03;		// 命令字	03
+					ackLen = 3;					// 应答长度 3	
+					// 数据域
+					Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+					Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+					Args.lastItemLen = i - 1;
+					break;
+
+				case 3:
+					CurrCmd = WaterCmd_CloseValve;		// " 关阀 ";
+					/*---------------------------------------------*/
+					Args.buf[i++] = 0x03;		// 命令字	03
+					ackLen = 3;					// 应答长度 3	
+					// 数据域
+					Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+					Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+					Args.lastItemLen = i - 1;
+					break;
+
+				case 4:
+					CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
+					/*---------------------------------------------*/
+					Args.buf[i++] = 0x05;		// 命令字	05
+					ackLen = 1;					// 应答长度 1	
+					// 数据域
+					Args.buf[i++] = 0x00;		// 命令选项 00	
+					Args.lastItemLen = i - 1;
+					break;
+
+				default: 
+					break;
+				}
+
+				// 地址填充
+				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+
+				// 应答长度、超时时间、重发次数
+				ackLen += 14 + Addrs.itemCnt * AddrLen;
+				timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+				tryCnt = 3;
+
+				// 发送、接收、结果显示
+				if(false == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
+					if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
+						DispBuf[0] = NULL;
+					}
+				}
+				key = ShowScrollStr(&DispBuf, 7);
+				
+				
+				// 继续 / 返回
+				if (key == KEY_CANCEL){
+					break;
+				}else{
+					continue;
+				}
+
+			} // while 2
+		} 
+	}// while 1
 	
-	//----------------------------------------------
-	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-	_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+	return key;
 }
 
 

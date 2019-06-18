@@ -2356,9 +2356,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 */
 uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
-	const uint8 lineStep = 7, lineMax = 7;
-	int8 lineCnt = 0, currLine = 0;
-	uint8 *lines[100], key;
+	uint8 key;
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
@@ -2372,54 +2370,10 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
 		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
 			DispBuf[0] = NULL;
-			lines[0] = NULL;
 		}
 	}
 
-	lineCnt = GetPrintLines(0, DispBuf, lines);
-	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
-
-	// 上/下滚动显示   ▲ ▼  △ ▽
-	while(1){
-
-		if(lineCnt > lineMax){
-			if(currLine < lineCnt - lineMax){
-				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
-			}else{
-				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
-			}
-
-			if(currLine > 0){
-				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
-			}else{
-				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
-			}
-		}
-
-		key = _ReadKey();
-
-		if(key == KEY_CANCEL || key == KEY_ENTER){
-			break;
-		}
-		else if(key == KEY_UP && lineCnt > lineMax){
-			currLine -= lineStep;
-			if(currLine < 0){
-				currLine = 0;
-			}
-		}
-		else if(key == KEY_DOWN && lineCnt > lineMax){
-			currLine += lineStep;
-			if(currLine > lineCnt - lineMax){
-				currLine = lineCnt - lineMax;
-			}
-		}
-		else{
-			continue;
-		}
-
-		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
-	}
+	key = ShowScrollStr(&DispBuf, 7);
 
 	return key;
 }
