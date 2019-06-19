@@ -340,11 +340,11 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 *		  dispMax	- 一页显示记录条数
 *		  fillStrsFunc	- 填充列表的回调函数
 *		  title		- 列表标题
-*		  strsCnt	- 字符串数量
+*		  strCnt	- 字符串数量
 *		  ...		- 字符串列表
 * 返回值：void
 */
-void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsCnt, ...)
+void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...)
 {
 	uint16 i;
 	va_list ap;
@@ -360,8 +360,8 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMa
 	lbx->title = title;
 
 	// init value
-	va_start(ap, strsCnt);
-	lbx->strCnt = strsCnt;
+	va_start(ap, strCnt);
+	lbx->strCnt = strCnt;
 	for(i = 0; i < lbx->strCnt; i++){
 		ptr = va_arg(ap, char *);
 		if(ptr == NULL){
@@ -382,11 +382,13 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMa
 *		  fillStrsFunc	- 填充列表的回调函数
 *		  title		- 列表标题
 *		  strs		- 字符串列表缓冲区
-*		  strsCnt	- 字符串数量
+*		  strCnt	- 字符串数量
 * 返回值：void
 */
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsCnt)
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strCnt)
 {
+	uint16 i;
+
 	lbx->x = x;		// 默认 0
 	lbx->y = y;		// 默认 0
 	lbx->width = 10 * 16;
@@ -395,30 +397,33 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 disp
 	lbx->dispMax = dispMax;
 	lbx->fillStrsFunc = fillStrsFunc;
 	lbx->title = title;
-	lbx->str = strs;
-	lbx->strCnt = strsCnt;
+	lbx->strCnt = strCnt;
+
+	for(i = 0; i < lbx->strCnt; i++){
+		lbx->str[i] = strs[i];
+	}
 }
 
 /*
 * 描  述：获取列表视图当前选项
 * 参  数：lbx	- 列表视图结构指针
-* 返回值：uint16  - 选择的列表视图当前选项 ： 取消键 - 返回0 ，  确认键 - 返回当前选项
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
 */
-uint16 ShowListBox(ListBox *lbx)
+uint8 ShowListBox(ListBox *lbx)
 {
-	uint16 retNum, dstIndex, srcIndex;
+	uint16 dstIndex, srcIndex;
 	uint8 key, i, recX, recY, fillX, fillY;
 	uint8 **lines = lbx->str;
-	uint16 fillMax = lbx->strCnt - (lbx->strCnt % lbx->dispMax);
+	uint16 fillMax = (lbx->strCnt >= lbx->totalCnt ? lbx->totalCnt : (lbx->strCnt - lbx->strCnt % lbx->dispMax));
 	uint16 fillCnt = 0;
 
 	lbx->currIdx = (lbx->currIdx > 0 ? lbx->currIdx : 0);
-	lbx->strsCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
-	lbx->strsIdx = (lbx->currIdx % fillMax);
-	lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
+	lbx->strCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
+	lbx->strIdx = (lbx->currIdx % fillMax);
+	lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->dispMax);
 
-	recX = (lbx->x - 4 <= 0 ? 0 : lbx->x - 4);
-	recY = (lbx->y - 4 <= 0 ? 0 : lbx->y - 4);
+	recX = lbx->x - 4;
+	recY = lbx->y - 4;
 	fillX = (lbx->x - 16 <= 0 ? 0 : lbx->x - 16);
 	fillY = (lbx->y - 16 <= 0 ? 0 : lbx->y - 16);
 	
@@ -431,38 +436,33 @@ uint16 ShowListBox(ListBox *lbx)
 		PrintfXyMultiLine_VaList(lbx->x, lbx->y, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
 		_GUIHLine(lbx->x, lbx->y + 16 + 4, 160, Color_Black);	
 		/*--------------------------------------------▼---*/
-		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strsCnt; i++){
+		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
 			_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
 		}
-		_Printfxy(0, (lbx->strsIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strsIdx], Color_Black);
+		_Printfxy(0, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
 		//--------------------------------------------▲---
 		_GUIHLine(lbx->x, 9*16 - 4, 160, Color_Black);
 
 		key = _ReadKey();
 
-		if(key == KEY_CANCEL){
-			retNum = 0;
-			break;
-		}
-		if(key == KEY_ENTER){
-			retNum = lbx->currIdx + 1;
+		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
 
 		if(key == KEY_UP){
-			lbx->strsIdx--;
+			lbx->strIdx--;
 			lbx->currIdx--;
 		}
 		else if(key == KEY_DOWN){
-			lbx->strsIdx++;
+			lbx->strIdx++;
 			lbx->currIdx++;
 		}
 		else if(key == KEY_LEFT){
-			lbx->strsIdx -= lbx->dispMax;
+			lbx->strIdx -= lbx->dispMax;
 			lbx->currIdx -= lbx->dispMax;
 		}
 		else if(key == KEY_RIGHT){
-			lbx->strsIdx += lbx->dispMax;
+			lbx->strIdx += lbx->dispMax;
 			lbx->currIdx += lbx->dispMax;
 		}
 		else{
@@ -479,30 +479,30 @@ uint16 ShowListBox(ListBox *lbx)
 		}
 
 		// disp index check 	and 	re-fill strs
-		if(lbx->strsIdx < 0){
+		if(lbx->strIdx < 0){
 
 			if(lbx->totalCnt > fillMax){
 				fillCnt = (lbx->currIdx % fillMax) + 1;
 				srcIndex = lbx->currIdx + 1 - fillCnt;
 				dstIndex = 0;
-				lbx->strsCnt = fillCnt;
+				lbx->strCnt = fillCnt;
 			}
-			lbx->strsIdx = lbx->strsCnt - 1;
+			lbx->strIdx = lbx->strCnt - 1;
 			
 			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
 				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
 				fillCnt = 0;
 			}
 		}
-		else if(lbx->strsIdx > lbx->strsCnt - 1){
+		else if(lbx->strIdx > lbx->strCnt - 1){
 
 			if(lbx->totalCnt > fillMax){
 				fillCnt = (lbx->totalCnt - lbx->currIdx >= fillMax ? fillMax : (lbx->totalCnt - lbx->currIdx));
 				srcIndex = lbx->currIdx;
 				dstIndex = 0;
-				lbx->strsCnt = fillCnt;
+				lbx->strCnt = fillCnt;
 			}
-			lbx->strsIdx = 0;
+			lbx->strIdx = 0;
 			
 			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
 				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
@@ -510,11 +510,11 @@ uint16 ShowListBox(ListBox *lbx)
 			}
 		}
 
-		lbx->dispStartIdx = lbx->strsIdx - (lbx->strsIdx % lbx->dispMax);
+		lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->dispMax);
 
 	}
 
-	return retNum;
+	return key;
 }
 
 /*

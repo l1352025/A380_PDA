@@ -1087,14 +1087,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 	_CloseCom();
 }
 
-void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
-{
-	int i;
-
-	for(i = 0; i < cnt; i++){
-		sprintf(strs[strsIdx + i], "  列表项 %d", srcIdx + i + 1);
-	}
-}
 
 // 5	工作参数
 void WaterCmdFunc_WorkingParams(void)
@@ -1110,7 +1102,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 14, 7, FillStrsFunc,
+	ListBoxCreate(&menuList, 0, 0, 14, 7, NULL,
 		"<<工作参数",
 		14,
 		"1. 设置IP+端口+模式",

@@ -507,7 +507,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
 	uint8 key, i, cnt = 0, isCancel = false;
-	uint8 * pByte, tryCnt;
+	uint8 tryCnt;
 	uint16 ackLen = 0, timeout;
 	char strTmp[50];
 

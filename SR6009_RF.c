@@ -3726,209 +3726,188 @@ void MainFuncCloseValve(void)
 // 批量抄表
 void MainFuncBatchMeterReading(void)
 {
-	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
-	ListBox XqList, LdList, subMenuList;		// 小区/楼栋/子菜单列表
-	uint16 XqListNo, LdListNo, subMenuListNo;	// 小区/楼栋/子菜单列表当前项： = idx + 1
+	uint8 key;
+	ListBox menuList, subMenuList;
+	ListBox XqList, LdList;				// 小区/楼栋列表
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
-	char *fileName = NULL;
-	int	fp, index;
-	uint8 fileds[15][20];
-	uint32 recCnt, recIdx, readOkCnt;
+	uint32 recCnt;
 
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<批量抄表";
-	menuList.no = 5;
-	menuList.MaxNum = 5;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 按楼栋抄表";
-	menuList.str[1] = "  2. 清空所有档案";
-	menuList.str[2] = "  3. 重置抄表时间";
-	menuList.str[3] = "  4. 户表查询";
-	menuList.str[4] = "  5. 抄表统计";
-	menuList.defbar = 1;
+
+	ListBoxCreate(&menuList, 0, 0, 5, 7, NULL,
+		"<<批量抄表",
+		5,
+		"1. 按楼栋抄表",
+		"2. 清空所有档案",
+		"3. 重置抄表时间",
+		"4. 户表查询",
+		"5. 抄表统计"
+	);
 
 	
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
 	recCnt = _Reccount();
-	recIdx = _Recno();
-	_Use("");		// 关闭数据库
+	_Use("");			// 关闭数据库
 
 	while(1){
 
 		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		
+		key = ShowListBox(&menuList);
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
-		while(2){
-			
-			_ClearScreen();
 
-			if(recCnt == 0){
-				PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n请先下载抄表档案，再进行批量操作");
-				_Sleep(1000);
-				break;
-			}
+		if(recCnt == 0){
+			PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n请先下载抄表档案，再进行批量操作");
+			_Sleep(1000);
+			break;
+		}
 
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
-			_Printfxy(0, 0, TmpBuf, Color_White);
+		switch(menuList.strIdx + 1){
+		case 1:		// 按楼栋抄表
+			/*---------------------------------------------*/
+			// 小区列表
+			QueryDistrictList(&Districts, &DbQuery);
+			while(2){
+				_ClearScreen();
+				ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
+					"<<小区选择", Districts.names, Districts.cnt);
+				key = ShowListBox(&XqList);
+				if (key == KEY_CANCEL){	// 返回
+					break;
+				}
 
-			switch(menuItemNo){
-			case 1:		// 按楼栋抄表
-				/*---------------------------------------------*/
-				// 小区列表
-				QueryDistrictList(&Districts, &DbQuery);
+				// xx小区-楼栋列表
+				Buildings.qryDistricNum = Districts.nums[XqList.strIdx];
+				QueryBuildingList(&Buildings, &DbQuery);
 				while(3){
 					_ClearScreen();
-					ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
-						"<<小区选择", Districts.names, Districts.cnt);
-					XqListNo = ShowListBox(&XqList);
-					if(XqListNo == 0){	// 返回
+					ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
+						"<<楼栋选择", Buildings.names, Buildings.cnt);
+					key = ShowListBox(&LdList);
+					if(key == KEY_CANCEL){	// 返回
 						break;
 					}
 
-					// xx小区-楼栋列表
-					Buildings.qryDistricNum = Districts.nums[XqListNo - 1];
-					QueryBuildingList(&Buildings, &DbQuery);
+					// 楼栋抄表-界面
+					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
+					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
 					while(4){
 						_ClearScreen();
-						ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
-							"<<楼栋选择", Buildings.names, Buildings.cnt);
-						LdListNo = ShowListBox(&LdList);
-						if(LdListNo == 0){	// 返回
+						ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
+							"<<楼栋抄表", 
+							4,
+							"1. 自动抄表",
+							"2. 已抄列表",
+							"3. 未抄列表",
+							"4. 抄表统计");
+							//"5. 重置抄表时间");
+						key = ShowListBox(&subMenuList);
+						if(key == KEY_CANCEL){	// 返回
 							break;
 						}
 
-						// 楼栋抄表-界面
-						Meters.qryDistricNum = Districts.nums[XqListNo - 1];
-						Meters.qryBuildingNum = Buildings.nums[LdListNo -1];
-						while(5){
-							_ClearScreen();
-							ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
-								"<<楼栋抄表", 
-								4,
-								"1. 自动抄表",
-								"2. 已抄列表",
-								"3. 未抄列表",
-								"4. 抄表统计");
-								//"5. 重置抄表时间");
-							subMenuListNo = ShowListBox(&subMenuList);
+						switch (subMenuList.strIdx + 1){
+						case 1:		// 自动抄表
+							Meters.selectField = Idx_MeterNum;
+							QueryMeterList(&Meters, &DbQuery);
+							key = ShowAutoMeterReading(&Meters);
+							break;
 
-							if(subMenuListNo == 0){	// 返回
-								break;
-							}
+						case 2:		// 已抄列表
+							Meters.qryMeterReadStatus = "1";
+							key = ShowMeterList(&Meters);
+							break;
+						case 3:		// 未抄列表
+							Meters.qryMeterReadStatus = "0";
+							key = ShowMeterList(&Meters);
+							break;
 
-							switch (subMenuListNo){
-							case 1:		// 自动抄表
-								Meters.selectField = Idx_MeterNum;
-								QueryMeterList(&Meters, &DbQuery);
-								break;
+						case 4:		// 抄表统计
+							Meters.selectField = Idx_Invalid;
+							QueryMeterList(&Meters, &DbQuery);
+							key = ShowMeterReadCountInfo(&Meters);
+							break;
 
-							case 2:		// 已抄列表
-								Meters.qryMeterReadStatus = "1";
-								ShowMeterList(&Meters);
-								break;
-							case 3:		// 未抄列表
-								Meters.qryMeterReadStatus = "0";
-								ShowMeterList(&Meters);
-								break;
-
-							case 4:		// 抄表统计
-								Meters.selectField = Idx_Invalid;
-								QueryMeterList(&Meters, &DbQuery);
-								ShowMeterReadCountInfo(&Meters);
-								break;
-
-							case 5:		// 重置抄表时间
-								
-								break;
+						case 5:		// 重置抄表时间
 							
-							default:
-								break;
-							}
-						}// while 5 楼栋抄表
-					}// while 4 楼栋列表
-				}// while 3 小区列表
-				
-				break;
+							break;
+						
+						default:
+							break;
+						}
 
-			case 2:		// 清空所有档案
-				// 清空数据库
-				_Select(1);
-				_Use(MeterDocDB);	// 打开数据库
-				_Zap();
-				recCnt = _Reccount();	
-				_Use("");		// 关闭数据库
-				_Printfxy(0, 3*16, "  所有档案已清空！", Color_White);
-				_Sleep(1000);
-				break;
-
-			case 3:		// 重置抄表时间
-				// 遍历所有记录，清空抄表时间
-				_Select(1);
-				_Use(MeterDocDB);	// 打开数据库
-				_Go(0);
-				do{
-					_Replace(Idx_MeterReadStatus, "0");
-					_Replace(Idx_MeterReadTime, "");
-					_Replace(Idx_MeterValue, "");
-					_Skip(1);
-				}while(_Eof() == false);
-				_Use("");		// 关闭数据库
-				_Printfxy(0, 3*16, "  抄表时间已重置！", Color_White);
-				_Sleep(1000);
-				break;
-
-			case 4:		// 户表查询
-				
-				break;
-
-			case 5:		// 抄表统计
-				MeterInfo.dbIdx = 0;
-				Meters.cnt = 0;
-				Buildings.cnt = 0;
-				Districts.cnt = 0;
-				break;
-
-
-			default: 
-				break;
-			}
-
-		
-
-			key = _ReadKey();
+					}// while 4 楼栋抄表
+				}// while 3 楼栋列表
+			}// while 2 小区列表
 			
-			// 继续 / 返回
-			if (key == KEY_CANCEL){
-				break;
-			}else{
-				isUiFinish = false;
-				continue;
-			}
-		}
-		
-	}
+			break;
 
-	
-	
+		case 2:		// 清空所有档案
+			_ClearScreen();
+			_Printfxy(0, 5*16, "  清空档案中... ", Color_White);
+			
+			_Select(1);
+			_Use(MeterDocDB);	// 打开数据库
+			_Zap();
+			recCnt = _Reccount();	
+			_Use("");		// 关闭数据库
+
+			_Printfxy(0, 5*16, "  清空档案完成！ ", Color_White);
+			_Sleep(2000);
+			break;
+
+		case 3:		// 重置抄表时间
+
+			_ClearScreen();
+			_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
+			
+			_Select(1);
+			_Use(MeterDocDB);	// 打开数据库
+			_Go(0);
+			do{
+				_Replace(Idx_MeterReadStatus, "0");
+				_Replace(Idx_MeterReadTime, "");
+				_Replace(Idx_MeterValue, "");
+				_Skip(1);
+			}while(_Eof() == false);
+			_Use("");		// 关闭数据库
+
+			_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
+			_Sleep(2000);
+			break;
+
+		case 4:		// 户表查询
+			
+			break;
+
+		case 5:		// 抄表统计
+			MeterInfo.dbIdx = 0;
+			Meters.cnt = 0;
+			Buildings.cnt = 0;
+			Districts.cnt = 0;
+			break;
+
+
+		default: 
+			break;
+		}
+
+		if (key == KEY_CANCEL){	// 返回
+			break;
+		}
+
+	} // while 1 批量抄表
 }
 
 // 工程调试		------------------------------

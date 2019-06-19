@@ -31,6 +31,7 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      10      // 最大UI控件数
+#define ListStrMax  256     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 
 
@@ -125,13 +126,12 @@ typedef struct{
     uint8 isCircle;     // 可循环列表标识 : 默认可循环
     uint8 dispMax;      // 一页最多显示行数 ： 最大8
     uint16 dispStartIdx; // 当前页显示的第一条记录在显示缓冲区的位置 
-    uint16 totalCnt;    // 所有记录总数
-    int16 currIdx;     // 在所有记录中当前记录的位置
-    uint16 strsCnt;     // 显示缓冲区中记录总数
-    int16 strsIdx;     // 在显示缓冲区中当前记录的位置 
+    uint16 totalCnt;    // 数据库记录总数
+    int16 currIdx;      // 数据库当前记录的位置
     char *title;
-    char **str;       // 字符串列表显示缓冲区
-    uint8 strCnt;      // 字符串列表长度
+    char *str[ListStrMax];  // 字符串列表
+    uint16 strCnt;          // 字符串列表中记录总数
+    int16 strIdx;          // 字符串列表中当前位置        确认键/取消键退出列表时的位置  
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
@@ -155,9 +155,9 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
-void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsCnt, ...);
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsCnt);
-uint16 ShowListBox(ListBox *lbx);
+void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...);
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strCnt);
+uint8 ShowListBox(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
