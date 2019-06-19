@@ -2251,13 +2251,11 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		if(sendCnt == 1){
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			//_Printfxy(0, 9*16, "×´Ì¬: ÃüÁî·¢ËÍ      ", Color_White);
 			_Printfxy(0, 9*16, " <  ÃüÁî·¢ËÍ...  >  ", Color_White);
 		}
 		else{
 			//------------------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			//PrintfXyMultiLine_VaList(0, 9*16, "×´Ì¬: ÃüÁîÖØ·¢ %d    ", sendCnt);
 			PrintfXyMultiLine_VaList(0, 9*16, " <  ÃüÁîÖØ·¢...%d  > ", sendCnt);
 		}
 

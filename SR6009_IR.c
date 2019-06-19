@@ -47,7 +47,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}
@@ -288,7 +288,7 @@ void WaterCmdFunc_TestCmd(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}
@@ -608,7 +608,7 @@ void WaterCmdFunc_Upgrade(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}
@@ -829,7 +829,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}
@@ -1137,7 +1137,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}
@@ -1653,7 +1653,7 @@ void WaterCmdFunc_Other(void)
 
 		_ClearScreen();
 
-		menuItemNo = ListBoxShow(&menuList);
+		menuItemNo = ShowListBox(&menuList);
 		if (menuItemNo == 0){
 			break;
 		}

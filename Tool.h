@@ -404,7 +404,7 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 disp
 * 参  数：lbx	- 列表视图结构指针
 * 返回值：uint16  - 选择的列表视图当前选项 ： 取消键 - 返回0 ，  确认键 - 返回当前选项
 */
-uint16 ListBoxShow(ListBox *lbx)
+uint16 ShowListBox(ListBox *lbx)
 {
 	uint16 retNum, dstIndex, srcIndex;
 	uint8 key, i, recX, recY, fillX, fillY;

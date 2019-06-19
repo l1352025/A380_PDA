@@ -157,7 +157,7 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * 
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strsCnt, ...);
 void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strsCnt);
-uint16 ListBoxShow(ListBox *lbx);
+uint16 ShowListBox(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);

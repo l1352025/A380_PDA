@@ -14,13 +14,6 @@
 #include "WaterMeter.h"
 #include "MeterDocDBF.h"
 
-
-MeterInfoSt meterInfo;
-DistrictListSt distctList;
-BuildingListSt buildingList;
-MeterListSt meterList;
-
-
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
 	int i = strsIdx;
@@ -3735,6 +3728,8 @@ void MainFuncBatchMeterReading(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	_GuiLisStruEx menuList;
+	ListBox XqList, LdList, subMenuList;		// 小区/楼栋/子菜单列表
+	uint16 XqListNo, LdListNo, subMenuListNo;	// 小区/楼栋/子菜单列表当前项： = idx + 1
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -3781,7 +3776,7 @@ void MainFuncBatchMeterReading(void)
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
-		while(1){
+		while(2){
 			
 			_ClearScreen();
 
@@ -3791,55 +3786,86 @@ void MainFuncBatchMeterReading(void)
 				break;
 			}
 
-			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
 			sprintf(TmpBuf, "<<%s",&pByte[5]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
-			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			/*---------------------------------------------*/
-		 	//----------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-
 
 			switch(menuItemNo){
-			case 1:		// 按区域抄表
+			case 1:		// 按楼栋抄表
 				/*---------------------------------------------*/
-				// 查询并显示区域列表
+				// 小区列表
+				QueryDistrictList(&Districts, &DbQuery);
+				while(3){
+					_ClearScreen();
+					ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
+						"<<小区选择", Districts.names, Districts.cnt);
+					XqListNo = ShowListBox(&XqList);
+					if(XqListNo == 0){	// 返回
+						break;
+					}
 
-				// 查询并显示某区域的小区列表
+					// xx小区-楼栋列表
+					Buildings.qryDistricNum = Districts.nums[XqListNo - 1];
+					QueryBuildingList(&Buildings, &DbQuery);
+					while(4){
+						_ClearScreen();
+						ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
+							"<<楼栋选择", Buildings.names, Buildings.cnt);
+						LdListNo = ShowListBox(&LdList);
+						if(LdListNo == 0){	// 返回
+							break;
+						}
 
-				// 查询并显示某小区的楼栋列表
+						// 楼栋抄表-界面
+						Meters.qryDistricNum = Districts.nums[XqListNo - 1];
+						Meters.qryBuildingNum = Buildings.nums[LdListNo -1];
+						while(5){
+							_ClearScreen();
+							ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
+								"<<楼栋抄表", 
+								4,
+								"1. 自动抄表",
+								"2. 已抄列表",
+								"3. 未抄列表",
+								"4. 抄表统计");
+								//"5. 重置抄表时间");
+							subMenuListNo = ShowListBox(&subMenuList);
 
-				// 轮抄选定楼栋的所有户表
-				 
-				// 命令参数处理
-				i = 0;	
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   // 命令字
-				Args.items[1] = &Args.buf[1];	// 数据域
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
-				// 数据域
-				Args.buf[i++] = 0x00;				// 数据格式 00	
-				Args.lastItemLen = i - 1;
+							if(subMenuListNo == 0){	// 返回
+								break;
+							}
 
+							switch (subMenuListNo){
+							case 1:		// 自动抄表
+								Meters.selectField = Idx_MeterNum;
+								QueryMeterList(&Meters, &DbQuery);
+								break;
 
-				// 地址填充
-				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-				#if (AddrLen == 6)
-				PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-				#else
-				PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-				#endif
+							case 2:		// 已抄列表
+								Meters.qryMeterReadStatus = "1";
+								ShowMeterList(&Meters);
+								break;
+							case 3:		// 未抄列表
+								Meters.qryMeterReadStatus = "0";
+								ShowMeterList(&Meters);
+								break;
 
-				// 应答长度、超时时间、重发次数
-				ackLen += 14 + Addrs.itemCnt * AddrLen;
-				timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-				tryCnt = 3;
+							case 4:		// 抄表统计
+								Meters.selectField = Idx_Invalid;
+								QueryMeterList(&Meters, &DbQuery);
+								ShowMeterReadCountInfo(&Meters);
+								break;
 
-				// 发送、接收、结果显示
-				//key = Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+							case 5:		// 重置抄表时间
+								
+								break;
+							
+							default:
+								break;
+							}
+						}// while 5 楼栋抄表
+					}// while 4 楼栋列表
+				}// while 3 小区列表
 				
 				break;
 
@@ -3860,9 +3886,9 @@ void MainFuncBatchMeterReading(void)
 				_Use(MeterDocDB);	// 打开数据库
 				_Go(0);
 				do{
-					_Replace(Idx_MeterValue, "");
 					_Replace(Idx_MeterReadStatus, "0");
 					_Replace(Idx_MeterReadTime, "");
+					_Replace(Idx_MeterValue, "");
 					_Skip(1);
 				}while(_Eof() == false);
 				_Use("");		// 关闭数据库
@@ -3875,10 +3901,10 @@ void MainFuncBatchMeterReading(void)
 				break;
 
 			case 5:		// 抄表统计
-				meterInfo.dbIdx = 0;
-				meterList.cnt = 0;
-				buildingList.cnt = 0;
-				distctList.cnt = 0;
+				MeterInfo.dbIdx = 0;
+				Meters.cnt = 0;
+				Buildings.cnt = 0;
+				Districts.cnt = 0;
 				break;
 
 
