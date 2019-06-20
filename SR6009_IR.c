@@ -32,7 +32,7 @@ void WaterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
 		"<<常用命令",
 		6,
 		"1. 读累计用量",
@@ -272,7 +272,7 @@ void WaterCmdFunc_TestCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
 		"<<测试命令",
 		6,
 		"1. 读debug信息",
@@ -589,7 +589,7 @@ void WaterCmdFunc_Upgrade(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
 		"<<程序升级",
 		6,
 		"1. 单表升级",
@@ -810,7 +810,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 	_ClearScreen();
 
 	// 菜单`
-	ListBoxCreate(&menuList, 0, 0, 6, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
 		"<<预缴用量",
 		6,
 		"1. 读预缴参考用量",
@@ -1102,7 +1102,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 14, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 14, NULL,
 		"<<工作参数",
 		14,
 		"1. 设置IP+端口+模式",
@@ -1627,7 +1627,7 @@ void WaterCmdFunc_Other(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 5, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
 		"<<其他操作",
 		5,
 		"1. 读收发磁扰阀控数",

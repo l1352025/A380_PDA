@@ -122,9 +122,9 @@ typedef void (*FillListFunc)(char **strs, int16 dstIdx, int16 srcIdx, uint16 cnt
 typedef struct{
     uint8 x;        
     uint8 y;
-    uint8 width;   
+    uint8 maxRow;       // 一页最多显示行数 ： 最大8行
+    uint8 maxCol;       // 一行最多显示列数：最大20个英文字符
     uint8 isCircle;     // 可循环列表标识 : 默认可循环
-    uint8 dispMax;      // 一页最多显示行数 ： 最大8
     uint16 dispStartIdx; // 当前页显示的第一条记录在显示缓冲区的位置 
     uint16 totalCnt;    // 数据库记录总数
     int16 currIdx;      // 数据库当前记录的位置
@@ -155,8 +155,8 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
-void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...);
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt);
+void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...);
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt);
 uint8 ShowListBox(ListBox *lbx);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);

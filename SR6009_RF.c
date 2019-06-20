@@ -3729,16 +3729,15 @@ void MainFuncBatchMeterReading(void)
 	uint8 key;
 	ListBox menuList, subMenuList;
 	ListBox XqList, LdList;				// 小区/楼栋列表
+	_GuiInputBoxStru inputSt1, inputSt2;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint32 recCnt;
 
-	_ClearScreen();
-
 	// 批量抄表-菜单
-	ListBoxCreate(&menuList, 0, 0, 5, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
 		"<<批量抄表",
 		5,
 		"1. 按楼栋抄表",
@@ -3756,7 +3755,7 @@ void MainFuncBatchMeterReading(void)
 	while(1){
 
 		_ClearScreen();
-		
+
 		key = ShowListBox(&menuList);
 		if (key == KEY_CANCEL){	// 返回
 			break;
@@ -3777,12 +3776,14 @@ void MainFuncBatchMeterReading(void)
 			//------------------------------------------------------------
 			_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 			QueryDistrictList(&Districts, &DbQuery);
-			ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
+			ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
 				"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
 			//------------------------------------------------------------
 			_Printfxy(0, 9*16, "返回            确定", Color_White);
 			while(2){
 				
+				_ClearScreen();
+		
 				key = ShowListBox(&XqList);
 				if (key == KEY_CANCEL){	// 返回
 					break;
@@ -3793,12 +3794,14 @@ void MainFuncBatchMeterReading(void)
 				_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 				Buildings.qryDistricNum = Districts.nums[XqList.strIdx];
 				QueryBuildingList(&Buildings, &DbQuery);
-				ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
+				ListBoxCreateEx(&LdList, 0, 0, 20, 7, Buildings.cnt, NULL,
 					"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
 				//------------------------------------------------------------
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				while(3){
 
+					_ClearScreen();
+							
 					key = ShowListBox(&LdList);
 					if(key == KEY_CANCEL){	// 返回
 						break;
@@ -3808,7 +3811,7 @@ void MainFuncBatchMeterReading(void)
 					//------------------------------------------------------------
 					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
 					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
-					ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
+					ListBoxCreate(&subMenuList, 0, 0, 20, 7, 4, NULL,
 						"<<楼栋抄表", 
 						4,
 						"1. 自动抄表",
@@ -3820,6 +3823,8 @@ void MainFuncBatchMeterReading(void)
 					_Printfxy(0, 9*16, "返回            确定", Color_White);
 					while(4){
 
+						_ClearScreen();
+		
 						key = ShowListBox(&subMenuList);
 						if(key == KEY_CANCEL){	// 返回
 							break;
@@ -3871,7 +3876,7 @@ void MainFuncBatchMeterReading(void)
 			_Use("");		// 关闭数据库
 
 			_Printfxy(0, 5*16, "  清空档案完成！ ", Color_White);
-			_Sleep(2000);
+			_Sleep(3000);
 			break;
 
 		case 3:		// 重置抄表时间
@@ -3891,11 +3896,43 @@ void MainFuncBatchMeterReading(void)
 			_Use("");		// 关闭数据库
 
 			_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
-			_Sleep(2000);
+			_Sleep(3000);
 			break;
 
 		case 4:		// 户表查询
-			
+			// 户表查询-界面
+			//------------------------------------------------------------
+			ListBoxCreate(&subMenuList, 0, 0, 20, 7, 3, NULL,
+				"户表查询", 
+				3,
+				"1. 按表号查询",
+				"2. 按户号查询",
+				"3. 按门牌号查询");
+			//------------------------------------------------------------
+			_Printfxy(0, 9*16, "返回            确定", Color_White);
+			while(2){
+
+				_ClearScreen();
+		
+				key = ShowListBox(&subMenuList);
+				if(key == KEY_CANCEL){	// 返回
+					break;
+				}
+
+				// 户表查询-界面
+				//------------------------------------------------------------
+				
+				switch (subMenuList.strIdx + 1){
+				case 1: pByte = "表号: "; break;
+				case 2: pByte = "户号: "; break;
+				case 3: pByte = "门牌号:"; break;
+				default: break;
+				}
+				
+				//------------------------------------------------------------
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+
+			} // while 2 户表查询
 			break;
 
 		case 5:		// 抄表统计

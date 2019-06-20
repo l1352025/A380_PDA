@@ -634,7 +634,7 @@ uint8 ShowMeterList(MeterListSt *meters)
 
 	// 列表显示方式-界面
 	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄列表" : "<<未抄列表");
-	ListBoxCreate(&showTpList, 0, 0, 4, 7, NULL,
+	ListBoxCreate(&showTpList, 0, 0, 20, 7, 4, NULL,
 		title, 
 		4,
 		"1. 按表号显示",
@@ -645,6 +645,8 @@ uint8 ShowMeterList(MeterListSt *meters)
 	_Printfxy(0, 9*16, "返回            确定", Color_White);
 	while(1){
 
+		_ClearScreen();
+		
 		key = ShowListBox(&showTpList);
 		if(key == KEY_CANCEL){	// 返回
 			break;
@@ -666,7 +668,7 @@ uint8 ShowMeterList(MeterListSt *meters)
 		//------------------------------------------------------------
 		_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 		QueryMeterList(meters, &DbQuery);	// 已抄/未抄列表 查询
-		ListBoxCreateEx(&meterList, 0, 0, meters->cnt, 7, NULL,
+		ListBoxCreateEx(&meterList, 0, 0, 20, 7, meters->cnt, NULL,
 				title, meters->strs, Size_ListStr, meters->cnt);
 		//------------------------------------------------------------
 		_Printfxy(0, 9*16, "返回        户表信息", Color_White);
@@ -678,6 +680,8 @@ uint8 ShowMeterList(MeterListSt *meters)
 				meterList.strIdx, meterList.strCnt, meterList.currIdx, meterList.totalCnt);
 			#endif
 			
+			_ClearScreen();
+		
 			key = ShowListBox(&meterList);
 			if(key == KEY_CANCEL){	// 返回
 				break;
@@ -892,7 +896,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 {
 	uint8 key, i;
-	uint16 dispIdx = 0, menuItemNo;
+	uint16 dispIdx = 0;
 	ListBox menuList;
 	uint8 * pByte, tryCnt;
 	uint16 ackLen = 0, timeout;
@@ -937,7 +941,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		}
 
 		// 户表命令-界面
-		ListBoxCreate(&menuList, 3*16, 3*16, 4, 4, NULL, 
+		ListBoxCreate(&menuList, 3*16, 3*16, 14, 4, 4, NULL, 
 			"户表命令", 
 			4, 
 			"1. 抄表",
