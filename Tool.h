@@ -385,9 +385,10 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMa
 *		  strCnt	- 字符串数量
 * 返回值：void
 */
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strCnt)
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 dispMax, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt)
 {
 	uint16 i;
+	char *str = (char *)strs;
 
 	lbx->x = x;		// 默认 0
 	lbx->y = y;		// 默认 0
@@ -400,7 +401,8 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 disp
 	lbx->strCnt = strCnt;
 
 	for(i = 0; i < lbx->strCnt; i++){
-		lbx->str[i] = strs[i];
+		lbx->str[i] = str;
+		str += strLen;
 	}
 }
 
@@ -411,7 +413,7 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint16 totalCnt, uint8 disp
 */
 uint8 ShowListBox(ListBox *lbx)
 {
-	uint16 dstIndex, srcIndex;
+	uint16 dstIndex, srcIndex, currIndex;
 	uint8 key, i, recX, recY, fillX, fillY;
 	uint8 **lines = lbx->str;
 	uint16 fillMax = (lbx->strCnt >= lbx->totalCnt ? lbx->totalCnt : (lbx->strCnt - lbx->strCnt % lbx->dispMax));
@@ -433,13 +435,14 @@ uint8 ShowListBox(ListBox *lbx)
 		_GUIRectangleFill(fillX, fillY, 160, 9*16, Color_White);	// 清空区域
 		_GUIRectangle(recX, recY, 160, 9*16 - 4, Color_Black);		// 绘制方框
 
-		PrintfXyMultiLine_VaList(lbx->x, lbx->y, "%-10s %4d/%-4d", lbx->title, lbx->currIdx + 1, lbx->totalCnt);
+		currIndex = (lbx->totalCnt == 0 ? 0 : lbx->currIdx + 1);
+		PrintfXyMultiLine_VaList(lbx->x, lbx->y, "%-10s %4d/%-4d", lbx->title, currIndex, lbx->totalCnt);
 		_GUIHLine(lbx->x, lbx->y + 16 + 4, 160, Color_Black);	
 		/*--------------------------------------------▼---*/
 		for(i = 0; i < lbx->dispMax && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
 			_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
 		}
-		_Printfxy(0, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
+		_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
 		//--------------------------------------------▲---
 		_GUIHLine(lbx->x, 9*16 - 4, 160, Color_Black);
 

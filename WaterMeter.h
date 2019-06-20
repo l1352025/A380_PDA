@@ -255,6 +255,11 @@ typedef enum{
 */
 void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char strRelayAddrs[][20])
 {
+	/*
+	参数传递方式1：const char strRelayAddrs[][20]
+	参数传递方式2：const char (*strRelayAddrs)[20]
+	参数传递方式3：const char **strRelayAddrs, uint addrLen
+	 */
 	#ifdef Project_6009_RF
 	uint8 i;
 	#endif

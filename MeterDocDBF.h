@@ -8,58 +8,58 @@
 
 #include "Common.h"
 
-//----------------------	å®å®šä¹‰		------------------------
-#define	MeterDocDB 	"jk.dbf"			// è¡¨æ¡£æ¡ˆæ•°æ®åº“æ–‡ä»¶å
+//----------------------	ºê¶¨Òå		------------------------
+#define	MeterDocDB 	"jk.dbf"			// ±íµµ°¸Êı¾İ¿âÎÄ¼şÃû
 
-#define Invalid_Idx	(0xFFFFFFFF)		// æ— æ•ˆç´¢å¼•
+#define Invalid_Idx	(0xFFFFFFFF)		// ÎŞĞ§Ë÷Òı
 
-#define District_Max				20	// æœ€å¤§å°åŒºæ•°
-#define Building_Max				50	// ä¸€ä¸ªå°åŒº-æœ€å¤§æ¥¼æ ‹æ•°
-#define Meter_Max					200	// ä¸€æ ‹æ¥¼-æœ€å¤§è¡¨æ•°
+#define District_Max				20	// ×î´óĞ¡ÇøÊı
+#define Building_Max				50	// Ò»¸öĞ¡Çø-×î´óÂ¥¶°Êı
+#define Meter_Max					200	// Ò»¶°Â¥-×î´ó±íÊı
 
-#define	Size_ListStr	20				// åˆ—è¡¨å­—ç¬¦ä¸²é•¿åº¦
+#define	Size_ListStr	20				// ÁĞ±í×Ö·û´®³¤¶È
 
-#define	Size_DistrictNum			12	// å°åŒºç¼–å· é•¿åº¦	10
-#define	Size_DistrictName			50	// å°åŒºåç§° é•¿åº¦	50
-#define	Size_BuildingNum			12	// æ¥¼æ ‹ç¼–å· é•¿åº¦	10
-#define	Size_BuildingName			50	// æ¥¼æ ‹åç§° é•¿åº¦	50
+#define	Size_DistrictNum			12	// Ğ¡Çø±àºÅ ³¤¶È	10
+#define	Size_DistrictName			50	// Ğ¡ÇøÃû³Æ ³¤¶È	50
+#define	Size_BuildingNum			12	// Â¥¶°±àºÅ ³¤¶È	10
+#define	Size_BuildingName			50	// Â¥¶°Ãû³Æ ³¤¶È	50
 
-#define	Size_MeterNum				16	//è¡¨å·é•¿åº¦ 		12
-#define	Size_UserNum               	16	//æˆ·å·é•¿åº¦		32
-#define Size_RoomNum              	16	//é—¨ç‰Œå·é•¿åº¦	16
-#define Size_MeterReadStatus        2	//æŠ„è¡¨çŠ¶æ€é•¿åº¦	1   : 0 - æœªæŠ„  1 - å·²æŠ„ 
-#define	Size_UserName               40	//æˆ·åé•¿åº¦		50
-#define Size_MobileNum           	12	//æ‰‹æœºå·é•¿åº¦	50
-#define	Size_UserAddr               80	//åœ°å€é•¿åº¦ 		100 
-#define Size_MeterReadType			2	//æŠ„è¡¨æ–¹å¼é•¿åº¦	1	
-#define Size_MeterReadTime          20	//æŠ„è¡¨æ—¶é—´é•¿åº¦	20
-#define Size_MeterValue             12	//è¡¨è¯»æ•°		12
-#define Size_MeterStatusHex         8	//è¡¨çŠ¶æ€Hexé•¿åº¦	8
-#define Size_MeterStatusStr         40	//è¡¨çŠ¶æ€Stré•¿åº¦	50
-#define Size_BatteryVoltage         6   //ç”µæ± ç”µå‹é•¿åº¦	5
-#define Size_SignalValue           	10 	//ä¿¡å·å¼ºåº¦é•¿åº¦	10
+#define	Size_MeterNum				16	//±íºÅ³¤¶È 		12
+#define	Size_UserNum               	16	//»§ºÅ³¤¶È		32
+#define Size_RoomNum              	16	//ÃÅÅÆºÅ³¤¶È	16
+#define Size_MeterReadStatus        2	//³­±í×´Ì¬³¤¶È	1   : 0 - Î´³­  1 - ÒÑ³­ 
+#define	Size_UserName               40	//»§Ãû³¤¶È		50
+#define Size_MobileNum           	12	//ÊÖ»úºÅ³¤¶È	50
+#define	Size_UserAddr               80	//µØÖ·³¤¶È 		100 
+#define Size_MeterReadType			2	//³­±í·½Ê½³¤¶È	1	
+#define Size_MeterReadTime          20	//³­±íÊ±¼ä³¤¶È	20
+#define Size_MeterValue             12	//±í¶ÁÊı		12
+#define Size_MeterStatusHex         8	//±í×´Ì¬Hex³¤¶È	8
+#define Size_MeterStatusStr         40	//±í×´Ì¬Str³¤¶È	50
+#define Size_BatteryVoltage         6   //µç³ØµçÑ¹³¤¶È	5
+#define Size_SignalValue           	10 	//ĞÅºÅÇ¿¶È³¤¶È	10
 
-//----------------------	æ•°æ®åº“ä¿¡æ¯	- è¡¨å­—æ®µ
-// å­—æ®µç´¢å¼•
+//----------------------	Êı¾İ¿âĞÅÏ¢	- ±í×Ö¶Î
+// ×Ö¶ÎË÷Òı
 typedef enum{
 	Idx_Id	= 0,		// "ID",		// ID
-	Idx_UserNum,		// "HH",		// æˆ·å·
-	Idx_UserName,		// "HM",		// æˆ·å
-	Idx_UserAddrs,		// "DZ",		// åœ°å€
-	Idx_UserRoomNum,	// "MPH",		// é—¨ç‰Œå·
-	Idx_UserTelNum,		// "TEL",		// ç”µè¯
-	Idx_UserMobileNum,	// "MOBILE",	// æ‰‹æœº
-	Idx_AreaNum,			// "CBQY",		// æŠ„è¡¨åŒºåŸŸ
-	Idx_CollectorNum,		// "ZDBH",		// é‡‡é›†å™¨ ç¼–å·
-	Idx_CollectorName,		// "ZDMC",		// é‡‡é›†å™¨ åç§°
-	Idx_CollectorSite,		// "ZDDZ",		// é‡‡é›†å™¨ ä½ç½®
-	Idx_DistrictNum,		// "CBYJFZBH",		// æŠ„è¡¨å°åŒº ç¼–å·
-	Idx_DistrictName,		// "CBYJFZMC",		// æŠ„è¡¨å°åŒº åç§°
-	Idx_BuildingNum,		// "CBEJFZBH",		// æŠ„è¡¨æ¥¼æ ‹ ç¼–å·
-	Idx_BuildingName,		// "CBEJFZMC",		// æŠ„è¡¨æ¥¼æ ‹ åç§°
-	Idx_MeterNum,			// "BH",		// è¡¨å·
+	Idx_UserNum,		// "HH",		// »§ºÅ
+	Idx_UserName,		// "HM",		// »§Ãû
+	Idx_UserAddrs,		// "DZ",		// µØÖ·
+	Idx_UserRoomNum,	// "MPH",		// ÃÅÅÆºÅ
+	Idx_UserTelNum,		// "TEL",		// µç»°
+	Idx_UserMobileNum,	// "MOBILE",	// ÊÖ»ú
+	Idx_AreaNum,			// "CBQY",		// ³­±íÇøÓò
+	Idx_CollectorNum,		// "ZDBH",		// ²É¼¯Æ÷ ±àºÅ
+	Idx_CollectorName,		// "ZDMC",		// ²É¼¯Æ÷ Ãû³Æ
+	Idx_CollectorSite,		// "ZDDZ",		// ²É¼¯Æ÷ Î»ÖÃ
+	Idx_DistrictNum,		// "CBYJFZBH",		// ³­±íĞ¡Çø ±àºÅ
+	Idx_DistrictName,		// "CBYJFZMC",		// ³­±íĞ¡Çø Ãû³Æ
+	Idx_BuildingNum,		// "CBEJFZBH",		// ³­±íÂ¥¶° ±àºÅ
+	Idx_BuildingName,		// "CBEJFZMC",		// ³­±íÂ¥¶° Ãû³Æ
+	Idx_MeterNum,			// "BH",		// ±íºÅ
 	Idx_FLXS,				// "FLXS",		// 
-	Idx_MeterValue,			// "FLA",		// è¡¨è¯»æ•° FL[A-J] 10ä¸ª ã€‹ã€‹
+	Idx_MeterValue,			// "FLA",		// ±í¶ÁÊı FL[A-J] 10¸ö ¡·¡·
 	Idx_FLB,				// "FLB",		// 
 	Idx_FLC,				// "FLC",		// 
 	Idx_FLD,				// "FLD",		// 
@@ -68,9 +68,9 @@ typedef enum{
 	Idx_FLG,				// "FLG",		// 
 	Idx_FLH,				// "FLH",		// 
 	Idx_FLI,				// "FLI",		// 
-	Idx_FLJ,				// "FLJ",		// è¡¨è¯»æ•° FL[A-J] 10ä¸ª ã€Šã€Š
+	Idx_FLJ,				// "FLJ",		// ±í¶ÁÊı FL[A-J] 10¸ö ¡¶¡¶
 	Idx_LYXS,				// "LYXS",		// 
-	Idx_LYA,				// "LYA",		// LY[A-J] 10ä¸ª >>
+	Idx_LYA,				// "LYA",		// LY[A-J] 10¸ö >>
 	Idx_LYB,				// "LYB",		// 
 	Idx_LYC,				// "LYC",		// 
 	Idx_LYD,				// "LYD",		// 
@@ -79,51 +79,51 @@ typedef enum{
 	Idx_LYG,				// "LYG",		// 
 	Idx_LYH,				// "LYH",		// 
 	Idx_LYI,				// "LYI",		// 
-	Idx_LYJ,				// "LYJ",		// LY[A-J] 10ä¸ª <<
-	Idx_BLXHEX,				// "BLXHEX",	// è¡¨ç±»å‹ HEX
-	Idx_BLXSTR,				// "BLXSTR",	// è¡¨ç±»å‹ STR
-	Idx_MeterStatusHex,		// "BZTHEX",	// è¡¨çŠ¶æ€ HEX
-	Idx_MeterStatusStr,		// "BZTSTR",	// è¡¨çŠ¶æ€ STR
-	Idx_BatteryVoltage,		// "DCDY",		// ç”µæ± ç”µå‹
-	Idx_MCCS,				// "MCCS",		// è„‰å†²å¸¸æ•°
-	Idx_MeterReadType,		// "SGCQ",		// æŠ„è¡¨æ–¹å¼ 0 - æŒæœºæŠ„è¡¨ ï¼Œ 1 - é›†ä¸­å™¨æŠ„è¡¨
+	Idx_LYJ,				// "LYJ",		// LY[A-J] 10¸ö <<
+	Idx_BLXHEX,				// "BLXHEX",	// ±íÀàĞÍ HEX
+	Idx_BLXSTR,				// "BLXSTR",	// ±íÀàĞÍ STR
+	Idx_MeterStatusHex,		// "BZTHEX",	// ±í×´Ì¬ HEX
+	Idx_MeterStatusStr,		// "BZTSTR",	// ±í×´Ì¬ STR
+	Idx_BatteryVoltage,		// "DCDY",		// µç³ØµçÑ¹
+	Idx_MCCS,				// "MCCS",		// Âö³å³£Êı
+	Idx_MeterReadType,		// "SGCQ",		// ³­±í·½Ê½ 0 - ÕÆ»ú³­±í £¬ 1 - ¼¯ÖĞÆ÷³­±í
 	Idx_QF,					// "QF",		// 
-	Idx_SignalValue,		// "XHQD",		// ä¿¡å·å¼ºåº¦
-	Idx_MeterReadTime,		// "CBSJ",		// æŠ„è¡¨æ—¶é—´
-	Idx_MeterReadStatus,	// "CBZT",		// æŠ„è¡¨çŠ¶æ€
-	Idx_BLZDA,				// "BLZDA",		// BLZD[A-J] 10ä¸ª ã€‹ã€‹
+	Idx_SignalValue,		// "XHQD",		// ĞÅºÅÇ¿¶È
+	Idx_MeterReadTime,		// "CBSJ",		// ³­±íÊ±¼ä
+	Idx_MeterReadStatus,	// "CBZT",		// ³­±í×´Ì¬
+	Idx_BLZDA,				// "BLZDA",		// BLZD[A-J] 10¸ö ¡·¡·
 	Idx_BLZDB,				// "BLZDB",		// 
-	Idx_BLZDC,				// "BLZDC",		// é›†ä¸­å™¨ ç¼–å·
-	Idx_BLZDD,				// "BLZDD",		// é›†ä¸­å™¨ åç§°
+	Idx_BLZDC,				// "BLZDC",		// ¼¯ÖĞÆ÷ ±àºÅ
+	Idx_BLZDD,				// "BLZDD",		// ¼¯ÖĞÆ÷ Ãû³Æ
 	Idx_BLZDE,				// "BLZDE",		// 
 	Idx_BLZDF,				// "BLZDF",		// 
 	Idx_BLZDG,				// "BLZDG",		// 
 	Idx_BLZDH,				// "BLZDH",		// 
 	Idx_BLZDI,				// "BLZDI",		// 
-	Idx_BLZDJ,				// "BLZDJ"		// BLZD[A-J] 10ä¸ª ã€Šã€Š
-	Idx_Invalid	= 0xFF	// æ— æ•ˆå­—æ®µ	
+	Idx_BLZDJ,				// "BLZDJ"		// BLZD[A-J] 10¸ö ¡¶¡¶
+	Idx_Invalid	= 0xFF	// ÎŞĞ§×Ö¶Î	
 }DB_Field_Index;
 
-// å­—æ®µå
+// ×Ö¶ÎÃû
 const char *Fields[] = {
 	"ID",		// ID
-	"HH",		// æˆ·å·
-	"HM",		// æˆ·å
-	"DZ",		// åœ°å€
-	"MPH",		// é—¨ç‰Œå·
-	"TEL",		// ç”µè¯
-	"MOBILE",	// æ‰‹æœº
-	"CBQY",		// æŠ„è¡¨åŒºåŸŸ
-	"ZDBH",		// é‡‡é›†å™¨ ç¼–å·
-	"ZDMC",		// é‡‡é›†å™¨ åç§°
-	"ZDDZ",		// é‡‡é›†å™¨ ä½ç½®
-	"CBYJFZBH",		// æŠ„è¡¨å°åŒº ç¼–å·
-	"CBYJFZMC",		// æŠ„è¡¨å°åŒº åç§°
-	"CBEJFZBH",		// æŠ„è¡¨æ¥¼æ ‹ ç¼–å·
-	"CBEJFZMC",		// æŠ„è¡¨æ¥¼æ ‹ åç§°
-	"BH",		// è¡¨å·
+	"HH",		// »§ºÅ
+	"HM",		// »§Ãû
+	"DZ",		// µØÖ·
+	"MPH",		// ÃÅÅÆºÅ
+	"TEL",		// µç»°
+	"MOBILE",	// ÊÖ»ú
+	"CBQY",		// ³­±íÇøÓò
+	"ZDBH",		// ²É¼¯Æ÷ ±àºÅ
+	"ZDMC",		// ²É¼¯Æ÷ Ãû³Æ
+	"ZDDZ",		// ²É¼¯Æ÷ Î»ÖÃ
+	"CBYJFZBH",		// ³­±íĞ¡Çø ±àºÅ
+	"CBYJFZMC",		// ³­±íĞ¡Çø Ãû³Æ
+	"CBEJFZBH",		// ³­±íÂ¥¶° ±àºÅ
+	"CBEJFZMC",		// ³­±íÂ¥¶° Ãû³Æ
+	"BH",		// ±íºÅ
 	"FLXS",		// 
-	"FLA",		// è¡¨è¯»æ•° FL[A-J] 10ä¸ª ã€‹ã€‹
+	"FLA",		// ±í¶ÁÊı FL[A-J] 10¸ö ¡·¡·
 	"FLB",		// 
 	"FLC",		// 
 	"FLD",		// 
@@ -132,9 +132,9 @@ const char *Fields[] = {
 	"FLG",		// 
 	"FLH",		// 
 	"FLI",		// 
-	"FLJ",		// è¡¨è¯»æ•° FL[A-J] 10ä¸ª ã€Šã€Š
+	"FLJ",		// ±í¶ÁÊı FL[A-J] 10¸ö ¡¶¡¶
 	"LYXS",		// 
-	"LYA",		// LY[A-J] 10ä¸ª >>
+	"LYA",		// LY[A-J] 10¸ö >>
 	"LYB",		// 
 	"LYC",		// 
 	"LYD",		// 
@@ -143,89 +143,89 @@ const char *Fields[] = {
 	"LYG",		// 
 	"LYH",		// 
 	"LYI",		// 
-	"LYJ",		// LY[A-J] 10ä¸ª <<
+	"LYJ",		// LY[A-J] 10¸ö <<
 	"BLXHEX",	// 
 	"BLXSTR",	// 
-	"BZTHEX",	// è¡¨çŠ¶æ€ HEX
-	"BZTSTR",	// è¡¨çŠ¶æ€ STR
-	"DCDY",		// ç”µæ± ç”µå‹
+	"BZTHEX",	// ±í×´Ì¬ HEX
+	"BZTSTR",	// ±í×´Ì¬ STR
+	"DCDY",		// µç³ØµçÑ¹
 	"MCCS",		// 
-	"SGCQ",		// æŠ„è¡¨æ–¹å¼ ï¼Ÿ
+	"SGCQ",		// ³­±í·½Ê½ £¿
 	"QF",		// 
-	"XHQD",		// ä¿¡å·å¼ºåº¦
-	"CBSJ",		// æŠ„è¡¨æ—¶é—´
-	"CBZT",		// æŠ„è¡¨çŠ¶æ€
-	"BLZDA",		// BLZD[A-J] 10ä¸ª ã€‹ã€‹
+	"XHQD",		// ĞÅºÅÇ¿¶È
+	"CBSJ",		// ³­±íÊ±¼ä
+	"CBZT",		// ³­±í×´Ì¬
+	"BLZDA",		// BLZD[A-J] 10¸ö ¡·¡·
 	"BLZDB",		// 
-	"BLZDC",		// é›†ä¸­å™¨ ç¼–å·
-	"BLZDD",		// é›†ä¸­å™¨ åç§°
+	"BLZDC",		// ¼¯ÖĞÆ÷ ±àºÅ
+	"BLZDD",		// ¼¯ÖĞÆ÷ Ãû³Æ
 	"BLZDE",		// 
 	"BLZDF",		// 
 	"BLZDG",		// 
 	"BLZDH",		// 
 	"BLZDI",		// 
-	"BLZDJ"			// BLZD[A-J] 10ä¸ª ã€Šã€Š
+	"BLZDJ"			// BLZD[A-J] 10¸ö ¡¶¡¶
 };
 
-//---------------	dbf æŸ¥è¯¢ç»“æ„
+//---------------	dbf ²éÑ¯½á¹¹
 typedef struct {
-	// uint8 queryType;	// æŸ¥è¯¢ç±»å‹ï¼š0-å°åŒºåˆ—è¡¨ï¼Œ 1-æ¥¼æ ‹åˆ—è¡¨ï¼› 2-æŠ„è¡¨æƒ…å†µåˆ—è¡¨ , 3 - æˆ·è¡¨ä¿¡æ¯
-	// char *districNum;	// å°åŒºç¼–å·
-	// char *buildingNum;	// æ¥¼æ ‹ç¼–å·
-	// char *meterReadStatus;	// æŠ„è¡¨çŠ¶æ€
-	// char *meterNum;		// è¡¨å·
-	// char *userNum;		// æˆ·å·
-	// char *roomNum;		// é—¨ç‰Œå·
-	// uint32 dbSelectIdx;	// é€‰æ‹©çš„æ•°æ®åº“è®°å½•ç´¢å¼•
+	// uint8 queryType;	// ²éÑ¯ÀàĞÍ£º0-Ğ¡ÇøÁĞ±í£¬ 1-Â¥¶°ÁĞ±í£» 2-³­±íÇé¿öÁĞ±í , 3 - »§±íĞÅÏ¢
+	// char *districNum;	// Ğ¡Çø±àºÅ
+	// char *buildingNum;	// Â¥¶°±àºÅ
+	// char *meterReadStatus;	// ³­±í×´Ì¬
+	// char *meterNum;		// ±íºÅ
+	// char *userNum;		// »§ºÅ
+	// char *roomNum;		// ÃÅÅÆºÅ
+	// uint32 dbSelectIdx;	// Ñ¡ÔñµÄÊı¾İ¿â¼ÇÂ¼Ë÷Òı
 
-	uint32	dbCurrIdx;	// æ•°æ®åº“å½“å‰ä½ç½®
-	uint32	reqMaxCnt;	// æœ€å¤§è¯·æ±‚æ•°
-	uint32	resultCnt;	// æŸ¥è¯¢çš„ç»“æœè®°å½•æ•°
-	uint8	errorCode;	// 0 - ok,  å…¶ä»– - å‡ºé”™
+	uint32	dbCurrIdx;	// Êı¾İ¿âµ±Ç°Î»ÖÃ
+	uint32	reqMaxCnt;	// ×î´óÇëÇóÊı
+	uint32	resultCnt;	// ²éÑ¯µÄ½á¹û¼ÇÂ¼Êı
+	uint8	errorCode;	// 0 - ok,  ÆäËû - ³ö´í
 }DbQuerySt;
 
-//---------------	å°åŒºåˆ—è¡¨
+//---------------	Ğ¡ÇøÁĞ±í
 typedef struct{
-	char 	nums[District_Max][Size_ListStr];	// åˆ—è¡¨é¡¹å­—ç¬¦ä¸²ï¼šæ¥¼æ ‹ç¼–å·
-	char 	names[District_Max][Size_ListStr];	// åˆ—è¡¨é¡¹å­—ç¬¦ä¸²ï¼šæ¥¼æ ‹åç§°
-	uint8 	idx;			// åˆ—è¡¨é¡¹ç´¢å¼•
-	uint8	cnt;			// åˆ—è¡¨é¡¹æ€»æ•°
+	char 	nums[District_Max][Size_ListStr];	// ÁĞ±íÏî×Ö·û´®£ºÂ¥¶°±àºÅ
+	char 	names[District_Max][Size_ListStr];	// ÁĞ±íÏî×Ö·û´®£ºÂ¥¶°Ãû³Æ
+	uint8 	idx;			// ÁĞ±íÏîË÷Òı
+	uint8	cnt;			// ÁĞ±íÏî×ÜÊı
 }DistrictListSt;
 
-//--------------	xxå°åŒº - æ¥¼æ ‹åˆ—è¡¨
+//--------------	xxĞ¡Çø - Â¥¶°ÁĞ±í
 typedef struct{
-	char 	nums[Building_Max][Size_ListStr];		// åˆ—è¡¨é¡¹å­—ç¬¦ä¸²ï¼šæ¥¼æ ‹ç¼–å·
-	char 	names[Building_Max][Size_ListStr];		// åˆ—è¡¨é¡¹å­—ç¬¦ä¸²ï¼šæ¥¼æ ‹åç§°
-	uint8 	idx;			// åˆ—è¡¨é¡¹ç´¢å¼•
-	uint8	cnt;			// åˆ—è¡¨é¡¹æ€»æ•°
-	char 	*qryDistricNum;	// å°åŒºç¼–å·
+	char 	nums[Building_Max][Size_ListStr];		// ÁĞ±íÏî×Ö·û´®£ºÂ¥¶°±àºÅ
+	char 	names[Building_Max][Size_ListStr];		// ÁĞ±íÏî×Ö·û´®£ºÂ¥¶°Ãû³Æ
+	uint8 	idx;			// ÁĞ±íÏîË÷Òı
+	uint8	cnt;			// ÁĞ±íÏî×ÜÊı
+	char 	*qryDistricNum;	// Ğ¡Çø±àºÅ
 }BuildingListSt;
 
-//---------------	xxå°åŒº - xxæ¥¼æ ‹ - æˆ·è¡¨åˆ—è¡¨ï¼ˆè¡¨å·/æˆ·å·/é—¨ç‰Œå·/æˆ·åï¼‰ 
+//---------------	xxĞ¡Çø - xxÂ¥¶° - »§±íÁĞ±í£¨±íºÅ/»§ºÅ/ÃÅÅÆºÅ/»§Ãû£© 
 typedef struct{
-	uint32 	dbIdx[Meter_Max];				// åˆ—è¡¨é¡¹å¯¹åº”çš„æ•°æ®åº“ç´¢å¼•
-	char 	strs[Meter_Max][Size_ListStr];	// åˆ—è¡¨é¡¹å­—ç¬¦ä¸²ï¼šè¡¨å·/æˆ·å·/é—¨ç‰Œå·/æˆ·å/åœ°å€
-	uint8 	idx;			// åˆ—è¡¨é¡¹ç´¢å¼•
-	uint8	cnt;			// åˆ—è¡¨é¡¹æ€»æ•°
-	uint8 	selectField;	// è¦æ˜¾ç¤ºçš„å­—æ®µï¼šè¡¨å·/æˆ·å·/é—¨ç‰Œå·/æˆ·å/åœ°å€
-	char 	*qryDistricNum;			// å°åŒºç¼–å·ï¼šç©ºå€¼è¡¨ç¤ºæ‰€æœ‰
-	char 	*qryBuildingNum;		// æ¥¼æ ‹ç¼–å·ï¼šç©ºå€¼è¡¨ç¤ºæ‰€æœ‰
-	char 	*qryMeterReadStatus;	// æŠ„è¡¨çŠ¶æ€
-	char 	districName[Size_DistrictName];		// å°åŒºå
-	char 	buildingName[Size_BuildingName];	// æ¥¼æ ‹å
-	uint16 	meterCnt;		// å½“å‰è¡¨æ€»æ•°
-	uint16 	readOkCnt;		// å·²æŠ„æ•°é‡
-	uint16 	readNgCnt;		// æœªæŠ„æ•°é‡
+	uint32 	dbIdx[Meter_Max];				// ÁĞ±íÏî¶ÔÓ¦µÄÊı¾İ¿âË÷Òı
+	char 	strs[Meter_Max][Size_ListStr];	// ÁĞ±íÏî×Ö·û´®£º±íºÅ/»§ºÅ/ÃÅÅÆºÅ/»§Ãû/µØÖ·
+	uint8 	idx;			// ÁĞ±íÏîË÷Òı
+	uint8	cnt;			// ÁĞ±íÏî×ÜÊı
+	uint8 	selectField;	// ÒªÏÔÊ¾µÄ×Ö¶Î£º±íºÅ/»§ºÅ/ÃÅÅÆºÅ/»§Ãû/µØÖ·
+	char 	*qryDistricNum;			// Ğ¡Çø±àºÅ£º¿ÕÖµ±íÊ¾ËùÓĞ
+	char 	*qryBuildingNum;		// Â¥¶°±àºÅ£º¿ÕÖµ±íÊ¾ËùÓĞ
+	char 	*qryMeterReadStatus;	// ³­±í×´Ì¬
+	char 	districName[Size_DistrictName];		// Ğ¡ÇøÃû
+	char 	buildingName[Size_BuildingName];	// Â¥¶°Ãû
+	uint16 	meterCnt;		// µ±Ç°±í×ÜÊı
+	uint16 	readOkCnt;		// ÒÑ³­ÊıÁ¿
+	uint16 	readNgCnt;		// Î´³­ÊıÁ¿
 }MeterListSt;
 
 
-//---------------	æˆ·è¡¨ä¿¡æ¯
+//---------------	»§±íĞÅÏ¢
 typedef struct 
 {
-	uint32	dbIdx;		// è®°å½•åœ¨æ•°æ®åº“ä¸­ç´¢å¼•
-	char	*qryMeterNum;		// è¡¨å·
-	char 	*qryUserNum;		// æˆ·å·
-	char 	*qryRoomNum;		// é—¨ç‰Œå·
+	uint32	dbIdx;		// ¼ÇÂ¼ÔÚÊı¾İ¿âÖĞË÷Òı
+	char	*qryMeterNum;		// ±íºÅ
+	char 	*qryUserNum;		// »§ºÅ
+	char 	*qryRoomNum;		// ÃÅÅÆºÅ
 	char	meterNum[Size_MeterNum];
 	char	userNum[Size_UserNum];
 	char	roomNum[Size_RoomNum];
@@ -243,7 +243,7 @@ typedef struct
 
 }MeterInfoSt;
 
-//------------------------		å¤–éƒ¨æ¥å£å£°æ˜	-------------------------------------
+//------------------------		Íâ²¿½Ó¿ÚÉùÃ÷	-------------------------------------
 extern MeterInfoSt MeterInfo;
 extern DistrictListSt Districts;
 extern BuildingListSt Buildings;
@@ -258,33 +258,37 @@ extern void SaveMeterReadResult(MeterInfoSt *meterInfo);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
 
-//-----------------------	å…¨å±€å˜é‡å®šä¹‰
+//-----------------------	È«¾Ö±äÁ¿¶¨Òå
 MeterInfoSt MeterInfo;
 DistrictListSt Districts;
 BuildingListSt Buildings;
 MeterListSt Meters;
 DbQuerySt DbQuery;
 
-//----------------------	æ•°æ®åº“ä¿¡æ¯-æ“ä½œå‡½æ•°		-------------------------------------
+//----------------------	Êı¾İ¿âĞÅÏ¢-²Ù×÷º¯Êı		-------------------------------------
 
 /*
-* æ è¿°ï¼šå­—ç¬¦ä¸²åˆ—è¡¨ä¸­æŸ¥æ‰¾å­—ç¬¦ä¸²
-* å‚ æ•°ï¼šstrs		- å­—ç¬¦ä¸²åˆ—è¡¨
-*		strsLen		- å­—ç¬¦ä¸²åˆ—è¡¨é•¿åº¦
-*		dstStr		- æŸ¥æ‰¾çš„å­—ç¬¦ä¸²
-*		cmpMaxLen	- æ¯”è¾ƒçš„æœ€å¤§é•¿åº¦
-* è¿” å›ï¼šint	- æ‰¾åˆ°çš„å­—ç¬¦ä¸²åœ¨åˆ—è¡¨ä¸­çš„ç´¢å¼•ï¼š -1 - æœªæ‰¾åˆ°ï¼Œ 0~n - æ‰¾åˆ°	
+* Ãè Êö£º×Ö·û´®ÁĞ±íÖĞ²éÕÒ×Ö·û´®
+* ²Î Êı£ºstrs		- ×Ö·û´®ÁĞ±í
+*		strLen		- Ã¿¸ö×Ö·û´®³¤¶È
+*		strCnt		- ×Ö·û´®ÊıÁ¿
+*		dstStr		- ²éÕÒµÄ×Ö·û´®
+*		cmpMaxLen	- ±È½ÏµÄ×î´ó³¤¶È
+* ·µ »Ø£ºint	- ÕÒµ½µÄ×Ö·û´®ÔÚÁĞ±íÖĞµÄË÷Òı£º -1 - Î´ÕÒµ½£¬ 0~n - ÕÒµ½	
 */
-int FindStrInList(char ** strs, uint16 strsLen, const char *dstStr, uint16 cmpMaxLen)
+int FindStrInList(char ** strs, uint8 strLen, uint16 strCnt, const char *dstStr, uint16 cmpMaxLen)
 {
 	int i = -1;
+	char *str = (char *)strs;
 
-	for(i = 0; i < strsLen; i++){
-		if(strncmp(strs[i], dstStr, cmpMaxLen) == 0){
+	for(i = 0; i < strCnt; i++){
+
+		if(strncmp(str, dstStr, cmpMaxLen) == 0){
 			break;
 		}
+		str += strLen;
 	}
-	if(i >= strsLen){
+	if(i >= strCnt){
 		i = -1;
 	}
 
@@ -292,30 +296,32 @@ int FindStrInList(char ** strs, uint16 strsLen, const char *dstStr, uint16 cmpMa
 }
 
 /*
-* æ è¿°ï¼šæŸ¥è¯¢å°åŒºåˆ—è¡¨
-* å‚ æ•°ï¼šdistricts	- å°åŒºåˆ—è¡¨
-*		 query		- æ•°æ®åº“æŸ¥è¯¢ç»“æ„
-* è¿” å›ï¼švoid
+* Ãè Êö£º²éÑ¯Ğ¡ÇøÁĞ±í
+* ²Î Êı£ºdistricts	- Ğ¡ÇøÁĞ±í
+*		 query		- Êı¾İ¿â²éÑ¯½á¹¹
+* ·µ »Ø£ºvoid
 */
 void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp1[Size_DistrictNum];
-	char strTmp2[Size_DistrictName];
+	char strTmp1[50];
+	char strTmp2[50];
 
 	_Select(1);
-	_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+	_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 	recCnt = _Reccount();
 	_Go(0);
 	districts->cnt = 0;
 	districts->idx = 0;
+	query->reqMaxCnt = (query->reqMaxCnt == 0 ? District_Max : query->reqMaxCnt);
 	query->resultCnt = 0;
 	query->errorCode = 0;
 	for(i = 0; i < recCnt; i++){
-		_ReadFieldEx(Idx_DistrictNum, strTmp1);		// å°åŒºç¼–å·
-		strTmp1[Size_DistrictNum - 1] = '\0';
+		_ReadField(Idx_DistrictNum, strTmp1);		// Ğ¡Çø±àºÅ
+		strTmp1[Size_ListStr - 1] = '\0';
 
-		if(-1 != FindStrInList(districts->nums, districts->cnt, strTmp1, Size_DistrictNum)){
+		// ÅÅ³ıÖØ¸´ºó£¬¼ÓÈëÁĞ±íÖĞ
+		if(-1 == FindStrInList(districts->nums, Size_ListStr, districts->cnt, strTmp1, Size_ListStr)){
 			
 			query->resultCnt++;
 			if(query->resultCnt > query->reqMaxCnt){
@@ -323,54 +329,56 @@ void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 				break;
 			}
 
-			strncpy(districts->nums[districts->cnt], strTmp1, Idx_DistrictNum);
+			_ReadField(Idx_DistrictName, strTmp2);	// Ğ¡ÇøÃû³Æ
+			strTmp2[Size_ListStr - 1] = '\0';
 
-			_ReadFieldEx(Idx_DistrictName, strTmp2);	// å°åŒºåç§°
-			strTmp2[Size_DistrictName -1] = '\0';
-			strncpy(districts->names[districts->cnt], strTmp2, Size_DistrictName);
-
+			strncpy(districts->nums[districts->cnt], strTmp1, Size_ListStr);
+			strncpy(districts->names[districts->cnt], strTmp2, Size_ListStr);
 			districts->cnt++;
-			
 		}
+		_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 	}
-	_Use("");		// å…³é—­æ•°æ®åº“
+	_Use("");		// ¹Ø±ÕÊı¾İ¿â
 
 	query->dbCurrIdx = i;
 }
 
 /*
-* æ è¿°ï¼šæŸ¥è¯¢xxå°åŒº-æ¥¼æ ‹åˆ—è¡¨
-* å‚ æ•°ï¼šbuildings	- æ¥¼æ ‹åˆ—è¡¨
-*		 query		- æ•°æ®åº“æŸ¥è¯¢ç»“æ„
-* è¿” å›ï¼švoid
+* Ãè Êö£º²éÑ¯xxĞ¡Çø-Â¥¶°ÁĞ±í
+* ²Î Êı£ºbuildings	- Â¥¶°ÁĞ±í
+*		 query		- Êı¾İ¿â²éÑ¯½á¹¹
+* ·µ »Ø£ºvoid
 */
 void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[20];
-	char strTmp1[Size_BuildingNum];
-	char strTmp2[Size_BuildingName];
+	char strTmp[50];
+	char strTmp1[50];
+	char strTmp2[50];
 
 	_Select(1);
-	_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+	_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 	recCnt = _Reccount();
 	_Go(0);
 	buildings->cnt = 0;
 	buildings->idx = 0;
+	query->reqMaxCnt = (query->reqMaxCnt == 0 ? Building_Max : query->reqMaxCnt);
 	query->resultCnt = 0;
 	query->errorCode = 0;
 	for(i = 0; i < recCnt; i++){
 
-		_ReadFieldEx(Idx_DistrictNum, strTmp);		// å°åŒºç¼–å· è¿‡æ»¤
-		strTmp[Size_DistrictNum - 1] = '\0';
+		_ReadField(Idx_DistrictNum, strTmp);		// Ğ¡Çø±àºÅ ¹ıÂË
+		strTmp[Size_ListStr - 1] = '\0';
 		if(strcmp(buildings->qryDistricNum, strTmp) != 0){
+			_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 			continue;
 		}
 
-		_ReadFieldEx(Idx_BuildingNum, strTmp1);		// æ¥¼æ ‹ç¼–å·
-		strTmp1[Size_BuildingNum - 1] = '\0';
+		_ReadField(Idx_BuildingNum, strTmp1);		// Â¥¶°±àºÅ
+		strTmp1[Size_ListStr - 1] = '\0';
 
-		if(-1 != FindStrInList(buildings->nums, buildings->cnt, strTmp1, Size_BuildingNum)){
+		// ÅÅ³ıÖØ¸´ºó£¬¼ÓÈëÁĞ±íÖĞ
+		if(-1 == FindStrInList(buildings->nums, Size_ListStr, buildings->cnt, strTmp1, Size_ListStr)){
 			
 			query->resultCnt++;
 			if(query->resultCnt > query->reqMaxCnt){
@@ -378,26 +386,25 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 				break;
 			}
 
-			strncpy(buildings->nums[buildings->cnt], strTmp1, Size_BuildingNum);
+			_ReadField(Idx_BuildingName, strTmp2);	// Â¥¶°Ãû³Æ
+			strTmp2[Size_ListStr -1] = '\0';
 
-			_ReadFieldEx(Idx_BuildingName, strTmp2);	// æ¥¼æ ‹åç§°
-			strTmp2[Size_BuildingName -1] = '\0';
-			strncpy(buildings->names[buildings->cnt], strTmp2, Size_BuildingName);
-
+			strncpy(buildings->nums[buildings->cnt], strTmp1, Size_ListStr);
+			strncpy(buildings->names[buildings->cnt], strTmp2, Size_ListStr);
 			buildings->cnt++;
-			
 		}
+		_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 	}
-	_Use("");		// å…³é—­æ•°æ®åº“
+	_Use("");		// ¹Ø±ÕÊı¾İ¿â
 
 	query->dbCurrIdx = i;
 }
 
 /*
-* æ è¿°ï¼šæŸ¥è¯¢xxå°åŒº-xxæ¥¼æ ‹-æŠ„è¡¨ç»Ÿè®¡æƒ…å†µ
-* å‚ æ•°ï¼šmeters		- æˆ·è¡¨åˆ—è¡¨ï¼šæŸ¥è¯¢å‰å…ˆè®¾ç½® meters.(å°åŒºç¼–å·/æ¥¼æ ‹ç¼–å·/æŠ„è¡¨çŠ¶æ€/æ˜¾ç¤ºå­—æ®µ)
-*		 query		- æ•°æ®åº“æŸ¥è¯¢ç»“æ„
-* è¿” å›ï¼švoid
+* Ãè Êö£º²éÑ¯xxĞ¡Çø-xxÂ¥¶°-³­±íÍ³¼ÆÇé¿ö
+* ²Î Êı£ºmeters		- »§±íÁĞ±í£º²éÑ¯Ç°ÏÈÉèÖÃ meters.(Ğ¡Çø±àºÅ/Â¥¶°±àºÅ/³­±í×´Ì¬/ÏÔÊ¾×Ö¶Î)
+*		 query		- Êı¾İ¿â²éÑ¯½á¹¹
+* ·µ »Ø£ºvoid
 */
 void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
@@ -405,7 +412,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	char strTmp[50];
 
 	_Select(1);
-	_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+	_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 	recCnt = _Reccount();
 	_Go(0);
 	meters->cnt = 0;
@@ -415,73 +422,80 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	meters->meterCnt = 0;
 	meters->readOkCnt = 0;
 	meters->readNgCnt = 0;
+	//query->reqMaxCnt = (query->reqMaxCnt == 0 ? Meter_Max : query->reqMaxCnt);
+	query->reqMaxCnt = Meter_Max;
 	query->resultCnt = 0;
 	query->errorCode = 0;
 	for(i = 0; i < recCnt; i++){
 
 		if(meters->qryDistricNum != NULL){
-			_ReadFieldEx(Idx_DistrictNum, strTmp);		// å°åŒºç¼–å· è¿‡æ»¤
-			strTmp[Size_DistrictNum - 1] = '\0';
+			_ReadField(Idx_DistrictNum, strTmp);		// Ğ¡Çø±àºÅ ¹ıÂË
+			strTmp[Size_ListStr - 1] = '\0';
 			if(strcmp(meters->qryDistricNum, strTmp) != 0){
+				_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 				continue;
 			}
 			else{
-				// ä¿å­˜å°åŒºå
+				// ±£´æĞ¡ÇøÃû
 				if(meters->districName[0] == 0x00){
-					_ReadFieldEx(Idx_DistrictName, strTmp);	
+					_ReadField(Idx_DistrictName, strTmp);	
 					strTmp[Size_DistrictName - 1] = '\0';
 					strcpy(meters->districName, strTmp);
 				}
 			}
 		}
 		if(meters->qryBuildingNum != NULL){
-			_ReadFieldEx(Idx_DistrictNum, strTmp);		// æ¥¼æ ‹ç¼–å· è¿‡æ»¤
-			strTmp[Size_BuildingNum - 1] = '\0';
+			_ReadField(Idx_BuildingNum, strTmp);		// Â¥¶°±àºÅ ¹ıÂË
+			strTmp[Size_ListStr - 1] = '\0';
 			if(strcmp(meters->qryBuildingNum, strTmp) != 0){
+				_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 				continue;
 			}
 			else{
-				// ä¿å­˜æ¥¼æ ‹å
+				// ±£´æÂ¥¶°Ãû
 				if(meters->buildingName[0] == 0x00){
-					_ReadFieldEx(Idx_BuildingName, strTmp);	
+					_ReadField(Idx_BuildingName, strTmp);	
 					strTmp[Size_BuildingName - 1] = '\0';
 					strcpy(meters->buildingName, strTmp);
 				}
 			}
 		}
 
-		meters->meterCnt++;		// å½“å‰è¡¨æ€»æ•°
+		meters->meterCnt++;		// µ±Ç°±í×ÜÊı
 		
 		if(meters->qryMeterReadStatus != NULL){
-			_ReadFieldEx(Idx_DistrictNum, strTmp);		// æŠ„è¡¨çŠ¶æ€ è¿‡æ»¤  NULL - æ‰€æœ‰ï¼Œ â€˜0â€™ - æœªæŠ„ï¼Œ â€˜1â€™ - å·²æŠ„
+			_ReadField(Idx_MeterReadStatus, strTmp);		// ³­±í×´Ì¬ ¹ıÂË  NULL - ËùÓĞ£¬ ¡®0¡¯ - Î´³­£¬ ¡®1¡¯ - ÒÑ³­
 			strTmp[Size_MeterReadStatus - 1] = '\0';
 			if(strcmp(strTmp, "1") != 0){
-				meters->readNgCnt++;		// æœªæŠ„æ•°é‡
+				meters->readNgCnt++;		// Î´³­ÊıÁ¿
 			}else{
-				meters->readOkCnt++;		// å·²æŠ„æ•°é‡
+				meters->readOkCnt++;		// ÒÑ³­ÊıÁ¿
 			}
 			if(strcmp(meters->qryMeterReadStatus, strTmp) != 0){
+				_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 				continue;
 			}
 		}
 
-		switch (meters->selectField)		// åˆ—è¡¨ç±»å‹ï¼šé»˜è®¤ä¸ºè¡¨å·åˆ—è¡¨
+		switch (meters->selectField)		// ÁĞ±íÀàĞÍ£ºÄ¬ÈÏÎª±íºÅÁĞ±í
 		{
 		case Idx_MeterNum:
 		case Idx_UserNum:
 		case Idx_UserRoomNum:
 		case Idx_UserName:
 		case Idx_UserAddrs:
+			break;
 		default: 
 			meters->selectField = Idx_Invalid;
 			break;
 		}
-		if(meters->selectField == Idx_Invalid){	// æœªé€‰æ‹©å­—æ®µï¼Œåˆ™ä¸æ„å»ºåˆ—è¡¨
+		if(meters->selectField == Idx_Invalid){	// Î´Ñ¡Ôñ×Ö¶Î£¬Ôò²»¹¹½¨ÁĞ±í
+			_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 			continue;
 		}
 
-		_ReadFieldEx(meters->selectField, strTmp);	// è¯»å–å­—æ®µï¼šè¡¨å·/æˆ·å·/é—¨ç‰Œå·/æˆ·å/åœ°å€
-		strTmp[Size_ListStr - 1] = '\0';			// æœ€å¤šæ˜¾ç¤ºä¸€è¡Œ
+		_ReadField(meters->selectField, strTmp);	// ¶ÁÈ¡×Ö¶Î£º±íºÅ/»§ºÅ/ÃÅÅÆºÅ/»§Ãû/µØÖ·
+		strTmp[Size_ListStr - 1] = '\0';			// ×î¶àÏÔÊ¾Ò»ĞĞ
 
 		query->resultCnt++;
 		if(query->resultCnt > query->reqMaxCnt){
@@ -489,20 +503,22 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 			break;
 		}
 
-		strncpy(meters->strs[meters->cnt], strTmp, Size_ListStr);	// æ·»åŠ åˆ°æ˜¾ç¤ºåˆ—è¡¨
-		meters->dbIdx[meters->cnt] = i;								// æ·»åŠ åˆ°DBç´¢å¼•åˆ—è¡¨
+		// ½«Ñ¡ÔñµÄ×Ö¶ÎĞÅÏ¢ ºÍ Êı¾İ¿âË÷Òı ¼ÓÈëÁĞ±í
+		strncpy(meters->strs[meters->cnt], strTmp, Size_ListStr);	
+		meters->dbIdx[meters->cnt] = (i + 1);	// Êı¾İ¿âË÷Òı´Ó 1 ¿ªÊ¼±àºÅ
 		meters->cnt++;
 
+		_Skip(1);	// ÏÂÒ»¸öÊı¾İ¿â¼ÇÂ¼
 	}
-	_Use("");		// å…³é—­æ•°æ®åº“
+	_Use("");		// ¹Ø±ÕÊı¾İ¿â
 
 	query->dbCurrIdx = i;
 }
 
 /*
-* æ è¿°ï¼šæ˜¾ç¤º xxå°åŒº-xxæ¥¼æ ‹- è‡ªåŠ¨æŠ„è¡¨
-* å‚ æ•°ï¼šmeters		- æŠ„è¡¨æƒ…å†µåˆ—è¡¨
-* è¿” å›ï¼šuint8 	- ç•Œé¢é€€å‡ºæ—¶çš„æŒ‰é”®å€¼ï¼š KEY_CANCEL - è¿”å›é”® ï¼Œ KEY_ENTER - ç¡®è®¤é”®
+* Ãè Êö£ºÏÔÊ¾ xxĞ¡Çø-xxÂ¥¶°- ×Ô¶¯³­±í
+* ²Î Êı£ºmeters		- ³­±íÇé¿öÁĞ±í
+* ·µ »Ø£ºuint8 	- ½çÃæÍË³öÊ±µÄ°´¼üÖµ£º KEY_CANCEL - ·µ»Ø¼ü £¬ KEY_ENTER - È·ÈÏ¼ü
 */
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
@@ -511,7 +527,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	uint16 ackLen = 0, timeout;
 	char strTmp[50];
 
-	// ä¸­ç»§æ¸…ç©º
+	// ÖĞ¼ÌÇå¿Õ
 	for(i = 0; i < RELAY_MAX; i++){				
 		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 			StrRelayAddr[i][0] = 0x00;
@@ -520,37 +536,37 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	while(cnt < meters->cnt){
 
 		_ClearScreen();
-		_Printfxy(0, 0, "<<è‡ªåŠ¨æŠ„è¡¨", Color_White);
+		_Printfxy(0, 0, "<<×Ô¶¯³­±í", Color_White);
 		/*---------------------------------------------*/
-		// è®¾ç½®è¡¨å·
+		// ÉèÖÃ±íºÅ
 		_Select(1);
-		_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+		_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 		_Go(meters->dbIdx[cnt]);
 
-		_Use("");			// å…³é—­æ•°æ®åº“
+		_Use("");			// ¹Ø±ÕÊı¾İ¿â
 		strcpy(StrDstAddr, strTmp);
 
-		// å‘½ä»¤å‚æ•°å¤„ç†
+		// ÃüÁî²ÎÊı´¦Àí
 		i = 0;	
 		Args.itemCnt = 2;
-		Args.items[0] = &Args.buf[0];   // å‘½ä»¤å­—
-		Args.items[1] = &Args.buf[1];	// æ•°æ®åŸŸ
-		Args.buf[i++] = 0x01;		// å‘½ä»¤å­—	01
-		ackLen = 21;				// åº”ç­”é•¿åº¦ 21	
-		Args.buf[i++] = 0x00;		// æ•°æ®æ ¼å¼ 00	
+		Args.items[0] = &Args.buf[0];   // ÃüÁî×Ö
+		Args.items[1] = &Args.buf[1];	// Êı¾İÓò
+		Args.buf[i++] = 0x01;		// ÃüÁî×Ö	01
+		ackLen = 21;				// Ó¦´ğ³¤¶È 21	
+		Args.buf[i++] = 0x00;		// Êı¾İ¸ñÊ½ 00	
 		Args.lastItemLen = i - 1;
 
-		// åœ°å€å¡«å……
+		// µØÖ·Ìî³ä
 		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 
-		// åº”ç­”é•¿åº¦ã€è¶…æ—¶æ—¶é—´ã€é‡å‘æ¬¡æ•°
+		// Ó¦´ğ³¤¶È¡¢³¬Ê±Ê±¼ä¡¢ÖØ·¢´ÎÊı
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
 		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
 		tryCnt = 3;
 
-		// å‘é€ã€æ¥æ”¶ã€ç»“æœæ˜¾ç¤º
+		// ·¢ËÍ¡¢½ÓÊÕ¡¢½á¹ûÏÔÊ¾
 		if(false == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
-			if(strncmp(DispBuf, "è¡¨å·", 4) != 0){	// å‘½ä»¤å·²å–æ¶ˆ	
+			if(strncmp(DispBuf, "±íºÅ", 4) != 0){	// ÃüÁîÒÑÈ¡Ïû	
 				DispBuf[0] = NULL;
 				isCancel = true;
 				break;
@@ -558,16 +574,16 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		}
 
 		//----------------------------------------------
-		_Printfxy(0, 9*16, "è¿”å›  < è½®æŠ„ä¸­ >     ", Color_White);
+		_Printfxy(0, 9*16, "·µ»Ø  < ÂÖ³­ÖĞ >     ", Color_White);
 	
 	}
 
 	if(isCancel){
 		
-		_Printfxy(0, 9*16, "è¿”å›  < å·²å–æ¶ˆ >    ", Color_White);
+		_Printfxy(0, 9*16, "·µ»Ø  < ÒÑÈ¡Ïû >    ", Color_White);
 	}
 	else{
-		_Printfxy(0, 9*16, "è¿”å›  < å·²å®Œæˆ >    ", Color_White);
+		_Printfxy(0, 9*16, "·µ»Ø  < ÒÑÍê³É >    ", Color_White);
 	}
 	
 	while(1){
@@ -578,9 +594,9 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 }
 
 /*
-* æ è¿°ï¼šæ˜¾ç¤ºxxå°åŒº-xxæ¥¼æ ‹-æŠ„è¡¨ç»Ÿè®¡æƒ…å†µ
-* å‚ æ•°ï¼šmeters		- æŠ„è¡¨æƒ…å†µåˆ—è¡¨
-* è¿” å›ï¼šuint8 	- ç•Œé¢é€€å‡ºæ—¶çš„æŒ‰é”®å€¼ï¼š KEY_CANCEL - è¿”å›é”® ï¼Œ KEY_ENTER - ç¡®è®¤é”®
+* Ãè Êö£ºÏÔÊ¾xxĞ¡Çø-xxÂ¥¶°-³­±íÍ³¼ÆÇé¿ö
+* ²Î Êı£ºmeters		- ³­±íÇé¿öÁĞ±í
+* ·µ »Ø£ºuint8 	- ½çÃæÍË³öÊ±µÄ°´¼üÖµ£º KEY_CANCEL - ·µ»Ø¼ü £¬ KEY_ENTER - È·ÈÏ¼ü
 */
 uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 {
@@ -590,15 +606,15 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 
 	_ClearScreen();
 
-	_Printfxy(0, 0, "<<æˆ·è¡¨ä¿¡æ¯", Color_White);
+	_Printfxy(0, 0, "<<»§±íĞÅÏ¢", Color_White);
 	/*---------------------------------------------*/
-	dispIdx += sprintf(&dispBuf[dispIdx], "å°åŒº: %s\n", meters->districName);
-	dispIdx += sprintf(&dispBuf[dispIdx], "æ¥¼æ ‹: %s\n", meters->buildingName);
-	dispIdx += sprintf(&dispBuf[dispIdx], "æ€»æ•°: %d\n", meters->meterCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "å·²æŠ„: %d\n", meters->readOkCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "æœªæŠ„: %d\n", meters->readNgCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "Ğ¡Çø: %s\n", meters->districName);
+	dispIdx += sprintf(&dispBuf[dispIdx], "Â¥¶°: %s\n", meters->buildingName);
+	dispIdx += sprintf(&dispBuf[dispIdx], "×ÜÊı: %d\n", meters->meterCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "ÒÑ³­: %d\n", meters->readOkCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "Î´³­: %d\n", meters->readNgCnt);
 	//----------------------------------------------
-	_Printfxy(0, 9*16, "è¿”å›            ç¡®å®š", Color_White);
+	_Printfxy(0, 9*16, "·µ»Ø            È·¶¨", Color_White);
 
 	key = ShowScrollStr(&DispBuf,  7);
 	
@@ -606,35 +622,35 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 }
 
 /*
-* æ è¿°ï¼šæ˜¾ç¤ºxxå°åŒº-xxæ¥¼æ ‹-å·²æŠ„/æœªæŠ„åˆ—è¡¨
-* å‚ æ•°ï¼šmeters		- æŠ„è¡¨æƒ…å†µåˆ—è¡¨: è°ƒç”¨å‰å…ˆè®¾ç½®æŠ„è¡¨çŠ¶æ€ qryMeterReadStatus
-* è¿” å›ï¼šuint8 	- ç•Œé¢é€€å‡ºæ—¶çš„æŒ‰é”®å€¼ï¼š KEY_CANCEL - è¿”å›é”® ï¼Œ KEY_ENTER - ç¡®è®¤é”®
+* Ãè Êö£ºÏÔÊ¾xxĞ¡Çø-xxÂ¥¶°-ÒÑ³­/Î´³­ÁĞ±í
+* ²Î Êı£ºmeters		- ³­±íÇé¿öÁĞ±í: µ÷ÓÃÇ°ÏÈÉèÖÃ³­±í×´Ì¬ qryMeterReadStatus
+* ·µ »Ø£ºuint8 	- ½çÃæÍË³öÊ±µÄ°´¼üÖµ£º KEY_CANCEL - ·µ»Ø¼ü £¬ KEY_ENTER - È·ÈÏ¼ü
 */
 uint8 ShowMeterList(MeterListSt *meters)
 {
 	uint8 key;
-	ListBox showTpList, meterList;		// æ˜¾ç¤ºæ–¹å¼/è¡¨ä¿¡æ¯-åˆ—è¡¨
-	uint16 showTpListNo, meterListNo;
+	ListBox showTpList, meterList;		// ÏÔÊ¾·½Ê½/±íĞÅÏ¢-ÁĞ±í
 	char *title = NULL;
 
-	// åˆ—è¡¨æ˜¾ç¤ºæ–¹å¼-ç•Œé¢
+	// ÁĞ±íÏÔÊ¾·½Ê½-½çÃæ
+	title = (meters->qryMeterReadStatus[0] == '1' ? "<<ÒÑ³­ÁĞ±í" : "<<Î´³­ÁĞ±í");
+	ListBoxCreate(&showTpList, 0, 0, 4, 7, NULL,
+		title, 
+		4,
+		"1. °´±íºÅÏÔÊ¾",
+		"2. °´»§ºÅÏÔÊ¾",
+		"3. °´»§ÃûÏÔÊ¾",
+		"4. °´ÃÅÅÆºÅÏÔÊ¾");
+	//------------------------------------------------------------
+	_Printfxy(0, 9*16, "·µ»Ø            È·¶¨", Color_White);
 	while(1){
-		_ClearScreen();
-		ListBoxCreate(&showTpList, 0, 0, 4, 7, NULL,
-			"<<åˆ—è¡¨æ˜¾ç¤ºæ–¹å¼", 
-			4,
-			"1. æŒ‰è¡¨å·æ˜¾ç¤º",
-			"2. æŒ‰æˆ·å·æ˜¾ç¤º",
-			"3. æŒ‰æˆ·åæ˜¾ç¤º",
-			"4. æŒ‰é—¨ç‰Œå·æ˜¾ç¤º");
-		showTpListNo = ShowListBox(&showTpList);
 
-		if(showTpListNo == 0){	// è¿”å›
-			key = KEY_CANCEL;
+		key = ShowListBox(&showTpList);
+		if(key == KEY_CANCEL){	// ·µ»Ø
 			break;
 		}
 
-		switch (showTpListNo){
+		switch (showTpList.strIdx + 1){
 		case 1:	meters->selectField = Idx_MeterNum;	
 			break;
 		case 2:	meters->selectField = Idx_UserNum;	
@@ -646,64 +662,94 @@ uint8 ShowMeterList(MeterListSt *meters)
 		default:
 			break;
 		}
-		QueryMeterList(meters, &DbQuery);	// å·²æŠ„/æœªæŠ„åˆ—è¡¨ æŸ¥è¯¢
-
-		// å·²æŠ„/æœªæŠ„åˆ—è¡¨-ç•Œé¢
-		title = (meters->qryMeterReadStatus[0] == '1' ? "å·²æŠ„åˆ—è¡¨" : "æœªæŠ„åˆ—è¡¨");
+		// ÒÑ³­/Î´³­ÁĞ±í-½çÃæ
+		//------------------------------------------------------------
+		_Printfxy(0, 9*16, "    <  ²éÑ¯ÖĞ  >    ", Color_White);
+		QueryMeterList(meters, &DbQuery);	// ÒÑ³­/Î´³­ÁĞ±í ²éÑ¯
+		ListBoxCreateEx(&meterList, 0, 0, meters->cnt, 7, NULL,
+				title, meters->strs, Size_ListStr, meters->cnt);
+		//------------------------------------------------------------
+		_Printfxy(0, 9*16, "·µ»Ø        »§±íĞÅÏ¢", Color_White);
 		while(2){
-			_ClearScreen();
-			ListBoxCreateEx(&meterList, 0, 0, meters->cnt, 7, NULL,
-				title, meters->strs, meters->cnt);
-			meterListNo = ShowListBox(&meterList);
-			if(meterListNo == 0){	// è¿”å›
+			#if Log_On
+			LogPrint("meters->idx = %d,  meters->cnt = %d,  meters->meterCnt = %d,  meters->selectField = %d \n \
+				meterList.strIdx = %d, meterList.strCnt = %d, meterList.currIdx = %d, meterList.totalCnt = %d \n", \
+				meters->idx, meters->cnt, meters->meterCnt, meters->selectField, \
+				meterList.strIdx, meterList.strCnt, meterList.currIdx, meterList.totalCnt);
+			#endif
+			
+			key = ShowListBox(&meterList);
+			if(key == KEY_CANCEL){	// ·µ»Ø
 				break;
 			}
-			meters->idx = meterListNo -1;
+			if(key == KEY_ENTER && meters->cnt == 0){	
+				_Printfxy(0, 5*16, "µ±Ç°ÁĞ±íÎŞÌõÄ¿£¡", Color_White);
+				continue;
+			}
+			
+			meters->idx = (uint8)(meterList.strIdx & 0xFF);
+			
+			#if Log_On
+			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
+				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
+			#endif
+			
+			// »§±íĞÅÏ¢-½çÃæ
+			//------------------------------------------------------
 			MeterInfo.dbIdx = meters->dbIdx[meters->idx];
-			QueryMeterInfo(&MeterInfo, &DbQuery);	// æˆ·è¡¨ä¿¡æ¯æŸ¥è¯¢
+			QueryMeterInfo(&MeterInfo, &DbQuery);	// »§±íĞÅÏ¢²éÑ¯
+			
+			#if Log_On
+			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
+				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
+			#endif
+			//------------------------------------------------------
+			key = ShowMeterInfo(&MeterInfo);	// ·µ»Øµ½ÁĞ±í
 
-			// æˆ·è¡¨ä¿¡æ¯-ç•Œé¢
-			ShowMeterInfo(&MeterInfo);				
+			#if Log_On
+			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
+				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
+			#endif
+			
+		}// while 2 ÒÑ³­/Î´³­ÁĞ±í
 
-		}// while 2 å·²æŠ„/æœªæŠ„åˆ—è¡¨
-
-	}// while 1 æ˜¾ç¤ºæ–¹å¼
+	}// while 1 ÏÔÊ¾·½Ê½
 	
 	return key;
 }
 
 /*
-* æ è¿°ï¼šä¿å­˜æŠ„è¡¨ç»“æœ
-* å‚ æ•°ï¼šmeterInfo	- æˆ·è¡¨ä¿¡æ¯
-* è¿” å›ï¼švoid
+* Ãè Êö£º±£´æ³­±í½á¹û
+* ²Î Êı£ºmeterInfo	- »§±íĞÅÏ¢
+* ·µ »Ø£ºvoid
 */
 void SaveMeterReadResult(MeterInfoSt *meterInfo)
 {
 	char time[20];
 
 	_Select(1);
-	_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+	_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 	_Go(meterInfo->dbIdx);
 
-	// æ›´æ–°æŠ„è¡¨ç»“æœ
+	// ¸üĞÂ³­±í½á¹û
 	_GetDateTime(time, '-', ':');
-	_Replace(Idx_MeterReadStatus, "1");	// æŠ„è¡¨çŠ¶æ€ 0 - æœªæŠ„ï¼Œ 1 - å·²æŠ„
-	_Replace(Idx_MeterReadType, "0");	// æŠ„è¡¨æ–¹å¼ 0 - æŒæœºæŠ„è¡¨ ï¼Œ 1 - é›†ä¸­å™¨æŠ„è¡¨
-	_Replace(Idx_MeterReadTime, time);	// æŠ„è¡¨æ—¶é—´
+	_Replace(Idx_MeterReadStatus, "1");	// ³­±í×´Ì¬ 0 - Î´³­£¬ 1 - ÒÑ³­
+	_Replace(Idx_MeterReadType, "0");	// ³­±í·½Ê½ 0 - ÕÆ»ú³­±í £¬ 1 - ¼¯ÖĞÆ÷³­±í
+	_Replace(Idx_MeterReadTime, time);	// ³­±íÊ±¼ä
 	_Replace(Idx_MeterValue, meterInfo->meterValue);
 	_Replace(Idx_MeterStatusHex, meterInfo->meterStatusHex);
 	_Replace(Idx_MeterStatusStr, meterInfo->meterStatusStr);
 	_Replace(Idx_BatteryVoltage, meterInfo->batteryVoltage);
 	_Replace(Idx_SignalValue, meterInfo->signalValue);
 
-	_Use("");			// å…³é—­æ•°æ®åº“
+	_Use("");			// ¹Ø±ÕÊı¾İ¿â
 }
 
 /*
-* æ è¿°ï¼šæŸ¥è¯¢æˆ·è¡¨ä¿¡æ¯
-* å‚ æ•°ï¼šmeterInfo	- æˆ·è¡¨ä¿¡æ¯
-*		 query		- æ•°æ®åº“æŸ¥è¯¢ç»“æ„
-* è¿” å›ï¼švoid
+* Ãè Êö£º²éÑ¯»§±íĞÅÏ¢
+* ²Î Êı£ºmeterInfo	- »§±íĞÅÏ¢
+*		 query		- Êı¾İ¿â²éÑ¯½á¹¹
+* ·µ »Ø£ºvoid
 */
 void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 {
@@ -711,24 +757,24 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 	char strTmp[100];
 
 	_Select(1);
-	_Use(MeterDocDB);	// æ‰“å¼€æ•°æ®åº“
+	_Use(MeterDocDB);	// ´ò¿ªÊı¾İ¿â
 	recCnt = _Reccount();
 	_Go(0);
 	query->resultCnt = 0;
 	query->errorCode = 0;
 
-	if(meterInfo->dbIdx != Invalid_Idx){	// æ•°æ®åº“è®°å½•ç´¢å¼• æ˜¯å¦æœ‰æ•ˆï¼Ÿ
+	if(meterInfo->dbIdx != Invalid_Idx){	// Êı¾İ¿â¼ÇÂ¼Ë÷Òı ÊÇ·ñÓĞĞ§£¿
 		if(meterInfo->dbIdx > recCnt -1){
 			meterInfo->dbIdx = Invalid_Idx;
 		}
 	}
 
-	if(meterInfo->dbIdx == Invalid_Idx){	// æ•°æ®åº“è®°å½•ç´¢å¼•æ— æ•ˆæ—¶ æ‰§è¡ŒæŸ¥è¯¢
+	if(meterInfo->dbIdx == Invalid_Idx){	// Êı¾İ¿â¼ÇÂ¼Ë÷ÒıÎŞĞ§Ê± Ö´ĞĞ²éÑ¯
 
 		#if 0
 		for(i = 0; i < recCnt; i++){
 			if(meterInfo->qryMeterNum != NULL){
-				_ReadFieldEx(Idx_MeterNum, strTmp);		// æŒ‰è¡¨å·æŸ¥è¯¢
+				_ReadField(Idx_MeterNum, strTmp);		// °´±íºÅ²éÑ¯
 				strTmp[Size_MeterNum - 1] = '\0';
 				if(strcmp(meterInfo->qryMeterNum, strTmp) == 0){
 					meterInfo->dbIdx = i;
@@ -736,7 +782,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 				}
 			}
 			else if(meterInfo->qryUserNum != NULL){
-				_ReadFieldEx(Idx_UserNum, strTmp);		// æŒ‰æˆ·å·æŸ¥è¯¢
+				_ReadField(Idx_UserNum, strTmp);		// °´»§ºÅ²éÑ¯
 				strTmp[Size_UserNum - 1] = '\0';
 				if(strcmp(meterInfo->qryUserNum, strTmp) == 0){
 					meterInfo->dbIdx = i;
@@ -744,7 +790,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 				}
 			}
 			else if(meterInfo->qryRoomNum != NULL){
-				_ReadFieldEx(Idx_UserRoomNum, strTmp);	// æŒ‰é—¨ç‰Œå·æŸ¥è¯¢
+				_ReadField(Idx_UserRoomNum, strTmp);	// °´ÃÅÅÆºÅ²éÑ¯
 				strTmp[Size_RoomNum - 1] = '\0';
 				if(strcmp(meterInfo->qryRoomNum, strTmp) == 0){
 					meterInfo->dbIdx = i;
@@ -756,17 +802,17 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 
 		if(meterInfo->qryMeterNum != NULL
 			&& _LocateEx(Idx_MeterNum, '=', meterInfo->qryMeterNum, 1, recCnt, 0) > 0){ 
-			// æŒ‰è¡¨å·æŸ¥è¯¢
+			// °´±íºÅ²éÑ¯
 			meterInfo->dbIdx = _Recno();
 		}
 		else if(meterInfo->qryMeterNum != NULL
 			&& _LocateEx(Idx_UserNum, '=', meterInfo->qryMeterNum, 1, recCnt, 0) > 0){ 
-			// æŒ‰è¡¨å·æŸ¥è¯¢
+			// °´±íºÅ²éÑ¯
 			meterInfo->dbIdx = _Recno();
 		}
 		else if(meterInfo->qryRoomNum != NULL
 			&& _LocateEx(Idx_UserRoomNum, '=', meterInfo->qryRoomNum, 1, recCnt, 0) > 0){ 
-			// æŒ‰è¡¨å·æŸ¥è¯¢
+			// °´±íºÅ²éÑ¯
 			meterInfo->dbIdx = _Recno();
 		}
 
@@ -775,71 +821,73 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 		}
 	}
 
-	if(meterInfo->dbIdx != Invalid_Idx){	// æ•°æ®åº“è®°å½•ç´¢å¼•æœ‰æ•ˆæ—¶ è¯»å–è®°å½•
+	if(meterInfo->dbIdx != Invalid_Idx){	// Êı¾İ¿â¼ÇÂ¼Ë÷ÒıÓĞĞ§Ê± ¶ÁÈ¡¼ÇÂ¼
+
+		_Go(meterInfo->dbIdx);
 		query->resultCnt = 1;
 
-		_ReadFieldEx(Idx_MeterNum, strTmp);					// è¡¨å·
+		_ReadField(Idx_MeterNum, strTmp);					// ±íºÅ
 		strTmp[Size_MeterNum - 1] = '\0';
-		strncpy(meterInfo->meterNum, strTmp, Size_ListStr);	
+		strncpy(meterInfo->meterNum, strTmp, Size_MeterNum);	
 
-		_ReadFieldEx(Idx_UserNum, strTmp);					// æˆ·å·
+		_ReadField(Idx_UserNum, strTmp);					// »§ºÅ
 		strTmp[Size_UserNum - 1] = '\0';
 		strncpy(meterInfo->userNum, strTmp, Size_UserNum);	
 
-		_ReadFieldEx(Idx_UserRoomNum, strTmp);				// é—¨ç‰Œå·
+		_ReadField(Idx_UserRoomNum, strTmp);				// ÃÅÅÆºÅ
 		strTmp[Size_RoomNum - 1] = '\0';
 		strncpy(meterInfo->roomNum, strTmp, Size_RoomNum);	
 
-		_ReadFieldEx(Idx_MeterReadStatus, strTmp);			// æŠ„è¡¨çŠ¶æ€
+		_ReadField(Idx_MeterReadStatus, strTmp);			// ³­±í×´Ì¬
 		strTmp[Size_MeterReadStatus - 1] = '\0';
 		strncpy(meterInfo->meterReadStatus, strTmp, Size_MeterReadStatus);	
 
-		_ReadFieldEx(Idx_UserName, strTmp);					// æˆ·å
+		_ReadField(Idx_UserName, strTmp);					// »§Ãû
 		strTmp[Size_UserName - 1] = '\0';
 		strncpy(meterInfo->userName, strTmp, Size_UserName);	
 
-		_ReadFieldEx(Idx_UserMobileNum, strTmp);			// æ‰‹æœºå·
+		_ReadField(Idx_UserMobileNum, strTmp);			// ÊÖ»úºÅ
 		strTmp[Size_MobileNum - 1] = '\0';
 		strncpy(meterInfo->mobileNum, strTmp, Size_MobileNum);	
 
-		_ReadFieldEx(Idx_UserAddrs, strTmp);				// åœ°å€
+		_ReadField(Idx_UserAddrs, strTmp);				// µØÖ·
 		strTmp[Size_UserAddr - 1] = '\0';
 		strncpy(meterInfo->userAddr, strTmp, Size_UserAddr);	
 
-		_ReadFieldEx(Idx_MeterReadType, strTmp);			// æŠ„è¡¨æ–¹å¼
+		_ReadField(Idx_MeterReadType, strTmp);			// ³­±í·½Ê½
 		strTmp[Size_MeterReadType - 1] = '\0';
 		strncpy(meterInfo->meterReadType, strTmp, Size_MeterReadType);	
 
-		_ReadFieldEx(Idx_MeterReadTime, strTmp);			// æŠ„è¡¨æ—¶é—´
+		_ReadField(Idx_MeterReadTime, strTmp);			// ³­±íÊ±¼ä
 		strTmp[Size_MeterReadTime - 1] = '\0';
 		strncpy(meterInfo->meterReadTime, strTmp, Size_MeterReadTime);	
 
-		_ReadFieldEx(Idx_MeterValue, strTmp);				// è¡¨è¯»æ•°
+		_ReadField(Idx_MeterValue, strTmp);				// ±í¶ÁÊı
 		strTmp[Size_MeterValue - 1] = '\0';
 		strncpy(meterInfo->meterValue, strTmp, Size_MeterValue);	
 
-		_ReadFieldEx(Idx_MeterStatusStr, strTmp);			// è¡¨çŠ¶æ€
+		_ReadField(Idx_MeterStatusStr, strTmp);			// ±í×´Ì¬
 		strTmp[Size_MeterStatusStr - 1] = '\0';
 		strncpy(meterInfo->meterStatusStr, strTmp, Size_MeterStatusStr);	
 
-		_ReadFieldEx(Idx_BatteryVoltage, strTmp);			// ç”µæ± ç”µå‹
+		_ReadField(Idx_BatteryVoltage, strTmp);			// µç³ØµçÑ¹
 		strTmp[Size_BatteryVoltage - 1] = '\0';
 		strncpy(meterInfo->batteryVoltage, strTmp, Size_BatteryVoltage);	
 
-		_ReadFieldEx(Idx_SignalValue, strTmp);				// ä¿¡å·å¼ºåº¦
+		_ReadField(Idx_SignalValue, strTmp);			// ĞÅºÅÇ¿¶È
 		strTmp[Size_SignalValue - 1] = '\0';
 		strncpy(meterInfo->signalValue, strTmp, Size_SignalValue);	
 	}
 
-	_Use("");		// å…³é—­æ•°æ®åº“
+	_Use("");		// ¹Ø±ÕÊı¾İ¿â
 
 	query->dbCurrIdx = i;
 }
 
 /*
-* æ è¿°ï¼šæ˜¾ç¤ºæˆ·è¡¨ä¿¡æ¯
-* å‚ æ•°ï¼šmeterInfo	- æˆ·è¡¨ä¿¡æ¯
-* è¿” å›ï¼šuint8 	- ç•Œé¢é€€å‡ºæ—¶çš„æŒ‰é”®å€¼ï¼š KEY_CANCEL - è¿”å›é”® ï¼Œ KEY_ENTER - ç¡®è®¤é”®
+* Ãè Êö£ºÏÔÊ¾»§±íĞÅÏ¢
+* ²Î Êı£ºmeterInfo	- »§±íĞÅÏ¢
+* ·µ »Ø£ºuint8 	- ½çÃæÍË³öÊ±µÄ°´¼üÖµ£º KEY_CANCEL - ·µ»Ø¼ü £¬ KEY_ENTER - È·ÈÏ¼ü
 */
 uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 {
@@ -848,144 +896,155 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 	ListBox menuList;
 	uint8 * pByte, tryCnt;
 	uint16 ackLen = 0, timeout;
-	char *dispBuf = &DispBuf;
+	char *dispBuf;
 
-	// å‘½ä»¤èœå•
-	ListBoxCreate(&menuList, 4*16, 4*16, 4, 4, NULL, 
-		"æˆ·è¡¨å‘½ä»¤", 
-		4, 
-		"1. æŠ„è¡¨",
-		"2. å¼€é˜€",
-		"3. å…³é˜€",
-		"4. æ¸…å¼‚å¸¸");
-
-	// æˆ·è¡¨ä¿¡æ¯-ç•Œé¢
+	// »§±íĞÅÏ¢-½çÃæ
 	while(1){
 
 		_ClearScreen();
 
-		_Printfxy(0, 0, "<<æˆ·è¡¨ä¿¡æ¯", Color_White);
+		_Printfxy(0, 0, "<<»§±íĞÅÏ¢", Color_White);
 		/*---------------------------------------------*/
-		dispIdx += sprintf(&dispBuf[dispIdx], "è¡¨å·: %s\n", meterInfo->meterNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æˆ·å·: %s\n", meterInfo->userNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "é—¨ç‰Œå·: %s\n", meterInfo->roomNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æŠ„è¡¨çŠ¶æ€: %s\n", meterInfo->meterReadStatus);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æˆ·å: %s\n", meterInfo->userNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æ‰‹æœº: %s\n", meterInfo->mobileNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "åœ°å€: %s\n", meterInfo->userAddr);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æŠ„è¡¨æ–¹å¼: %s\n", meterInfo->meterReadType);
-		dispIdx += sprintf(&dispBuf[dispIdx], "æŠ„è¡¨æ—¶é—´: %s\n", meterInfo->meterReadTime);
-		dispIdx += sprintf(&dispBuf[dispIdx], "è¡¨è¯»æ•°: %s\n", meterInfo->meterValue);
-		dispIdx += sprintf(&dispBuf[dispIdx], "è¡¨çŠ¶æ€: %s\n", meterInfo->meterStatusStr);
-		dispIdx += sprintf(&dispBuf[dispIdx], "ç”µæ± ç”µå‹: %s\n", meterInfo->batteryVoltage);
-		dispIdx += sprintf(&dispBuf[dispIdx], "ä¿¡å·å¼ºåº¦: %s\n", meterInfo->signalValue);
+		dispBuf = &DispBuf;
+		dispIdx = 0;
+		dispIdx += sprintf(&dispBuf[dispIdx], "±íºÅ: %s\n", meterInfo->meterNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "»§ºÅ: %s\n", meterInfo->userNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "ÃÅÅÆºÅ: %s\n", meterInfo->roomNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "³­±í×´Ì¬: %s\n", meterInfo->meterReadStatus);
+		dispIdx += sprintf(&dispBuf[dispIdx], "»§Ãû: %s\n", meterInfo->userName);
+		dispIdx += sprintf(&dispBuf[dispIdx], "ÊÖ»ú: %s\n", meterInfo->mobileNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "µØÖ·: %s\n", meterInfo->userAddr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "³­±í·½Ê½: %s\n", meterInfo->meterReadType);
+		dispIdx += sprintf(&dispBuf[dispIdx], "³­±íÊ±¼ä: %s\n", meterInfo->meterReadTime);
+		dispIdx += sprintf(&dispBuf[dispIdx], "±í¶ÁÊı: %s\n", meterInfo->meterValue);
+		dispIdx += sprintf(&dispBuf[dispIdx], "±í×´Ì¬: %s\n", meterInfo->meterStatusStr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "µç³ØµçÑ¹: %s\n", meterInfo->batteryVoltage);
+		dispIdx += sprintf(&dispBuf[dispIdx], "ĞÅºÅÇ¿¶È: %s\n", meterInfo->signalValue);
 		//----------------------------------------------
-		_Printfxy(0, 9*16, "è¿”å›        æˆ·è¡¨å‘½ä»¤", Color_White);
+		_Printfxy(0, 9*16, "·µ»Ø        »§±íÃüÁî", Color_White);
 
-		key = ShowScrollStr(&DispBuf,  7);
-
-		if(key == KEY_CANCEL){
+		key = ShowScrollStr(dispBuf,  7);
+		if(key == KEY_CANCEL){	// ·µ»Ø
 			break;
 		}
-		else if(key == KEY_ENTER){
-			// æˆ·è¡¨å‘½ä»¤-ç•Œé¢
-			strcpy(StrDstAddr, meterInfo->meterNum);	// è¡¨å·è®¾ç½®
-			for(i = 0; i < RELAY_MAX; i++){				// ä¸­ç»§æ¸…ç©º
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-				}
+
+		
+		strcpy(StrDstAddr, meterInfo->meterNum);	// ±íºÅÉèÖÃ
+		for(i = 0; i < RELAY_MAX; i++){				// ÖĞ¼ÌÇå¿Õ
+			if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+				StrRelayAddr[i][0] = 0x00;
 			}
-			while(2){
-				
-				menuItemNo = ShowListBox(&menuList);
+		}
 
-				// æ˜¾ç¤ºæ ‡é¢˜
-				pByte = menuList.str[menuItemNo - 1];
-				sprintf(TmpBuf, "<<%s",&pByte[3]);
-				_Printfxy(0, 0, TmpBuf, Color_White);
-				//------------------------------------
+		// »§±íÃüÁî-½çÃæ
+		ListBoxCreate(&menuList, 3*16, 3*16, 4, 4, NULL, 
+			"»§±íÃüÁî", 
+			4, 
+			"1. ³­±í",
+			"2. ¿ª·§",
+			"3. ¹Ø·§",
+			"4. ÇåÒì³£");
+		//---------------------
+		key = ShowListBox(&menuList);
+		if(key == KEY_CANCEL){	// È¡ÏûÖ´ĞĞÃüÁî£¬ÖØĞÂÏÔÊ¾»§±íĞÅÏ¢
+			continue;
+		}
 
-				// å‘½ä»¤å‚æ•°å¤„ç†
-				i = 0;	
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   // å‘½ä»¤å­—
-				Args.items[1] = &Args.buf[1];	// æ•°æ®åŸŸ
+		// ÏÔÊ¾±êÌâ
+		pByte = menuList.str[menuList.strIdx];
+		sprintf(TmpBuf, "<<%s",&pByte[3]);
+		_Printfxy(0, 0, TmpBuf, Color_White);
+		//------------------------------------
 
-				switch(menuItemNo){
+		// ÃüÁî²ÎÊı´¦Àí
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // ÃüÁî×Ö
+		Args.items[1] = &Args.buf[1];	// Êı¾İÓò
 
-				case 1:
-					CurrCmd = WaterCmd_ReadRealTimeData;		// "è¯»å–ç”¨æˆ·ç”¨é‡"
-					/*---------------------------------------------*/
-					Args.buf[i++] = 0x01;		// å‘½ä»¤å­—	01
-					ackLen = 21;				// åº”ç­”é•¿åº¦ 21	
-					// æ•°æ®åŸŸ
-					Args.buf[i++] = 0x00;				// æ•°æ®æ ¼å¼ 00	
-					Args.lastItemLen = i - 1;
-					break;
+		switch(menuList.strIdx + 1){
 
-				case 2:
-					CurrCmd = WaterCmd_OpenValve;			// " å¼€é˜€ "
-					/*---------------------------------------------*/
-					Args.buf[i++] = 0x03;		// å‘½ä»¤å­—	03
-					ackLen = 3;					// åº”ç­”é•¿åº¦ 3	
-					// æ•°æ®åŸŸ
-					Args.buf[i++] = 0x00;		// å¼ºåˆ¶æ ‡è¯† 	0 - ä¸å¼ºåˆ¶ï¼Œ 1 - å¼ºåˆ¶
-					Args.buf[i++] = 0x01;		// å¼€å…³é˜€æ ‡è¯†	0 - å…³é˜€ï¼Œ 1 - å¼€é˜€
-					Args.lastItemLen = i - 1;
-					break;
+		case 1:
+			CurrCmd = WaterCmd_ReadRealTimeData;		// "¶ÁÈ¡ÓÃ»§ÓÃÁ¿"
+			/*---------------------------------------------*/
+			Args.buf[i++] = 0x01;		// ÃüÁî×Ö	01
+			ackLen = 21;				// Ó¦´ğ³¤¶È 21	
+			// Êı¾İÓò
+			Args.buf[i++] = 0x00;				// Êı¾İ¸ñÊ½ 00	
+			Args.lastItemLen = i - 1;
+			break;
 
-				case 3:
-					CurrCmd = WaterCmd_CloseValve;		// " å…³é˜€ ";
-					/*---------------------------------------------*/
-					Args.buf[i++] = 0x03;		// å‘½ä»¤å­—	03
-					ackLen = 3;					// åº”ç­”é•¿åº¦ 3	
-					// æ•°æ®åŸŸ
-					Args.buf[i++] = 0x00;		// å¼ºåˆ¶æ ‡è¯† 	0 - ä¸å¼ºåˆ¶ï¼Œ 1 - å¼ºåˆ¶
-					Args.buf[i++] = 0x00;		// å¼€å…³é˜€æ ‡è¯†	0 - å…³é˜€ï¼Œ 1 - å¼€é˜€
-					Args.lastItemLen = i - 1;
-					break;
+		case 2:
+			CurrCmd = WaterCmd_OpenValve;			// " ¿ª·§ "
+			/*---------------------------------------------*/
+			Args.buf[i++] = 0x03;		// ÃüÁî×Ö	03
+			ackLen = 3;					// Ó¦´ğ³¤¶È 3	
+			// Êı¾İÓò
+			Args.buf[i++] = 0x00;		// Ç¿ÖÆ±êÊ¶ 	0 - ²»Ç¿ÖÆ£¬ 1 - Ç¿ÖÆ
+			Args.buf[i++] = 0x01;		// ¿ª¹Ø·§±êÊ¶	0 - ¹Ø·§£¬ 1 - ¿ª·§
+			Args.lastItemLen = i - 1;
+			break;
 
-				case 4:
-					CurrCmd = WaterCmd_ClearException;		// " æ¸…å¼‚å¸¸å‘½ä»¤ ";
-					/*---------------------------------------------*/
-					Args.buf[i++] = 0x05;		// å‘½ä»¤å­—	05
-					ackLen = 1;					// åº”ç­”é•¿åº¦ 1	
-					// æ•°æ®åŸŸ
-					Args.buf[i++] = 0x00;		// å‘½ä»¤é€‰é¡¹ 00	
-					Args.lastItemLen = i - 1;
-					break;
+		case 3:
+			CurrCmd = WaterCmd_CloseValve;		// " ¹Ø·§ ";
+			/*---------------------------------------------*/
+			Args.buf[i++] = 0x03;		// ÃüÁî×Ö	03
+			ackLen = 3;					// Ó¦´ğ³¤¶È 3	
+			// Êı¾İÓò
+			Args.buf[i++] = 0x00;		// Ç¿ÖÆ±êÊ¶ 	0 - ²»Ç¿ÖÆ£¬ 1 - Ç¿ÖÆ
+			Args.buf[i++] = 0x00;		// ¿ª¹Ø·§±êÊ¶	0 - ¹Ø·§£¬ 1 - ¿ª·§
+			Args.lastItemLen = i - 1;
+			break;
 
-				default: 
-					break;
-				}
+		case 4:
+			CurrCmd = WaterCmd_ClearException;		// " ÇåÒì³£ÃüÁî ";
+			/*---------------------------------------------*/
+			Args.buf[i++] = 0x05;		// ÃüÁî×Ö	05
+			ackLen = 1;					// Ó¦´ğ³¤¶È 1	
+			// Êı¾İÓò
+			Args.buf[i++] = 0x00;		// ÃüÁîÑ¡Ïî 00	
+			Args.lastItemLen = i - 1;
+			break;
 
-				// åœ°å€å¡«å……
-				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		default: 
+			break;
+		}
 
-				// åº”ç­”é•¿åº¦ã€è¶…æ—¶æ—¶é—´ã€é‡å‘æ¬¡æ•°
-				ackLen += 14 + Addrs.itemCnt * AddrLen;
-				timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-				tryCnt = 3;
+		// µØÖ·Ìî³ä
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 
-				// å‘é€ã€æ¥æ”¶ã€ç»“æœæ˜¾ç¤º
-				if(false == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
-					if(strncmp(DispBuf, "è¡¨å·", 4) != 0){	// å‘½ä»¤å·²å–æ¶ˆ	
-						DispBuf[0] = NULL;
-					}
-				}
-				key = ShowScrollStr(&DispBuf, 7);
-				
-				
-				// ç»§ç»­ / è¿”å›
-				if (key == KEY_CANCEL){
-					break;
-				}else{
-					continue;
-				}
+		// Ó¦´ğ³¤¶È¡¢³¬Ê±Ê±¼ä¡¢ÖØ·¢´ÎÊı
+		ackLen += 14 + Addrs.itemCnt * AddrLen;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
 
-			} // while 2
-		} 
-	}// while 1
+		// ·¢ËÍ¡¢½ÓÊÕ¡¢½á¹ûÏÔÊ¾
+		if(false == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
+			if(strncmp(DispBuf, "±íºÅ", 4) != 0){	// ÃüÁîÒÑÈ¡Ïû	
+				DispBuf[0] = NULL;
+			}
+		}
+		else{
+			// ±£´æ½á¹ûµ½Êı¾İ¿â
+			SaveMeterReadResult(meterInfo);
+		}
+		_Printfxy(0, 9*16, "·µ»Ø            È·¶¨", Color_White);
+		
+		while(3){
+			key = ShowScrollStr(&DispBuf, 7);
+		
+			// ·µ»Ø / È·¶¨ 
+			if (key == KEY_CANCEL || key == KEY_ENTER){
+				break;
+			}else{
+				continue;
+			}
+		}
+
+		if(key == KEY_CANCEL){	// ·µ»Ø
+			break;
+		}
+	}// while 1  »§±íĞÅÏ¢
 	
 
 	return key;

@@ -3737,8 +3737,7 @@ void MainFuncBatchMeterReading(void)
 
 	_ClearScreen();
 
-	// 菜单
-
+	// 批量抄表-菜单
 	ListBoxCreate(&menuList, 0, 0, 5, 7, NULL,
 		"<<批量抄表",
 		5,
@@ -3748,7 +3747,6 @@ void MainFuncBatchMeterReading(void)
 		"4. 户表查询",
 		"5. 抄表统计"
 	);
-
 	
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -3766,7 +3764,6 @@ void MainFuncBatchMeterReading(void)
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
-
 		if(recCnt == 0){
 			PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n请先下载抄表档案，再进行批量操作");
 			_Sleep(1000);
@@ -3775,43 +3772,54 @@ void MainFuncBatchMeterReading(void)
 
 		switch(menuList.strIdx + 1){
 		case 1:		// 按楼栋抄表
-			/*---------------------------------------------*/
-			// 小区列表
+
+			// 小区列表-界面
+			//------------------------------------------------------------
+			_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 			QueryDistrictList(&Districts, &DbQuery);
+			ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
+				"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
+			//------------------------------------------------------------
+			_Printfxy(0, 9*16, "返回            确定", Color_White);
 			while(2){
-				_ClearScreen();
-				ListBoxCreateEx(&XqList, 0, 0, Districts.cnt, 7, NULL,
-					"<<小区选择", Districts.names, Districts.cnt);
+				
 				key = ShowListBox(&XqList);
 				if (key == KEY_CANCEL){	// 返回
 					break;
 				}
 
-				// xx小区-楼栋列表
+				// xx小区-楼栋列表-界面
+				//------------------------------------------------------------
+				_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 				Buildings.qryDistricNum = Districts.nums[XqList.strIdx];
 				QueryBuildingList(&Buildings, &DbQuery);
+				ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
+					"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
+				//------------------------------------------------------------
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				while(3){
-					_ClearScreen();
-					ListBoxCreateEx(&LdList, 0, 0, Buildings.cnt, 7, NULL,
-						"<<楼栋选择", Buildings.names, Buildings.cnt);
+
 					key = ShowListBox(&LdList);
 					if(key == KEY_CANCEL){	// 返回
 						break;
 					}
 
 					// 楼栋抄表-界面
+					//------------------------------------------------------------
 					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
 					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
+					ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
+						"<<楼栋抄表", 
+						4,
+						"1. 自动抄表",
+						"2. 已抄列表",
+						"3. 未抄列表",
+						"4. 抄表统计");
+						//"5. 重置抄表时间");
+					//------------------------------------------------------------
+					_Printfxy(0, 9*16, "返回            确定", Color_White);
 					while(4){
-						_ClearScreen();
-						ListBoxCreate(&subMenuList, 0, 0, 4, 7, NULL,
-							"<<楼栋抄表", 
-							4,
-							"1. 自动抄表",
-							"2. 已抄列表",
-							"3. 未抄列表",
-							"4. 抄表统计");
-							//"5. 重置抄表时间");
+
 						key = ShowListBox(&subMenuList);
 						if(key == KEY_CANCEL){	// 返回
 							break;
@@ -3850,7 +3858,6 @@ void MainFuncBatchMeterReading(void)
 					}// while 4 楼栋抄表
 				}// while 3 楼栋列表
 			}// while 2 小区列表
-			
 			break;
 
 		case 2:		// 清空所有档案
@@ -3900,10 +3907,6 @@ void MainFuncBatchMeterReading(void)
 
 
 		default: 
-			break;
-		}
-
-		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
 
