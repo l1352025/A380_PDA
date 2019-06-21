@@ -156,7 +156,7 @@ void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
 {
 	uint32 width = (currValue >= maxValue? 160 : 160*currValue/maxValue);
-	_GUIRectangleFill(0, y, width, y + 16, 1);
+	_GUIRectangleFill(0, y, width, y + 16, Color_Black);
 }
 
 /*
@@ -415,7 +415,8 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow,
 uint8 ShowListBox(ListBox *lbx)
 {
 	uint16 dstIndex, srcIndex, currIndex;
-	uint8 key, i, x1, y1, recX, recY, recX1, recY1;
+	uint8 key, i;
+	int16 x1, y1, recX, recY, recX1, recY1, fillX, fillY, fillX1, fillY1;
 	uint8 **lines = lbx->str;
 	uint16 fillMax = (lbx->strCnt >= lbx->totalCnt ? lbx->totalCnt : (lbx->strCnt - lbx->strCnt % lbx->maxRow));
 	uint16 fillCnt = 0;
@@ -426,25 +427,30 @@ uint8 ShowListBox(ListBox *lbx)
 	lbx->strIdx = (lbx->currIdx % fillMax);
 	lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->maxRow);
 
-	recX = (lbx->x - 4 <= 0 ? 0 : lbx->x - 4);
-	recY = (lbx->y - 4 <= 0 ? 0 : lbx->y - 4);
+	
+	recX = lbx->x - 4;
+	recY = lbx->y - 4;
 	x1 = lbx->x + lbx->maxCol * 8;
 	y1 = lbx->y + (lbx->maxRow + 2) * 16;
-	recX1 = ((x1 + 4) >= 160 ? 160 : (x1 + 4));
+	recX1 = x1 + 4;
 	recY1 = y1 - 4;
+	fillX = (recX <= 0 ? 0 : recX);
+	fillY = (recY <= 0 ? 0 : recY);
+	fillX1 = (recX1 >= 160 ? 160 : recX1);
+	fillY1 = recY1 + 4;
 	
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
 
-		_GUIRectangleFill(recX, recY, recX1, recY1, Color_White);	// 清空区域
+		_GUIRectangleFill(fillX, fillY, fillX1, fillY1, Color_White);	// 清空区域
 		_GUIRectangle(recX, recY, recX1, recY1, Color_Black);			// 绘制方框
 
 		// 显示标题：lbx->title  n/m
 		//-------------------------------------------------
 		currIndex = (lbx->totalCnt == 0 ? 0 : lbx->currIdx + 1);
-		sprintf(temp, "%d/%d ", currIndex, lbx->totalCnt);
-		StringPadLeft(temp, (lbx->maxCol - strlen(lbx->title)), ' ');
-		sprintf(title, "%s%s ", lbx->title, temp);	
+		sprintf(temp, "%d/%d", currIndex, lbx->totalCnt);
+		StringPadLeft(temp, (lbx->maxCol - strlen(lbx->title) - 1), ' ');
+		sprintf(title, "%s%s", lbx->title, temp);	
 		_Printfxy(lbx->x, lbx->y, title, Color_White);
 		_GUIHLine(lbx->x, lbx->y + 16 + 4, x1, Color_Black);	
 		//--------------------------------------------▼---
@@ -453,7 +459,7 @@ uint8 ShowListBox(ListBox *lbx)
 		}
 		_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
 		//--------------------------------------------▲---
-		_GUIHLine(lbx->x, y1 - 4, x1, Color_Black);	
+		_GUIHLine(lbx->x, recY1, x1, Color_Black);	
 
 		key = _ReadKey();
 

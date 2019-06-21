@@ -461,16 +461,16 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 			}
 		}
 
-		meters->meterCnt++;		// 当前表总数
+		meters->meterCnt++;				// 当前表总数
+		_ReadField(Idx_MeterReadStatus, strTmp);		
+		strTmp[Size_MeterReadStatus - 1] = '\0';
+		if(strcmp(strTmp, "1") != 0){
+			meters->readNgCnt++;		// 未抄数量
+		}else{
+			meters->readOkCnt++;		// 已抄数量
+		}
 		
-		if(meters->qryMeterReadStatus != NULL){
-			_ReadField(Idx_MeterReadStatus, strTmp);		// 抄表状态 过滤  NULL - 所有， ‘0’ - 未抄， ‘1’ - 已抄
-			strTmp[Size_MeterReadStatus - 1] = '\0';
-			if(strcmp(strTmp, "1") != 0){
-				meters->readNgCnt++;		// 未抄数量
-			}else{
-				meters->readOkCnt++;		// 已抄数量
-			}
+		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄， ‘1’ - 已抄
 			if(strcmp(meters->qryMeterReadStatus, strTmp) != 0){
 				_Skip(1);	// 下一个数据库记录
 				continue;
@@ -489,7 +489,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 			meters->selectField = Idx_Invalid;
 			break;
 		}
-		if(meters->selectField == Idx_Invalid){	// 未选择字段，则不构建列表
+		if(meters->selectField == Idx_Invalid){		// 未选择字段，则不构建列表
 			_Skip(1);	// 下一个数据库记录
 			continue;
 		}
@@ -522,10 +522,10 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 */
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
-	uint8 key, i, cnt = 0, isCancel = false;
-	uint8 tryCnt;
-	uint16 ackLen = 0, timeout;
-	char strTmp[50];
+	uint8 key, i, cnt, tryCnt, isCancel = false;
+	uint16 ackLen, timeout, dispIdx;
+	char *dispBuf = &DispBuf;
+	MeterInfoSt *meterInfo = &MeterInfo;
 
 	// 中继清空
 	for(i = 0; i < RELAY_MAX; i++){				
@@ -533,18 +533,47 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			StrRelayAddr[i][0] = 0x00;
 		}
 	}
+
+	cnt = 0;	// 已抄数初始化
+
+	// 自动抄表
 	while(cnt < meters->cnt){
 
-		_ClearScreen();
-		_Printfxy(0, 0, "<<自动抄表", Color_White);
-		/*---------------------------------------------*/
-		// 设置表号
-		_Select(1);
-		_Use(MeterDocDB);	// 打开数据库
-		_Go(meters->dbIdx[cnt]);
+		// 读取当前户表信息
+		meterInfo->dbIdx = meters->dbIdx[cnt];
+		QueryMeterInfo(meterInfo, &DbQuery);
 
-		_Use("");			// 关闭数据库
-		strcpy(StrDstAddr, strTmp);
+		// 自动抄表-界面显示
+		_ClearScreen();
+		PrintfXyMultiLine_VaList(0, 0, "<<自动抄表  %3d/%-3d ", (cnt + 1), meters->cnt);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		dispBuf = &DispBuf;
+		dispIdx = 0;
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", meterInfo->meterNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "户号: %s\n", meterInfo->userNum);
+		dispIdx += sprintf(&dispBuf[dispIdx], "地址: %s\n\n", meterInfo->userAddr);
+		
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表进度: %d/%d\n", (cnt + 1), meters->cnt);
+		PrintfXyMultiLine(0, 1*16 + 8, dispBuf, 7);	
+		ShowProgressBar(7*16, meters->cnt, cnt + 1);	// 进度条
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回  < 轮抄中 >    ", Color_White);
+		
+		i = 5;
+		while(i--){			// 1s 等待按键
+			key = _GetKeyExt();
+			_Sleep(200);
+		}
+		if(key == KEY_CANCEL){	// 取消轮抄
+			isCancel = true;
+			break;
+		}
+		
+		// 表号设置
+		strcpy(StrDstAddr, meterInfo->meterNum);
+		StringPadLeft(StrDstAddr, 12, '0');
 
 		// 命令参数处理
 		i = 0;	
@@ -572,14 +601,13 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 				break;
 			}
 		}
-
-		//----------------------------------------------
-		_Printfxy(0, 9*16, "返回  < 轮抄中 >     ", Color_White);
-	
+		else{
+			// 保存结果到数据库
+			SaveMeterReadResult(meterInfo);
+		}
 	}
 
 	if(isCancel){
-		
 		_Printfxy(0, 9*16, "返回  < 已取消 >    ", Color_White);
 	}
 	else{
@@ -587,7 +615,10 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	}
 	
 	while(1){
-		
+		key = _ReadKey();
+		if(key == KEY_CANCEL || KEY_ENTER){
+			break;
+		}
 	}
 	
 	return key;
@@ -606,7 +637,7 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 
 	_ClearScreen();
 
-	_Printfxy(0, 0, "<<户表信息", Color_White);
+	_Printfxy(0, 0, "<<抄表统计", Color_White);
 	/*---------------------------------------------*/
 	dispIdx += sprintf(&dispBuf[dispIdx], "小区: %s\n", meters->districName);
 	dispIdx += sprintf(&dispBuf[dispIdx], "楼栋: %s\n", meters->buildingName);
@@ -614,7 +645,7 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 	dispIdx += sprintf(&dispBuf[dispIdx], "已抄: %d\n", meters->readOkCnt);
 	dispIdx += sprintf(&dispBuf[dispIdx], "未抄: %d\n", meters->readNgCnt);
 	//----------------------------------------------
-	_Printfxy(0, 9*16, "返回            确定", Color_White);
+	_Printfxy(0, 9*16, "返回  < 完成 >  确定", Color_White);
 
 	key = ShowScrollStr(&DispBuf,  7);
 	
@@ -645,8 +676,6 @@ uint8 ShowMeterList(MeterListSt *meters)
 	_Printfxy(0, 9*16, "返回            确定", Color_White);
 	while(1){
 
-		_ClearScreen();
-		
 		key = ShowListBox(&showTpList);
 		if(key == KEY_CANCEL){	// 返回
 			break;
@@ -680,14 +709,13 @@ uint8 ShowMeterList(MeterListSt *meters)
 				meterList.strIdx, meterList.strCnt, meterList.currIdx, meterList.totalCnt);
 			#endif
 			
-			_ClearScreen();
-		
 			key = ShowListBox(&meterList);
 			if(key == KEY_CANCEL){	// 返回
 				break;
 			}
 			if(key == KEY_ENTER && meters->cnt == 0){	
 				_Printfxy(0, 5*16, "当前列表无条目！", Color_White);
+				_Sleep(3000);
 				continue;
 			}
 			
