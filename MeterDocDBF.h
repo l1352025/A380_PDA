@@ -9,9 +9,9 @@
 #include "Common.h"
 
 //----------------------	宏定义		------------------------
-#define	MeterDocDB 	"jk.dbf"			// 表档案数据库文件名
+#define	MeterDocDB 		"jk.dbf"		// 表档案数据库文件名
 
-#define Invalid_Idx	(0xFFFFFFFF)		// 无效索引
+#define Invalid_dbIdx	(0xFFFFFFFF)	// 无效索引
 
 #define District_Max				20	// 最大小区数
 #define Building_Max				50	// 一个小区-最大楼栋数
@@ -702,7 +702,7 @@ uint8 ShowMeterList(MeterListSt *meters)
 		//------------------------------------------------------------
 		_Printfxy(0, 9*16, "返回        户表信息", Color_White);
 		while(2){
-			#if Log_On
+			#if LOG_ON
 			LogPrint("meters->idx = %d,  meters->cnt = %d,  meters->meterCnt = %d,  meters->selectField = %d \n \
 				meterList.strIdx = %d, meterList.strCnt = %d, meterList.currIdx = %d, meterList.totalCnt = %d \n", \
 				meters->idx, meters->cnt, meters->meterCnt, meters->selectField, \
@@ -714,14 +714,15 @@ uint8 ShowMeterList(MeterListSt *meters)
 				break;
 			}
 			if(key == KEY_ENTER && meters->cnt == 0){	
-				_Printfxy(0, 5*16, "当前列表无条目！", Color_White);
+				_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
+				_Printfxy(0, 4*16, "当前列表无条目！", Color_White);
 				_Sleep(3000);
 				continue;
 			}
 			
 			meters->idx = (uint8)(meterList.strIdx & 0xFF);
 			
-			#if Log_On
+			#if LOG_ON
 			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
 				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
 			#endif
@@ -731,14 +732,14 @@ uint8 ShowMeterList(MeterListSt *meters)
 			MeterInfo.dbIdx = meters->dbIdx[meters->idx];
 			QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
 			
-			#if Log_On
+			#if LOG_ON
 			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
 				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
 			#endif
 			//------------------------------------------------------
 			key = ShowMeterInfo(&MeterInfo);	// 返回到列表
 
-			#if Log_On
+			#if LOG_ON
 			LogPrint("meters->idx = %d,  meters->cnt = %d, meters->meterCnt = %d,  meters->selectField = %d \n " , \
 				meters->idx, meters->cnt, meters->meterCnt, meters->selectField);
 			#endif
@@ -795,13 +796,13 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 	query->resultCnt = 0;
 	query->errorCode = 0;
 
-	if(meterInfo->dbIdx != Invalid_Idx){	// 数据库记录索引 是否有效？
+	if(meterInfo->dbIdx != Invalid_dbIdx){	// 数据库记录索引 是否有效？
 		if(meterInfo->dbIdx > recCnt -1){
-			meterInfo->dbIdx = Invalid_Idx;
+			meterInfo->dbIdx = Invalid_dbIdx;
 		}
 	}
 
-	if(meterInfo->dbIdx == Invalid_Idx){	// 数据库记录索引无效时 执行查询
+	if(meterInfo->dbIdx == Invalid_dbIdx){	// 数据库记录索引无效时 执行查询
 
 		#if 0
 		for(i = 0; i < recCnt; i++){
@@ -809,7 +810,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 				_ReadField(Idx_MeterNum, strTmp);		// 按表号查询
 				strTmp[Size_MeterNum - 1] = '\0';
 				if(strcmp(meterInfo->qryMeterNum, strTmp) == 0){
-					meterInfo->dbIdx = i;
+					meterInfo->dbIdx = i + 1;
 					break;
 				}
 			}
@@ -817,7 +818,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 				_ReadField(Idx_UserNum, strTmp);		// 按户号查询
 				strTmp[Size_UserNum - 1] = '\0';
 				if(strcmp(meterInfo->qryUserNum, strTmp) == 0){
-					meterInfo->dbIdx = i;
+					meterInfo->dbIdx = i + 1;
 					break;
 				}
 			}
@@ -825,7 +826,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 				_ReadField(Idx_UserRoomNum, strTmp);	// 按门牌号查询
 				strTmp[Size_RoomNum - 1] = '\0';
 				if(strcmp(meterInfo->qryRoomNum, strTmp) == 0){
-					meterInfo->dbIdx = i;
+					meterInfo->dbIdx = i + 1;
 					break;
 				}
 			}
@@ -848,12 +849,9 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 			meterInfo->dbIdx = _Recno();
 		}
 
-		if(i >= recCnt){
-			meterInfo->dbIdx = Invalid_Idx;
-		}
 	}
 
-	if(meterInfo->dbIdx != Invalid_Idx){	// 数据库记录索引有效时 读取记录
+	if(meterInfo->dbIdx != Invalid_dbIdx){	// 数据库记录索引有效时 读取记录
 
 		_Go(meterInfo->dbIdx);
 		query->resultCnt = 1;
@@ -983,7 +981,10 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		}
 
 		// 显示标题
+		_ClearScreen();
 		pByte = menuList.str[menuList.strIdx];
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		//--------------------------------------
 		sprintf(TmpBuf, "<<%s",&pByte[3]);
 		_Printfxy(0, 0, TmpBuf, Color_White);
 		//------------------------------------
@@ -1060,22 +1061,21 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 			// 保存结果到数据库
 			SaveMeterReadResult(meterInfo);
 		}
+		//------------------------------------------------------
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
 		
-		while(3){
-			key = ShowScrollStr(&DispBuf, 7);
-		
-			// 返回 / 确定 
-			if (key == KEY_CANCEL || key == KEY_ENTER){
-				break;
-			}else{
-				continue;
-			}
-		}
+		// while(3){
 
-		if(key == KEY_CANCEL){	// 返回
-			break;
-		}
+		// 	// 返回 / 确定 
+		// 	if (key == KEY_CANCEL || key == KEY_ENTER){
+		// 		break;
+		// 	}else{
+		// 		continue;
+		// 	}
+		// }
+
+		key = ShowScrollStr(&DispBuf, 7);
+
 	}// while 1  户表信息
 	
 

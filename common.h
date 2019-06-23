@@ -19,12 +19,12 @@ typedef unsigned char bool;
 
 
 #ifndef VerInfo_Release
-#define Log_On      1           // 调试日志开关
+#define LOG_ON      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
 #define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
-#define RxBeep_On   1       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
+#define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
-#define Log_On      0 
+#define LOG_ON      0 
 #define RxBeep_On   1       
 #endif
 
@@ -150,6 +150,7 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse);
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
+int StringTrimEnd(const char * srcStr, char trimChar);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
 void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);

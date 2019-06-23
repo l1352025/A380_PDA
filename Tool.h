@@ -71,7 +71,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 */
 void LogPrint(const char * format, ...)
 {
-#if Log_On
+#if LOG_ON
 	
 #if !(LogScom_On)
 	int fp;
@@ -125,7 +125,7 @@ void LogPrint(const char * format, ...)
 */
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
 {
-#if Log_On
+#if LOG_ON
 	const char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
 	uint16 i = 0;
 	uint8 *tmp;
@@ -767,32 +767,32 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 {
 	static uint8 dispLine[21] = {0};
 	uint8 row = 0, col = 0; 
-	uint8 * pcol, *prow;
+	char * pChar, *prow;
 
-	pcol = buf;
+	pChar = buf;
 
 	for(row = 0; row < maxLines; row++){
 
-		prow = pcol;
+		prow = pChar;
 
 		for(col = x/8; col < 20; col++){
-			if(col == 19 && *(pcol + 1) == '\n'){
-				pcol++;
+			if(col == 19 && *(pChar + 1) == '\n'){
+				pChar++;		// 第21列是换行，跳过1字符
 			}
-			else if(*pcol == '\n'){
-				pcol++;
+			else if(*pChar == '\n'){
+				pChar++;
 				break;
 			}
-			else if(*pcol == 0x00){
+			else if(*pChar == 0x00){
 				break;
 			}
-			pcol++;
+			pChar++;
 		}
 		memcpy(dispLine, prow, col);
 		dispLine[col] = 0x00;
 		_Printfxy(x, y, dispLine, Color_White);
 
-		if(*pcol == 0x00){
+		if(*pChar == 0x00){
 			break;
 		}
 
@@ -964,7 +964,7 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 */
 int StringTrimStart(const char * srcStr, char trimChar)
 {
-	uint32 srcStrLen, i = 0;
+	int srcStrLen, i = 0;
 	char *pr, *pw;
 
 	srcStrLen = strlen(srcStr);
@@ -993,6 +993,31 @@ int StringTrimStart(const char * srcStr, char trimChar)
 	return (srcStrLen - i);
 }
 
+/*
+* 描  述：字符串尾部裁剪
+* 参  数：srcStr - 字符串起始地址
+		  trimChar - 裁剪的字符
+* 返回值：int 裁剪后的字符串长度
+*/
+int StringTrimEnd(const char * srcStr, char trimChar)
+{
+	int srcStrLen, i = 0;
+	char *pr = srcStr;
+
+	srcStrLen = strlen(srcStr);
+	if(srcStrLen == 0 || trimChar == 0x00){
+		return 0;
+	}
+	
+	for(i = srcStrLen - 1; i >= 0; i--){
+		if(pr[i] != trimChar){
+			break;
+		}
+	}
+	pr[i + 1] = 0x00;
+
+	return (srcStrLen - i);
+}
 
 /*
 * 描  述：16进制数转换成对应的字符

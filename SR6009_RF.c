@@ -3729,11 +3729,8 @@ void MainFuncBatchMeterReading(void)
 	uint8 key;
 	ListBox menuList, menuList_2, menuList_3;
 	ListBox XqList, LdList;				// 小区/楼栋列表
-	_GuiInputBoxStru inputSt1, inputSt2;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
+	_GuiInputBoxStru inputSt;
 	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 dispIdx;
 	char *dispBuf = &DispBuf;
 	char qryStrXq[50], qryStrLd[50];
@@ -3767,10 +3764,10 @@ void MainFuncBatchMeterReading(void)
 			break;
 		}
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
-		isUiFinish = false;
 
 		if(recCnt == 0){
-			PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n请先下载抄表档案，再进行批量操作");
+			_GUIRectangleFill(0, 3*16 - 4, 160, 6*16 + 4, Color_White);
+			PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n 请先下载抄表档案，\n 再进行批量操作");
 			_Sleep(1000);
 			break;
 		}
@@ -3869,7 +3866,8 @@ void MainFuncBatchMeterReading(void)
 
 		case 2:		// 清空所有档案
 			_ClearScreen();
-			_Printfxy(0, 5*16, "  清空档案中... ", Color_White);
+			_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
+			_Printfxy(0, 4*16, "  清空档案中... ", Color_White);
 			
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
@@ -3877,14 +3875,15 @@ void MainFuncBatchMeterReading(void)
 			recCnt = _Reccount();	
 			_Use("");		// 关闭数据库
 
-			_Printfxy(0, 5*16, "  清空档案完成！ ", Color_White);
+			_Printfxy(0, 4*16, "  清空档案完成！ ", Color_White);
 			_Sleep(3000);
 			break;
 
 		case 3:		// 重置抄表时间
 
 			_ClearScreen();
-			_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
+			_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
+			_Printfxy(0, 4*16, " 抄表时间重置中... ", Color_White);
 			//------------------------------------------------------------
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
@@ -3897,7 +3896,7 @@ void MainFuncBatchMeterReading(void)
 			}while(_Eof() == false);
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
-			_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
+			_Printfxy(0, 4*16, " 抄表时间重置完成！ ", Color_White);
 			_Sleep(3000);
 			break;
 
@@ -3905,7 +3904,7 @@ void MainFuncBatchMeterReading(void)
 			// 户表查询-界面
 			//------------------------------------------------------------
 			ListBoxCreate(&menuList_2, 0, 0, 20, 7, 3, NULL,
-				"户表查询", 
+				"<<户表查询", 
 				3,
 				"1. 按表号查询",
 				"2. 按户号查询",
@@ -3919,18 +3918,53 @@ void MainFuncBatchMeterReading(void)
 					break;
 				}
 
-				// 户表查询-界面
+				// 户表查询-输入界面
 				//------------------------------------------------------------
-				
+				_ClearScreen();
+				sprintf(&TmpBuf[0], "<<%s", &(menuList_2.str[menuList_2.strIdx][3]));
+				_Printfxy(0, 0*16, &TmpBuf[0], Color_White);
+				_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+				MeterInfo.dbIdx = Invalid_dbIdx;
+				MeterInfo.qryMeterNum = NULL;
+				MeterInfo.qryUserNum = NULL;
+				MeterInfo.qryRoomNum = NULL;
 				switch (menuList_2.strIdx + 1){
-				case 1: pByte = "表号: "; break;
-				case 2: pByte = "户号: "; break;
-				case 3: pByte = "门牌号:"; break;
+				case 1: pByte = "输入表号: "; MeterInfo.qryMeterNum = StrBuf[0]; break;
+				case 2: pByte = "输入户号: "; MeterInfo.qryUserNum = StrBuf[0]; break;
+				case 3: pByte = "输入门牌号:"; MeterInfo.qryRoomNum = StrBuf[0]; break;
 				default: break;
 				}
-				
-				//------------------------------------------------------------
+				_Printfxy(0, 2*16, pByte, Color_White);
+				StrBuf[0][0] = 0x00;
+				inputSt.left = 0;
+				inputSt.top = 3*16;
+				inputSt.width = 10*16;
+				inputSt.hight = 16;
+				inputSt.caption = "";
+				inputSt.context = StrBuf[0];
+				inputSt.datelen = 20;
+				inputSt.IsClear = true;
+				inputSt.keyUpDown = false;
+				inputSt.type = 1;
+				_GUIHLine(0, 9*16 - 4, 160, Color_Black);	
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				//------------------------------------------------------------
+				if(KEY_CANCEL ==  _GetStr(&inputSt)){
+					continue;
+				}
+				StringTrimStart(StrBuf[0],  ' ');
+				StringTrimEnd(StrBuf[0],  ' ');
+
+				QueryMeterInfo(&MeterInfo, &DbQuery);
+				if(DbQuery.resultCnt > 0){
+					ShowMeterInfo(&MeterInfo);
+				}
+				else{
+					_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
+					_Printfxy(0, 4*16, " 查询失败，未找到 ", Color_White);
+					_Sleep(3000);
+				}
+				
 
 			} // while 2 户表查询
 			break;
@@ -3960,9 +3994,15 @@ void MainFuncBatchMeterReading(void)
 				//---------------------------------------------------------------------
 				dispBuf = &DispBuf;
 				dispIdx = 0;
-				dispIdx += sprintf(&dispBuf[dispIdx], "小区:%s\n", qryStrXq);
-				dispIdx += sprintf(&dispBuf[dispIdx], "楼栋:%s\n", qryStrLd);
-				PrintfXyMultiLine(0, 5*16, dispBuf, 7);
+				//dispIdx += sprintf(&dispBuf[dispIdx], "小区:%s \n", qryStrXq);
+				//dispIdx += sprintf(&dispBuf[dispIdx], "楼栋:%s", qryStrLd);
+
+				#if LOG_ON
+					LogPrint("qryStrXq = %s qryStrLd = %s dispBuf = %s ", 
+						qryStrXq, qryStrLd, dispBuf);
+				#endif
+				//PrintfXyMultiLine(0, 5*16, dispBuf, 7);
+				PrintfXyMultiLine_VaList(0, 5*16, "小区:%s \n楼栋:%s", qryStrXq, qryStrLd);
 				//----------------------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -4031,9 +4071,9 @@ void MainFuncBatchMeterReading(void)
 					else{
 
 						if(qryTypeXq == 0){
-							_GUIRectangleFill(0, 3*16 - 4, 160, 6*16 + 4, Color_White);
-							_Printfxy(0, 3*16, " 请先选择 ", Color_White);
-							_Printfxy(0, 4*16, " 该楼栋所在小区! ", Color_White);
+							_GUIRectangleFill(0, 4*16 - 4, 160, 6*16 + 4, Color_White);
+							_Printfxy(0, 4*16, " 选择某个楼栋时 ", Color_White);
+							_Printfxy(0, 5*16, " 必须选择所在小区! ", Color_White);
 							_Sleep(3000);
 							continue;
 						}
@@ -4066,7 +4106,7 @@ void MainFuncBatchMeterReading(void)
 					}
 					
 				}
-				else{	// 统计
+				else {	// if(menuList_2.strIdx == 3){	// 统计
 					Meters.qryDistricNum = (qryTypeXq == 0 ? NULL : Districts.nums[qryIndexXq]);
 					Meters.qryBuildingNum = (qryTypeLd == 0 ? NULL : Buildings.nums[qryIndexLd]);
 					Meters.selectField = Idx_Invalid;

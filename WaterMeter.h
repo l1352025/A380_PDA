@@ -2304,7 +2304,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 		PrintfXyMultiLine_VaList(0, 5*16, "µ±Ç°Ó¦´ð %d/%d \n", RxLen, ackLen);
 
-#if Log_On
+#if LOG_ON
 		LogPrintBytes("Tx: ", TxBuf, TxLen);
 		LogPrintBytes("Rx: ", RxBuf, RxLen);
 #endif
