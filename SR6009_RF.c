@@ -3749,21 +3749,20 @@ void MainFuncBatchMeterReading(void)
 		"4. 户表查询",
 		"5. 抄表统计"
 	);
-	//------------------------------------------------------------
-	_Printfxy(0, 9*16, "返回            确定", Color_White);
-
-	_Select(1);
-	_Use(MeterDocDB);	// 打开数据库
-	recCnt = _Reccount();
-	_Use("");			// 关闭数据库
-
 	while(1){
 
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
 		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
 		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
+
+		_Select(1);
+		_Use(MeterDocDB);	// 打开数据库
+		recCnt = _Reccount();
+		_Use("");			// 关闭数据库
 
 		if(recCnt == 0){
 			_GUIRectangleFill(0, 3*16 - 4, 160, 6*16 + 4, Color_White);
@@ -3781,11 +3780,11 @@ void MainFuncBatchMeterReading(void)
 			QueryDistrictList(&Districts, &DbQuery);
 			ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
 				"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
-			//------------------------------------------------------------
-			_Printfxy(0, 9*16, "返回            确定", Color_White);
 			while(2){
 				
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				key = ShowListBox(&XqList);
+				//------------------------------------------------------------
 				if (key == KEY_CANCEL){	// 返回
 					break;
 				}
@@ -3798,10 +3797,11 @@ void MainFuncBatchMeterReading(void)
 				ListBoxCreateEx(&LdList, 0, 0, 20, 7, Buildings.cnt, NULL,
 					"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
 				//------------------------------------------------------------
-				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				while(3){
 	
+					_Printfxy(0, 9*16, "返回            确定", Color_White);
 					key = ShowListBox(&LdList);
+					//------------------------------------------------------------
 					if(key == KEY_CANCEL){	// 返回
 						break;
 					}
@@ -3818,13 +3818,11 @@ void MainFuncBatchMeterReading(void)
 						"3. 未抄列表",
 						"4. 抄表统计");
 						//"5. 重置抄表时间");
-					//------------------------------------------------------------
-					_Printfxy(0, 9*16, "返回            确定", Color_White);
 					while(4){
 
-						key = ShowListBox(&menuList_2);
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						
+						key = ShowListBox(&menuList_2);
+						//------------------------------------------------------------
 						if(key == KEY_CANCEL){	// 返回
 							break;
 						}
@@ -3909,11 +3907,11 @@ void MainFuncBatchMeterReading(void)
 				"1. 按表号查询",
 				"2. 按户号查询",
 				"3. 按门牌号查询");
-			//------------------------------------------------------------
-			_Printfxy(0, 9*16, "返回            确定", Color_White);
 			while(2){
 
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				key = ShowListBox(&menuList_2);
+				//------------------------------------------------------------
 				if(key == KEY_CANCEL){	// 返回
 					break;
 				}
@@ -3965,7 +3963,6 @@ void MainFuncBatchMeterReading(void)
 					_Sleep(3000);
 				}
 				
-
 			} // while 2 户表查询
 			break;
 
@@ -3979,8 +3976,6 @@ void MainFuncBatchMeterReading(void)
 				"2. 楼栋选择>",
 				"3. 统计");
 			//------------------------------------------------------------
-			_Printfxy(0, 9*16, "返回            确定", Color_White);
-			
 			sprintf(qryStrXq, "全部");
 			sprintf(qryStrLd, "全部");
 			qryTypeXq = 0;		// 0 - 全部， 1 - 选择某个
@@ -3990,24 +3985,18 @@ void MainFuncBatchMeterReading(void)
 			while(2){
 
 				_ClearScreen();
-				_GUIRectangleFill(0, 5*16, 160, 9*16, Color_White);
+				// 抄表统计-界面
 				//---------------------------------------------------------------------
 				dispBuf = &DispBuf;
 				dispIdx = 0;
-				//dispIdx += sprintf(&dispBuf[dispIdx], "小区:%s \n", qryStrXq);
-				//dispIdx += sprintf(&dispBuf[dispIdx], "楼栋:%s", qryStrLd);
-
-				#if LOG_ON
-					LogPrint("qryStrXq = %s qryStrLd = %s dispBuf = %s ", 
-						qryStrXq, qryStrLd, dispBuf);
-				#endif
-				//PrintfXyMultiLine(0, 5*16, dispBuf, 7);
-				PrintfXyMultiLine_VaList(0, 5*16, "小区:%s \n楼栋:%s", qryStrXq, qryStrLd);
+				dispIdx += sprintf(&dispBuf[dispIdx], "小区: %s\n", qryStrXq);
+				dispIdx += sprintf(&dispBuf[dispIdx], "楼栋: %s", qryStrLd);
+				PrintfXyMultiLine(0, 5*16, dispBuf, 7);
 				//----------------------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
-
 				key = ShowListBox(&menuList_2);
+				//----------------------------------------------------------------------
 				if(key == KEY_CANCEL){	// 返回
 					break;
 				}
@@ -4016,8 +4005,8 @@ void MainFuncBatchMeterReading(void)
 					//----------------------------------------------
 					ListBoxCreate(&menuList_3, 2*16, 2*16, 12, 2, 2, NULL, 
 					"小区选择", 2, "全部", "选择某个");
-					//----------------------------------------------
 					key = ShowListBox(&menuList_3);
+					//----------------------------------------------
 					if(key == KEY_CANCEL){	// 未选择，返回
 						continue;
 					}
@@ -4033,10 +4022,9 @@ void MainFuncBatchMeterReading(void)
 						QueryDistrictList(&Districts, &DbQuery);
 						ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
 							"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
-						//------------------------------------------------------------
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						
 						key = ShowListBox(&XqList);
+						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
 						}
@@ -4058,8 +4046,8 @@ void MainFuncBatchMeterReading(void)
 					//----------------------------------------------
 					ListBoxCreate(&menuList_3, 2*16, 3*16, 12, 2, 2, NULL, 
 					"楼栋选择", 2, "全部", "选择某个");
-					//-----------------------------------------------
 					key = ShowListBox(&menuList_3);
+					//----------------------------------------------
 					if(key == KEY_CANCEL){	// 未选择，返回
 						continue;
 					}
@@ -4085,10 +4073,10 @@ void MainFuncBatchMeterReading(void)
 						QueryBuildingList(&Buildings, &DbQuery);
 						ListBoxCreateEx(&LdList, 0, 0, 20, 7, Buildings.cnt, NULL,
 							"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
-						//------------------------------------------------------------
+
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-					
 						key = ShowListBox(&LdList);
+						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
 						}

@@ -727,30 +727,55 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 {
 	uint8 lineCnt = 0, col = 0; 
-	uint8 * pr = buf;
+	uint8 *pcurrLine, *pnextLine, *pr;
 
-	// first line
-	lines[lineCnt] = pr;
-	lineCnt++;
+	pcurrLine = buf;
+	pr = buf;
 
-	// next lines
 	while(*pr != 0x00){
-		if(*pr == '\n' || (x + col * 8) > 160){
+		if((x/8 + col) >= 20){
+			if(col == 21){
+				pr -= 2;
+			}
+			else{
+				pr = (*pr == '\n' ? pr + 1 : pr);
+			}
+			pnextLine = pr;
 			
+			lines[lineCnt++] = pcurrLine;
+			pcurrLine = pnextLine;
+
 			col = 0;
 			x = 0;
-			pr = (*pr == '\n' ? pr + 1 : pr);
-
-			lines[lineCnt] = pr;
-			lineCnt++;
-
-			if(*pr == 0x00){
-				lineCnt--;
-				break;
-			}
 		}
-		pr++;
-		col++;
+		else if(*pr == '\n'){
+			pr++;
+			pnextLine = pr;
+
+			lines[lineCnt++] = pcurrLine;
+			pcurrLine = pnextLine;
+
+			col = 0;
+			x = 0;
+		}
+
+		if(*pr == 0x00){
+			break;
+		}
+		else if(*(pr) > 0x80){
+			pr += 2;
+			col += 2;
+		}
+		else{
+			pr++;
+			col++;
+		}
+		
+	}
+
+	// last line 
+	if(pcurrLine != 0x00){
+		lines[lineCnt++] = pcurrLine;
 	}
 
 	return lineCnt;
@@ -766,40 +791,68 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 {
 	static uint8 dispLine[21] = {0};
-	uint8 row = 0, col = 0; 
-	char * pChar, *prow;
+	uint8 lineCnt = 0, col = 0; 
+	uint8 *pcurrLine, *pnextLine, *pr;
 
-	pChar = buf;
+	pcurrLine = buf;
+	pr = buf;
 
-	for(row = 0; row < maxLines; row++){
-
-		prow = pChar;
-
-		for(col = x/8; col < 20; col++){
-			if(col == 19 && *(pChar + 1) == '\n'){
-				pChar++;		// 第21列是换行，跳过1字符
+	while(*pr != 0x00 && lineCnt < maxLines){
+		if((x/8 + col) >= 20){
+			if(col == 21){
+				pr -= 2;
+				col -= 2;
 			}
-			else if(*pChar == '\n'){
-				pChar++;
-				break;
+			else{	// col == 20
+				pr = (*pr == '\n' ? pr + 1 : pr);
 			}
-			else if(*pChar == 0x00){
-				break;
-			}
-			pChar++;
+			pnextLine = pr;
+			
+			memcpy(dispLine, pcurrLine, col);
+			dispLine[col] = 0x00;
+			_Printfxy(x, y, dispLine, Color_White);
+			lineCnt++;
+			pcurrLine = pnextLine;
+
+			col = 0;
+			x = 0;
+			y += 16;
 		}
-		memcpy(dispLine, prow, col);
-		dispLine[col] = 0x00;
-		_Printfxy(x, y, dispLine, Color_White);
+		else if(*pr == '\n'){
+			pr++;
+			pnextLine = pr;
 
-		if(*pChar == 0x00){
+			memcpy(dispLine, pcurrLine, col);
+			dispLine[col] = 0x00;
+			_Printfxy(x, y, dispLine, Color_White);
+			lineCnt++;
+			pcurrLine = pnextLine;
+
+			col = 0;
+			x = 0;
+			y += 16;
+		}
+
+		if(*pr == 0x00){
 			break;
 		}
-
-		col = 0;
-		x = 0;
-		y += 16;
+		else if(*pr > 0x80){
+			pr += 2;
+			col += 2;
+		}
+		else{
+			pr++;
+			col++;
+		}
 	}
+
+	// last line 
+	if(pcurrLine != 0x00 && lineCnt < maxLines){
+		memcpy(dispLine, pcurrLine, col);
+		dispLine[col] = 0x00;
+		_Printfxy(x, y, dispLine, Color_White);
+	}
+	
 }
 
 /*
