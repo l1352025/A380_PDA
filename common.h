@@ -151,6 +151,7 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
 int StringTrimStart(const char * srcStr, char trimChar);
 int StringTrimEnd(const char * srcStr, char trimChar);
+void StringFixGbkStrEndError(const char * srcStr);
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue);
 void LableCreate(UI_Item *item, uint8 x, uint8 y, const char * title);
 void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * text, uint8 maxLen, uint8 width, bool isClear);

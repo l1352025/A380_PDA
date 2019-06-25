@@ -40,17 +40,18 @@ void WaterCmdFunc_CommonCmd(void)
 		"3. 设用量和脉冲系数",
 		"4. 开阀",
 		"5. 关阀",
-		"6. 清异常命令"
+		"6. 清异常"
 	);
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -286,12 +287,13 @@ void WaterCmdFunc_TestCmd(void)
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -606,12 +608,13 @@ void WaterCmdFunc_Upgrade(void)
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -827,12 +830,13 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -1127,12 +1131,13 @@ void WaterCmdFunc_WorkingParams(void)
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -1172,15 +1177,18 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetIpPortMode;			// 设IP+端口+模式
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					if(StrBuf[1][0] == 0x00){
-						StrBuf[1][0] = 0x01;
-					}
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
-					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
-						"1", "10", "100", "1000");
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:", StrBuf[0], 2, 
+						"Coap", "UDP");
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Ip地址:");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "   >", StrBuf[1], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 7*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 15*8, (uiRowIdx)*16, ".", StrBuf[4], 3, 3*8, true);
+					uiRowIdx++;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "端口号:", StrBuf[5], 5, 6*8, true);
 					break;
 				}
+
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
 					sprintf(StrBuf[0], " 请输入");
 					currUi = uiRowIdx - 2 - 2;
@@ -1643,12 +1651,13 @@ void WaterCmdFunc_Other(void)
 
 	while(1){
 
-		_ClearScreen();
-
-		menuItemNo = ShowListBox(&menuList);
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
+		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
@@ -1904,27 +1913,33 @@ void WaterCmdFunc_Other(void)
 
 void WaterCmdFunc(void)
 {
-
 	_GuiMenuStru menu;
+
+	/* v2.2 菜单
+	// menu.title= "<<工程调试 ";		
+	// menu.str[0]=" 常用命令 ";
+	// menu.str[1]=" 测试命令 ";
+	// menu.str[2]=" 程序升级 ";
+	// menu.str[3]=" 预缴用量 ";
+	// menu.str[4]=" 工作参数 ";
+	// menu.str[5]=" 其他操作 ";
+	// menu.str[6]=" 版本信息 ";
+	*/
 	
 	menu.left=0;
 	menu.top=0;
-	menu.no=7;
+	menu.no=4;
 	menu.title= "<<工程调试 ";		// 工程调试 --> 即原来的 表端操作
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 测试命令 ";
-	menu.str[2]=" 程序升级 ";
-	menu.str[3]=" 预缴用量 ";
-	menu.str[4]=" 工作参数 ";
-	menu.str[5]=" 其他操作 ";
-	menu.str[6]=" 版本信息 ";
+	menu.str[2]=" 工作参数 ";
+	menu.str[3]=" 程序升级 ";
+	menu.str[4]=" 版本信息 ";
 	menu.key[0]="1";
 	menu.key[1]="2";
 	menu.key[2]="3";
 	menu.key[3]="4";
 	menu.key[4]="5";
-	menu.key[5]="6";
-	menu.key[6]="7";
 	menu.Function[0]=WaterCmdFunc_CommonCmd;
 	menu.Function[1]=WaterCmdFunc_TestCmd;
 	menu.Function[2]=WaterCmdFunc_Upgrade;
@@ -2467,7 +2482,7 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<清异常命令", Color_White);
+		_Printfxy(0, 0, "<<清异常", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------

@@ -13,6 +13,7 @@
 #include "Tool.h"
 #include "WaterMeter.h"
 #include "MeterDocDBF.h"
+#include "MeterDocDBF.c"
 
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
@@ -3730,9 +3731,9 @@ void MainFuncBatchMeterReading(void)
 	ListBox menuList, menuList_2, menuList_3;
 	ListBox XqList, LdList;				// 小区/楼栋列表
 	_GuiInputBoxStru inputSt;
-	uint8 * pByte;
-	uint16 dispIdx;
-	char *dispBuf = &DispBuf;
+	uint8 *pByte;
+	uint16 dispIdx, i;
+	char *dispBuf = &DispBuf, *strTmp = &TmpBuf;
 	char qryStrXq[50], qryStrLd[50];
 	uint8 qryTypeXq, qryTypeLd;
 	uint16 qryIndexXq, qryIndexLd;
@@ -3810,14 +3811,14 @@ void MainFuncBatchMeterReading(void)
 					//------------------------------------------------------------
 					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
 					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
-					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 4, NULL,
+					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 5, NULL,
 						"<<楼栋抄表", 
-						4,
+						5,
 						"1. 自动抄表",
 						"2. 已抄列表",
 						"3. 未抄列表",
-						"4. 抄表统计");
-						//"5. 重置抄表时间");
+						"4. 抄表统计",
+						"5. 重置抄表时间");
 					while(4){
 
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -3830,6 +3831,7 @@ void MainFuncBatchMeterReading(void)
 						switch (menuList_2.strIdx + 1){
 						case 1:		// 自动抄表
 							Meters.selectField = Idx_MeterNum;
+							Meters.qryMeterReadStatus = "0";
 							QueryMeterList(&Meters, &DbQuery);
 							key = ShowAutoMeterReading(&Meters);
 							break;
@@ -3850,7 +3852,37 @@ void MainFuncBatchMeterReading(void)
 							break;
 
 						case 5:		// 重置抄表时间
-							
+							_GUIRectangleFill(0, 4*16 - 4, 160, 6*16 + 4, Color_White);
+							_Printfxy(0, 4*16, " 当前楼栋档案      ", Color_White);
+							_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
+							//------------------------------------------------------------
+							_Select(1);
+							_Use(MeterDocDB);	// 打开数据库
+							_Go(0);
+							for(i = 0; i < recCnt; i++){
+								_ReadField(Idx_DistrictNum, strTmp);	// 小区编号 过滤
+								strTmp[Size_DistrictNum - 1] = '\0';
+								if(strcmp(Meters.qryDistricNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_ReadField(Idx_BuildingNum, strTmp);	// 楼栋编号 过滤
+								strTmp[Size_BuildingNum - 1] = '\0';
+								if(strcmp(Meters.qryBuildingNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_Replace(Idx_MeterReadStatus, "0");		// 重置抄表信息
+								_Replace(Idx_MeterReadTime, "");
+								_Replace(Idx_MeterValue, "");
+								_Skip(1);
+							}
+							_Use("");		// 关闭数据库
+							//------------------------------------------------------------
+							_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
+							_Sleep(3000);
 							break;
 						
 						default:
@@ -3863,7 +3895,6 @@ void MainFuncBatchMeterReading(void)
 			break;
 
 		case 2:		// 清空所有档案
-			_ClearScreen();
 			_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
 			_Printfxy(0, 4*16, "  清空档案中... ", Color_White);
 			
@@ -3878,10 +3909,9 @@ void MainFuncBatchMeterReading(void)
 			break;
 
 		case 3:		// 重置抄表时间
-
-			_ClearScreen();
-			_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
-			_Printfxy(0, 4*16, " 抄表时间重置中... ", Color_White);
+			_GUIRectangleFill(0, 4*16 - 4, 160, 6*16 + 4, Color_White);
+			_Printfxy(0, 4*16, " 所有档案         ", Color_White);
+			_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
 			//------------------------------------------------------------
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
@@ -3894,7 +3924,7 @@ void MainFuncBatchMeterReading(void)
 			}while(_Eof() == false);
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
-			_Printfxy(0, 4*16, " 抄表时间重置完成！ ", Color_White);
+			_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
 			_Sleep(3000);
 			break;
 

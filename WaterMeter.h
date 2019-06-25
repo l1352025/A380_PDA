@@ -3,6 +3,9 @@
 
 #include "stdio.h"
 #include "Common.h"
+#ifdef Project_6009_RF
+#include "MeterDocDBF.h"
+#endif
 
 // --------------------------------  全局变量  -----------------------------------------
 char Screenbuff[160*(160/3+1)*2]; 
@@ -21,7 +24,6 @@ char StrBuf[10][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
-
 
 //----------------------------------------  表端命令  ------------------------
 /*
@@ -810,6 +812,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "正转: %d.%03d\n", u32Tmp, u16Tmp);
+		#ifdef Project_6009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				sprintf(MeterInfo.meterValue, "%d.%03d", u32Tmp, u16Tmp);
+			}
+		#endif
 		// 反转用量
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		index += 4;
@@ -817,17 +824,38 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
 		//告警状态字
+		#ifdef Project_6009_RF
+			u32Tmp = dispIdx + 6;
+		#endif
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
 		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
+		#ifdef Project_6009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp);
+				u32Tmp = ( (dispIdx - u32Tmp) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp));
+				MeterInfo.meterStatusStr[u32Tmp] = 0x00;
+			}
+		#endif
 		//阀门状态 
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
 		index += 1;
+		#ifdef Project_6009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
+				sprintf(&MeterInfo.meterStatusStr[u32Tmp], "  阀门%s", ptr);
+			}
+		#endif
 		//电池电压
 		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
+		#ifdef Project_6009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				strncpy(MeterInfo.batteryVoltage, &dispBuf[dispIdx - 4], 3);
+			}
+		#endif
 		//环境温度
 		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
 		dispIdx += sprintf(&dispBuf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
@@ -2174,6 +2202,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	if(index == startIdx + length - 4)
 	{
 		//下行/上行 信号强度
+		#ifdef Project_6009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				sprintf(MeterInfo.signalValue, "%d", buf[index + 1]);	// 保存上行
+			}
+		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;

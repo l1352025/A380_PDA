@@ -977,8 +977,8 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
 /*
 * Ãè  Êö£º×Ö·û´®×ó²àÌî³ä
 * ²Î  Êý£ºsrcStr - Ô­×Ö·û´®
-		  totalLen - ×Ü×Ö·û³¤¶È£ºÔ­×Ö·û+×ó²àÌî³äµÄ×Ö·û£¨ÈôÔ­×Ö·û³¤¶È>=×Ü³¤¶È£¬ÔòÎÞÐèÌî³ä£©
-		  padChar - Ìî³äµÄ×Ö·û
+*		  totalLen - ×Ü×Ö·û³¤¶È£ºÔ­×Ö·û+×ó²àÌî³äµÄ×Ö·û£¨ÈôÔ­×Ö·û³¤¶È>=×Ü³¤¶È£¬ÔòÎÞÐèÌî³ä£©
+*		  padChar - Ìî³äµÄ×Ö·û
 * ·µ»ØÖµ£ºvoid
 */
 void StringPadLeft(const char * srcStr, int totalLen, char padChar)
@@ -1012,7 +1012,7 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 /*
 * Ãè  Êö£º×Ö·û´®Í·²¿²Ã¼ô
 * ²Î  Êý£ºsrcStr - ×Ö·û´®ÆðÊ¼µØÖ·
-		  trimChar - ²Ã¼ôµÄ×Ö·û
+*		  trimChar - ²Ã¼ôµÄ×Ö·û
 * ·µ»ØÖµ£ºint ²Ã¼ôºóµÄ×Ö·û´®³¤¶È
 */
 int StringTrimStart(const char * srcStr, char trimChar)
@@ -1049,7 +1049,7 @@ int StringTrimStart(const char * srcStr, char trimChar)
 /*
 * Ãè  Êö£º×Ö·û´®Î²²¿²Ã¼ô
 * ²Î  Êý£ºsrcStr - ×Ö·û´®ÆðÊ¼µØÖ·
-		  trimChar - ²Ã¼ôµÄ×Ö·û
+*		  trimChar - ²Ã¼ôµÄ×Ö·û
 * ·µ»ØÖµ£ºint ²Ã¼ôºóµÄ×Ö·û´®³¤¶È
 */
 int StringTrimEnd(const char * srcStr, char trimChar)
@@ -1070,6 +1070,30 @@ int StringTrimEnd(const char * srcStr, char trimChar)
 	pr[i + 1] = 0x00;
 
 	return (srcStrLen - i);
+}
+
+/*
+* Ãè  Êö£ºÐÞÕýGBK×Ö·û´®Î²²¿´íÎó£¬¼´°ÑÎ²²¿ÊÇ²»ÍêÕûµÄGBK×Ö·û²Ã¼ôµô
+* ²Î  Êý£ºsrcStr - ×Ö·û´®ÆðÊ¼µØÖ·
+* ·µ»ØÖµ£ºvoid
+*/
+void StringFixGbkStrEndError(const char * srcStr)
+{
+	char *pr = srcStr;
+
+	while(*pr){
+		if(*pr >= 0x80){
+			pr++;
+			if(*pr < 0x80){
+				*(pr -1) = 0x00;
+				break;
+			}
+			pr++;
+		}
+		else{
+			pr++;
+		}
+	}
 }
 
 /*
