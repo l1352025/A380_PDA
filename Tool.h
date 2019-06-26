@@ -1311,8 +1311,8 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 /*
 * 描  述：计算CRC16
 * 参  数：Buf - 数据缓存起始地址
-		  Len - 计算的总长度
-		  Seed - 如电力/水力固定使用 0x8408
+*		  Len - 计算的总长度
+*		  Seed - 如电力/水力固定使用 0x8408
 * 返回值：uint16 CRC16值
 */
 uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
@@ -1340,8 +1340,8 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 /*
 * 描  述：计算CRC8
 * 参  数：Buf - 数据缓存起始地址
-		  Len - 计算的总长度
-		  Seed - 如电力/水力固定使用 0x8408
+*		  Len - 计算的总长度
+*		  Seed - 如电力/水力固定使用 0x8408
 * 返回值：uint8 CRC16值
 */
 uint8 GetCrc8(uint8 *Buf, int len)
@@ -1366,7 +1366,7 @@ uint8 GetCrc8(uint8 *Buf, int len)
 /*
 * 描  述：计算8位累加和
 * 参  数：Buf - 数据缓存起始地址
-		  Len - 计算的总长度
+*		  Len - 计算的总长度
 * 返回值：uint8 累加和
 */
 uint8 GetSum8(uint8 *buf, uint16 len)
@@ -1378,6 +1378,85 @@ uint8 GetSum8(uint8 *buf, uint16 len)
 	}
 	
     return sum;
+}
+
+/*
+* 描  述：获取时间字符串
+* 参  数：datetime		- 输入参数：时间字符串 yyyy-MM-dd HH:mm:ss
+*		 year/month/day/hour/min/sec - 输出参数：年/月/日/时/分/秒 字符串缓冲区
+* 返回值：void
+*/
+void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec)
+{
+	if(year[0] == 0x00){
+		year[0] = datetime[0];		// year
+		year[1] = datetime[1];
+		year[2] = datetime[2];
+		year[3] = datetime[3];
+		year[4] = 0x00;
+	}
+	if(month[0] == 0x00){
+		month[0] = datetime[5];		// month
+		month[1] = datetime[6];
+		month[2] = 0x00;
+	}
+	if(day[0] == 0x00){
+		day[0] = datetime[8];	// day
+		day[1] = datetime[9];
+		day[2] = 0x00;
+	}
+	if(hour[0] == 0x00){
+		hour[0] = datetime[11];	// hour
+		hour[1] = datetime[12];
+		hour[2] = 0x00;
+	}
+	if(min[0] == 0x00){
+		min[0] = datetime[14];	// minute
+		min[1] = datetime[15];
+		min[2] = 0x00;
+	}
+	if(sec[0] == 0x00){
+		sec[0] = datetime[17];	// second
+		sec[1] = datetime[18];
+		sec[2] = 0x00;
+	}
+}
+
+/*
+* 描  述：校验时间字符串
+* 参  数：year/month/day/hour/min/sec - 年/月/日/时/分/秒 字符串缓冲区
+* 返回值：uint8 错误码：0 - 正确, 1/2/3/4/5/6 - 年/月/日/时/分/秒 错误
+*/
+uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min, char *sec)
+{
+	uint8 errorCode = 0;
+
+	if((year[0] > '9' && year[0] < '0') || year[0] == '0' ){
+		year[0] = 0x00;
+		errorCode = 1;
+	}
+	else if(_atof(month) < 1 || _atof(month) > 12 ){
+		month[0] = 0x00;
+		errorCode = 2;
+	}
+	else if(_atof(day) < 1 || _atof(day) > 31 ){
+		day[0] = 0x00;
+		errorCode = 3;
+	}
+	else if((hour[0] > '2' && hour[0] < '0') || _atof(hour) > 23 ){
+		hour[0] = 0x00;
+		errorCode = 4;
+	}
+	else if((min[0] > '5' && min[0] < '0') || _atof(min) > 59 ){
+		min[0] = 0x00;
+		errorCode = 5;
+	}
+	else if((sec[0] > '5' && sec[0] < '0') || _atof(sec) > 59 ){
+		sec[0] = 0x00;
+		errorCode = 6;
+	}
+
+	return errorCode;
 }
 
 #endif

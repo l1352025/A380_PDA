@@ -30,7 +30,7 @@ typedef unsigned char bool;
 
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
-#define UI_MAX      10      // 最大UI控件数
+#define UI_MAX      15      // 最大UI控件数
 #define ListStrMax  256     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 
@@ -168,6 +168,8 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep);
 uint8 ShowScrollStrEx(char *strBuf, uint8 lineStep);
 void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
+void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec);
+uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min, char *sec);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern char Screenbuff[160*(160/3+1)*2]; 

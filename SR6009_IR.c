@@ -1391,28 +1391,9 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetMeterTime;			// 校表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					_GetDate(&TmpBuf[200], '-');
-					_GetTime(&TmpBuf[220], ':');
-					StrBuf[0][0] = TmpBuf[200];		// year
-					StrBuf[0][1] = TmpBuf[201];
-					StrBuf[0][2] = TmpBuf[202];
-					StrBuf[0][3] = TmpBuf[203];
-					StrBuf[0][4] = 0x00;
-					StrBuf[1][0] = TmpBuf[205];		// month
-					StrBuf[1][1] = TmpBuf[206];
-					StrBuf[1][2] = 0x00;
-					StrBuf[2][0] = TmpBuf[208];	// day
-					StrBuf[2][1] = TmpBuf[209];
-					StrBuf[2][2] = 0x00;
-					StrBuf[3][0] = TmpBuf[220];	// hour
-					StrBuf[3][1] = TmpBuf[221];
-					StrBuf[3][2] = 0x00;
-					StrBuf[4][0] = TmpBuf[223];	// minute
-					StrBuf[4][1] = TmpBuf[224];
-					StrBuf[4][2] = 0x00;
-					StrBuf[5][0] = TmpBuf[226];	// second
-					StrBuf[5][1] = TmpBuf[227];
-					StrBuf[5][2] = 0x00;
+					_GetDateTime(&TmpBuf[200], '-',  ':');
+					GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -1422,16 +1403,10 @@ void WaterCmdFunc_WorkingParams(void)
 					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 					break;
 				}
-				
-				for(i = 0; i < 6; i ++){
-					if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-						// 请输入有效值 
-						currUi = uiRowIdx - 2 - 6;
-						isUiFinish = false;
-						break;
-					}
-				}
-				if(false == isUiFinish){
+				// 时间有效值校验
+				if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+					currUi = 2 + (i -1);
+					isUiFinish = false;
 					continue;
 				}
 
@@ -1911,6 +1886,7 @@ void WaterCmdFunc_Other(void)
 	_CloseCom();
 }
 
+
 void WaterCmdFunc(void)
 {
 	_GuiMenuStru menu;
@@ -1928,7 +1904,7 @@ void WaterCmdFunc(void)
 	
 	menu.left=0;
 	menu.top=0;
-	menu.no=4;
+	menu.no=5;
 	menu.title= "<<工程调试 ";		// 工程调试 --> 即原来的 表端操作
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 测试命令 ";
@@ -1942,11 +1918,9 @@ void WaterCmdFunc(void)
 	menu.key[4]="5";
 	menu.Function[0]=WaterCmdFunc_CommonCmd;
 	menu.Function[1]=WaterCmdFunc_TestCmd;
-	menu.Function[2]=WaterCmdFunc_Upgrade;
-	menu.Function[3]=WaterCmdFunc_PrepaiedVal;
-	menu.Function[4]=WaterCmdFunc_WorkingParams;
-	menu.Function[5]=WaterCmdFunc_Other;
-	menu.Function[6]=VersionInfoFunc;
+	menu.Function[2]=WaterCmdFunc_WorkingParams;
+	menu.Function[3]=WaterCmdFunc_Upgrade;
+	menu.Function[4]=VersionInfoFunc;
 	menu.FunctionEx=0;
 	_Menu(&menu);	
 }
@@ -2348,28 +2322,9 @@ void MainFuncSetMeterTime(void)
 		case WaterCmd_SetMeterTime:		// "设置表端时钟"
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
-				_GetDate(&TmpBuf[200], '-');
-				_GetTime(&TmpBuf[220], ':');
-				StrBuf[0][0] = TmpBuf[200];		// year
-				StrBuf[0][1] = TmpBuf[201];
-				StrBuf[0][2] = TmpBuf[202];
-				StrBuf[0][3] = TmpBuf[203];
-				StrBuf[0][4] = 0x00;
-				StrBuf[1][0] = TmpBuf[205];		// month
-				StrBuf[1][1] = TmpBuf[206];
-				StrBuf[1][2] = 0x00;
-				StrBuf[2][0] = TmpBuf[208];	// day
-				StrBuf[2][1] = TmpBuf[209];
-				StrBuf[2][2] = 0x00;
-				StrBuf[3][0] = TmpBuf[220];	// hour
-				StrBuf[3][1] = TmpBuf[221];
-				StrBuf[3][2] = 0x00;
-				StrBuf[4][0] = TmpBuf[223];	// minute
-				StrBuf[4][1] = TmpBuf[224];
-				StrBuf[4][2] = 0x00;
-				StrBuf[5][0] = TmpBuf[226];	// second
-				StrBuf[5][1] = TmpBuf[227];
-				StrBuf[5][2] = 0x00;
+				_GetDateTime(&TmpBuf[200], '-',  ':');
+				GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 				TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -2379,15 +2334,10 @@ void MainFuncSetMeterTime(void)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 				break;
 			}
-			for(i = 0; i < 6; i ++){
-				if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-					// 请输入有效值 
-					currUi = 1;
-					isUiFinish = false;
-					break;
-				}
-			}
-			if(false == isUiFinish){
+			// 时间有效值校验
+			if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+				currUi = 2 + (i -1);
+				isUiFinish = false;
 				continue;
 			}
 

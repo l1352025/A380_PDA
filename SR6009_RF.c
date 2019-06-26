@@ -2297,7 +2297,7 @@ void WaterCmdFunc_WorkingParams(void)
 				if((StrBuf[1][0] > '9' || StrBuf[1][0] < '0') 
 					|| _atof(StrBuf[1]) > 255){
 					sprintf(StrBuf[1], "   ");
-					currUi = 1;
+					currUi = 2;
 					isUiFinish = false;
 					continue;
 				}
@@ -2325,28 +2325,9 @@ void WaterCmdFunc_WorkingParams(void)
 			case WaterCmd_SetMeterTime:		// 校表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					_GetDate(&TmpBuf[200], '-');
-					_GetTime(&TmpBuf[220], ':');
-					StrBuf[0][0] = TmpBuf[200];		// year
-					StrBuf[0][1] = TmpBuf[201];
-					StrBuf[0][2] = TmpBuf[202];
-					StrBuf[0][3] = TmpBuf[203];
-					StrBuf[0][4] = 0x00;
-					StrBuf[1][0] = TmpBuf[205];		// month
-					StrBuf[1][1] = TmpBuf[206];
-					StrBuf[1][2] = 0x00;
-					StrBuf[2][0] = TmpBuf[208];	// day
-					StrBuf[2][1] = TmpBuf[209];
-					StrBuf[2][2] = 0x00;
-					StrBuf[3][0] = TmpBuf[220];	// hour
-					StrBuf[3][1] = TmpBuf[221];
-					StrBuf[3][2] = 0x00;
-					StrBuf[4][0] = TmpBuf[223];	// minute
-					StrBuf[4][1] = TmpBuf[224];
-					StrBuf[4][2] = 0x00;
-					StrBuf[5][0] = TmpBuf[226];	// second
-					StrBuf[5][1] = TmpBuf[227];
-					StrBuf[5][2] = 0x00;
+					_GetDateTime(&TmpBuf[200], '-',  ':');
+					GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -2356,16 +2337,10 @@ void WaterCmdFunc_WorkingParams(void)
 					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 					break;
 				}
-				
-				for(i = 0; i < 6; i ++){
-					if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-						// 请输入有效值 
-						currUi = 1;
-						isUiFinish = false;
-						break;
-					}
-				}
-				if(false == isUiFinish){
+				// 时间有效值校验
+				if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+					currUi = 2 + (i -1);
+					isUiFinish = false;
 					continue;
 				}
 
@@ -3232,28 +3207,9 @@ void MainFuncSetMeterTime(void)
 		case WaterCmd_SetMeterTime:		// "设置表端时钟"
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
-				_GetDate(&TmpBuf[200], '-');
-				_GetTime(&TmpBuf[220], ':');
-				StrBuf[0][0] = TmpBuf[200];		// year
-				StrBuf[0][1] = TmpBuf[201];
-				StrBuf[0][2] = TmpBuf[202];
-				StrBuf[0][3] = TmpBuf[203];
-				StrBuf[0][4] = 0x00;
-				StrBuf[1][0] = TmpBuf[205];		// month
-				StrBuf[1][1] = TmpBuf[206];
-				StrBuf[1][2] = 0x00;
-				StrBuf[2][0] = TmpBuf[208];	// day
-				StrBuf[2][1] = TmpBuf[209];
-				StrBuf[2][2] = 0x00;
-				StrBuf[3][0] = TmpBuf[220];	// hour
-				StrBuf[3][1] = TmpBuf[221];
-				StrBuf[3][2] = 0x00;
-				StrBuf[4][0] = TmpBuf[223];	// minute
-				StrBuf[4][1] = TmpBuf[224];
-				StrBuf[4][2] = 0x00;
-				StrBuf[5][0] = TmpBuf[226];	// second
-				StrBuf[5][1] = TmpBuf[227];
-				StrBuf[5][2] = 0x00;
+				_GetDateTime(&TmpBuf[200], '-',  ':');
+				GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
 				TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
@@ -3263,15 +3219,10 @@ void MainFuncSetMeterTime(void)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
 				break;
 			}
-			for(i = 0; i < 6; i ++){
-				if((StrBuf[i][0] > '9' && StrBuf[i][0] < '0') || StrBuf[0][0] == '0' ){
-					// 请输入有效值 
-					currUi = 1;
-					isUiFinish = false;
-					break;
-				}
-			}
-			if(false == isUiFinish){
+			// 时间有效值校验
+			if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+				currUi = 2 + (i -1);
+				isUiFinish = false;
 				continue;
 			}
 
@@ -3731,6 +3682,9 @@ void MainFuncBatchMeterReading(void)
 	ListBox menuList, menuList_2, menuList_3;
 	ListBox XqList, LdList;				// 小区/楼栋列表
 	_GuiInputBoxStru inputSt;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint8 *pByte;
 	uint16 dispIdx, i;
 	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
@@ -3759,6 +3713,7 @@ void MainFuncBatchMeterReading(void)
 			break;
 		}
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		isUiFinish = false;
 
 		_Select(1);
 		_Use(MeterDocDB);	// 打开数据库
@@ -3913,24 +3868,52 @@ void MainFuncBatchMeterReading(void)
 
 						case 6:		// 重置抄表时间
 							//-------------------------------------------------------
-							_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
-							_Printfxy(0, 4*16, " 确定要将抄表时间重", Color_White);
-							_Printfxy(0, 5*16, " 置为当前系统时间吗?", Color_White);
-							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
-							key = _ReadKey();
-							//-------------------------------------------------------
-							if(key != KEY_ENTER){
+							_GUIRectangleFill(0, 3*16 - 8, 160, 7*16 + 8, Color_White);
+							_GUIRectangle(0, 3*16 - 8, 160, 7*16 + 8, Color_Black);
+							memset(StrBuf, 0, TXTBUF_LEN * 10);
+							isUiFinish = false;
+							while(true){
+								if(false == isUiFinish){
+									(*pUiCnt) = 0;
+									uiRowIdx = 3;
+									_GetDateTime(time, '-',  ':');
+									GetDatetimeStr(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+									
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
+									TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+									TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+									TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+									TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+									TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+									TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "确定将抄表时间重置");
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "为当前系统时间吗?");
+									
+									key = ShowUI(UiList, &currUi);
+									if (key == KEY_CANCEL){
+										break;
+									}
+									isUiFinish = true;
+								
+								}
+								// 时间有效值校验
+								if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+									currUi = 1 + (i -1);
+									isUiFinish = false;
+									continue;
+								}
+
+								sprintf(time, "%s-%s-%s %s:%s:%s",
+									StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+								_SetDateTime(time);
 								break;
 							}
-							_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
-							_Printfxy(0, 4*16, " 当前楼栋         ", Color_White);
-							_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
-							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							_Printfxy(8, 5*16, "当前楼栋           ", Color_White);
+							_Printfxy(8, 6*16, "抄表时间重置中... ", Color_White);
 							//------------------------------------------------------------
 							_Select(1);
 							_Use(MeterDocDB);	// 打开数据库
 							_Go(0);
-							_GetDateTime(time, '-', ':');
 							for(i = 0; i < recCnt; i++){
 								_ReadField(Idx_DistrictNum, strTmp);	// 小区编号 过滤
 								strTmp[Size_DistrictNum - 1] = '\0';
@@ -3958,8 +3941,7 @@ void MainFuncBatchMeterReading(void)
 							}
 							_Use("");		// 关闭数据库
 							//------------------------------------------------------------
-							_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
-							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							_Printfxy(8, 6*16, "抄表时间重置完成！ ", Color_White);
 							_Sleep(3000);
 							break;
 						
@@ -4016,24 +3998,55 @@ void MainFuncBatchMeterReading(void)
 
 		case 3:		// 重置抄表时间
 			//-------------------------------------------------------
-			_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
-			_Printfxy(0, 4*16, " 确定要将抄表时间重", Color_White);
-			_Printfxy(0, 5*16, " 置为当前系统时间吗?", Color_White);
-			_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
-			key = _ReadKey();
-			//-------------------------------------------------------
-			if(key != KEY_ENTER){
+			_GUIRectangleFill(0, 3*16 - 8, 160, 7*16 + 8, Color_White);
+			_GUIRectangle(0, 3*16 - 8, 160, 7*16 + 8, Color_Black);
+			while(true){
+				if(false == isUiFinish){
+					(*pUiCnt) = 0;
+					uiRowIdx = 3;
+
+					_GetDateTime(time, '-',  ':');
+					GetDatetimeStr(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+					TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "确定将抄表时间重置");
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "为当前系统时间吗?");
+					
+					key = ShowUI(UiList, &currUi);
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+				
+				}
+				// 时间有效值校验
+				if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+					currUi = 1 + (i -1);
+					isUiFinish = false;
+					continue;
+				}
+
+				sprintf(time, "%s-%s-%s %s:%s:%s",
+					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_SetDateTime(time);
 				break;
 			}
-			_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
-			_Printfxy(0, 4*16, " 所有档案         ", Color_White);
-			_Printfxy(0, 5*16, " 抄表时间重置中... ", Color_White);
-			_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+			//-------------------------------------------------------
+			if(key == KEY_CANCEL){
+				break;
+			}
+			_Printfxy(8, 5*16, "所有档案          ", Color_White);
+			_Printfxy(8, 6*16, "抄表时间重置中... ", Color_White);
 			//------------------------------------------------------------
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
-			_GetDateTime(time, '-', ':');
 			do{
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
@@ -4046,8 +4059,7 @@ void MainFuncBatchMeterReading(void)
 			}while(_Eof() == false);
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
-			_Printfxy(0, 5*16, " 抄表时间重置完成！ ", Color_White);
-			_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+			_Printfxy(8, 6*16, "抄表时间重置完成！", Color_White);
 			_Sleep(3000);
 			break;
 
