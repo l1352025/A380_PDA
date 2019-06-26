@@ -400,6 +400,7 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow,
 	lbx->title = title;
 	lbx->strCnt = strCnt;
 	lbx->currIdx = 0;
+	lbx->strIdx = 0;
 
 	for(i = 0; i < lbx->strCnt; i++){
 		lbx->str[i] = str;
@@ -427,7 +428,7 @@ uint8 ShowListBox(ListBox *lbx)
 	lbx->strIdx = (lbx->currIdx % fillMax);
 	lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->maxRow);
 
-	
+
 	recX = lbx->x - 4;
 	recY = lbx->y - 4;
 	x1 = lbx->x + lbx->maxCol * 8;
@@ -441,7 +442,7 @@ uint8 ShowListBox(ListBox *lbx)
 	
 	// 上/下滚动显示   ▲ ▼  △ ▽
 	while(1){
-
+	
 		_GUIRectangleFill(fillX, fillY, fillX1, fillY1, Color_White);	// 清空区域
 		_GUIRectangle(recX, recY, recX1, recY1, Color_Black);			// 绘制方框
 
@@ -454,10 +455,15 @@ uint8 ShowListBox(ListBox *lbx)
 		_Printfxy(lbx->x, lbx->y, title, Color_White);
 		_GUIHLine(lbx->x, lbx->y + 16 + 4, x1, Color_Black);	
 		//--------------------------------------------▼---
-		for(i = 0; i < lbx->maxRow && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
-			_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+		if(lbx->totalCnt == 0){
+			_Printfxy(lbx->x, lbx->y + 16 + 8, "列表为空！", Color_White);
 		}
-		_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
+		else{
+			for(i = 0; i < lbx->maxRow && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
+				_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+			}
+			_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
+		}
 		//--------------------------------------------▲---
 		_GUIHLine(lbx->x, recY1, x1, Color_Black);	
 
@@ -467,19 +473,19 @@ uint8 ShowListBox(ListBox *lbx)
 			break;
 		}
 
-		if(key == KEY_UP){
+		if(key == KEY_UP && lbx->totalCnt > 0){
 			lbx->strIdx--;
 			lbx->currIdx--;
 		}
-		else if(key == KEY_DOWN){
+		else if(key == KEY_DOWN && lbx->totalCnt > 0){
 			lbx->strIdx++;
 			lbx->currIdx++;
 		}
-		else if(key == KEY_LEFT){
+		else if(key == KEY_LEFT && lbx->totalCnt > 0){
 			lbx->strIdx -= lbx->maxRow;
 			lbx->currIdx -= lbx->maxRow;
 		}
-		else if(key == KEY_RIGHT){
+		else if(key == KEY_RIGHT && lbx->totalCnt > 0){
 			lbx->strIdx += lbx->maxRow;
 			lbx->currIdx += lbx->maxRow;
 		}
@@ -906,7 +912,7 @@ void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
 
 /*
 * 描  述：显示可滚动的字符串	- 可自动换行：遇到 \n 或 到达屏幕边界时
-* 参  数：strBuf	- 字符串缓冲区
+* 参  数：strBuf	- 字符串缓冲区，最大显示150行
 *		 lineStep	- 按上下键时滚动的行数，最大7行
 * 返回值：uint8  - 界面退出时的按键值：确认键，取消键
 */
@@ -949,6 +955,76 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
 		key = _ReadKey();
 
 		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+		else if(key == KEY_UP && lineCnt > lineMax){
+			currLine -= lineStep;
+			if(currLine < 0){
+				currLine = 0;
+			}
+		}
+		else if(key == KEY_DOWN && lineCnt > lineMax){
+			currLine += lineStep;
+			if(currLine > lineCnt - lineMax){
+				currLine = lineCnt - lineMax;
+			}
+		}
+		else{
+			continue;
+		}
+
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
+	}
+
+	return key;
+}
+
+/*
+* 描  述：显示可滚动的字符串(扩展了左右键也返回)	- 可自动换行：遇到 \n 或 到达屏幕边界时
+* 参  数：strBuf	- 字符串缓冲区，最大显示150行
+*		 lineStep	- 按上下键时滚动的行数，最大7行
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键, 左/右键
+*/
+uint8 ShowScrollStrEx(char *strBuf, uint8 lineStep)
+{
+	const uint8 lineMax = 7;
+	int8 lineCnt = 0, currLine = 0;
+	uint8 *lines[150], key;
+
+	// lineStep check
+	if(lineStep > lineMax){
+		lineStep = lineMax;
+	}
+
+	lineCnt = GetPrintLines(0, strBuf, lines);
+
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+	
+	// 上/下滚动显示   ▲ ▼  △ ▽
+	while(1){
+
+		if(lineCnt > lineMax){
+			if(currLine < lineCnt - lineMax){
+				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
+			}else{
+				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
+			}
+
+			if(currLine > 0){
+				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
+			}else{
+				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
+			}
+		}
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER || key == KEY_LEFT || key == KEY_RIGHT){
 			break;
 		}
 		else if(key == KEY_UP && lineCnt > lineMax){

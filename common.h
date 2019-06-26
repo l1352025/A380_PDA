@@ -13,8 +13,8 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-#define VerInfo_RevNo   (char *)"2.2"               // 版本号
-#define VerInfo_RevDate (char *)"2019-6-3"         // 版本日期
+#define VerInfo_RevNo   (char *)"2.3"               // 版本号
+#define VerInfo_RevDate (char *)"2019-6-27"         // 版本日期
 //#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
 
 
@@ -165,6 +165,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[]);
 uint8 ShowScrollStr(char *strBuf, uint8 lineStep);
+uint8 ShowScrollStrEx(char *strBuf, uint8 lineStep);
 void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 

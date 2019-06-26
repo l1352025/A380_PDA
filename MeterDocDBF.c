@@ -288,6 +288,8 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	}
 
 	cnt = 0;	// 已抄数初始化
+	meters->readOkCnt = 0;
+	meters->readNgCnt = 0;
 
 	// 自动抄表
 	while(cnt < meters->cnt){
@@ -298,7 +300,8 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 
 		// 自动抄表-界面显示
 		_ClearScreen();
-		PrintfXyMultiLine_VaList(0, 0, "<<自动抄表  %3d/%-3d ", (cnt + 1), meters->cnt);
+		//PrintfXyMultiLine_VaList(0, 0, "<<自动抄表  %3d/%-3d ", (cnt + 1), meters->cnt);
+		_Printfxy(0, 0, "<<自动抄表", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		dispBuf = &DispBuf;
@@ -308,7 +311,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		dispIdx += sprintf(&dispBuf[dispIdx], "地址: %s\n", meterInfo->userAddr);
 		PrintfXyMultiLine(0, 1*16 + 8, dispBuf, 7);	
 
-		sprintf(strTmp, "抄表进度: %d/%d", (cnt + 1), meters->cnt);
+		sprintf(strTmp, "当前抄表: %d/%d", (cnt + 1), meters->cnt);
 		_Printfxy(0, 6*16 + 8, strTmp, Color_White);
 		_GUIHLine(0, 7*16 + 8 + 1, 160, Color_Black);
 		ShowProgressBar(7*16 + 8 + 3, meters->cnt, cnt + 1);	// 进度条
@@ -337,7 +340,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
 		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-		tryCnt = 1;
+		tryCnt = 3;
 
 		// 发送、接收、结果显示
 		_CloseCom();
@@ -405,10 +408,12 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			// 成功，保存结果到数据库
 			SaveMeterReadResult(meterInfo);
 			_Printfxy(0, 9*16, " < 当前抄表: 成功 > ", Color_White);
+			meters->readOkCnt++;
 		}
 		else{
 			// 失败，不作处理
 			_Printfxy(0, 9*16, " < 当前抄表: 失败 > ", Color_White);
+			meters->readNgCnt++;
 		}
 		_Sleep(1500);
 
@@ -421,6 +426,9 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	else{
 		_Printfxy(0, 9*16, "返回  <已完成>  确定", Color_White);
 	}
+
+	sprintf(strTmp, "成功:%d", meters->readOkCnt);
+	_Printfxy(6*16, 7*16 + 8 + 3, strTmp, Color_White);
 	
 	while(1){
 		key = _ReadKey();
@@ -465,12 +473,12 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 * 参 数：meters		- 抄表情况列表: 调用前先设置抄表状态 qryMeterReadStatus
 * 返 回：uint8 	- 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
 */
-uint8 ShowMeterList(MeterListSt *metersList)
+uint8 ShowMeterList(MeterListSt *meterReadList)
 {
 	uint8 key;
 	ListBox showTpList, meterList;		// 显示方式/表信息-列表
 	char *title = NULL;
-	MeterListSt *meters = metersList;
+	MeterListSt *meters = meterReadList;
 
 	// 列表显示方式-界面
 	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄列表" : "<<未抄列表");
@@ -517,20 +525,41 @@ uint8 ShowMeterList(MeterListSt *metersList)
 				break;
 			}
 			if(key == KEY_ENTER && meters->cnt == 0){	
-				_GUIRectangleFill(0, 4*16 - 4, 160, 5*16 + 4, Color_White);
-				_Printfxy(0, 4*16, "当前列表无条目！", Color_White);
-				_Sleep(3000);
 				continue;
 			}
-			meters->idx = meterList.strIdx;
-			
-			// 户表信息-界面
-			//------------------------------------------------------
-			MeterInfo.dbIdx = meters->dbIdx[meters->idx];
-			QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
-			key = ShowMeterInfo(&MeterInfo);	
-			//------------------------------------------------------
-			
+
+			while(3){
+				// 户表信息-界面
+				//------------------------------------------------------
+				meters->idx = meterList.strIdx;
+				MeterInfo.dbIdx = meters->dbIdx[meters->idx];
+				MeterInfo.strIdx = meters->idx;
+				MeterInfo.strCnt = meters->cnt;
+				QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
+				key = ShowMeterInfo(&MeterInfo);	
+				//------------------------------------------------------
+				if(key == KEY_LEFT){
+					if(meterList.strIdx == 0){
+						meterList.strIdx = meterList.strCnt - 1;
+					}
+					else{
+						meterList.strIdx--;
+					}
+				}
+				else if(key == KEY_RIGHT){
+					if(meterList.strIdx == meterList.strCnt - 1){
+						meterList.strIdx = 0;
+					}
+					else{
+						meterList.strIdx++;
+					}
+				}
+				else{	// KEY_CANCEL
+					meterList.currIdx = meterList.strIdx;
+					break;
+				}
+			} // while 3 户表信息
+
 		}// while 2 已抄/未抄列表
 
 	}// while 1 显示方式
@@ -597,7 +626,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 			// 按表号查询
 			meterInfo->dbIdx = _Recno();
 		}
-		else if(meterInfo->qryMeterNum != NULL
+		else if(meterInfo->qryUserNum != NULL
 			&& _LocateEx(Idx_UserNum, '=', meterInfo->qryUserNum, 1, recCnt, 0) > 0){ 
 			// 按户号查询
 			meterInfo->dbIdx = _Recno();
@@ -722,7 +751,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 
 		// 户表信息-界面
 		//-----------------------------------------------------
-		_Printfxy(0, 0, "<<户表信息", Color_White);
+		PrintfXyMultiLine_VaList(0, 0, "<<户表信息  %3d/%-3d ", meterInfo->strIdx + 1, meterInfo->strCnt);
 		dispBuf = &DispBuf;
 		dispIdx = 0;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", meterInfo->meterNum);
@@ -733,17 +762,17 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		dispIdx += sprintf(&dispBuf[dispIdx], "手机: %s\n", meterInfo->mobileNum);
 		dispIdx += sprintf(&dispBuf[dispIdx], "地址: %s\n", meterInfo->userAddr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "抄表方式: %s\n", 
-			(meterInfo->meterReadType[0] == '0' ? "掌机抄表" : (meterInfo->meterReadType[0] == '1' ? "集中器抄表" : " ")));
-		dispIdx += sprintf(&dispBuf[dispIdx], "抄表时间: %s\n", meterInfo->meterReadTime);
+			(meterInfo->meterReadType[0] == '0' ? "手持机抄表" : (meterInfo->meterReadType[0] == '1' ? "集中器抄表" : " ")));
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表时间: \n %s\n", meterInfo->meterReadTime);
 		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %s\n", meterInfo->meterValue);
 		dispIdx += sprintf(&dispBuf[dispIdx], "表状态: %s\n", meterInfo->meterStatusStr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %s\n", meterInfo->batteryVoltage);
-		dispIdx += sprintf(&dispBuf[dispIdx], "信号强度: %s\n", meterInfo->signalValue);
+		dispIdx += sprintf(&dispBuf[dispIdx], "信号强度: %s", meterInfo->signalValue);
 		//----------------------------------------------
 		_Printfxy(0, 9*16, "返回        户表命令", Color_White);
-		key = ShowScrollStr(dispBuf,  7);
+		key = ShowScrollStrEx(dispBuf,  7);
 		//----------------------------------------------
-		if(key == KEY_CANCEL){	// 返回
+		if(key == KEY_CANCEL || key == KEY_LEFT || key == KEY_RIGHT){	// 返回
 			break;
 		}
 

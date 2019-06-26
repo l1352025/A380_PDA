@@ -215,7 +215,9 @@ typedef struct{
 //---------------	户表信息
 typedef struct 
 {
-	uint32	dbIdx;		// 记录在数据库中索引
+	uint32	dbIdx;		// 当前记录在数据库中索引
+	uint8 	strIdx;		// 当前记录在列表项的索引
+	uint8	strCnt;		// 当前记录所在列表项总数	
 	char	*qryMeterNum;		// 表号
 	char 	*qryUserNum;		// 户号
 	char 	*qryRoomNum;		// 门牌号
