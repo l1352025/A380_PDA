@@ -1101,18 +1101,19 @@ void WaterCmdFunc_WorkingParams(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout, u16Tmp;
+	uint16 ackLen = 0, timeout;
 	uint32 u32Tmp;
+	uint16 ip[4];
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 14, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 12, NULL,		
 		"<<工作参数",
-		14,
+		12,
 		"1. 设置IP+端口+模式",
 		"2. 读取IP+端口+模式",
-		"3. 读运营商编号",
-		"4. 读IMEI+CCID",
+		"3. 读取运营商编号",
+		"4. 读取IMEI+ICCID",
 		"5. 清除反转计量数据",
 		"6. 读取功能使能状态",
 		"7. 设置定时上传",
@@ -1121,8 +1122,8 @@ void WaterCmdFunc_WorkingParams(void)
 		"10.读表端时钟",
 		"11.校表端时钟",
 		"12.读收发磁扰阀控数",
-		"13.读取模块运行参数",
-		"14.设置模块运行参数"
+		"13.读取模块运行参数",		// 暂时屏蔽
+		"14.设置模块运行参数"		// 暂时屏蔽
 	);
 
 	_CloseCom();
@@ -1177,37 +1178,63 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetIpPortMode;			// 设IP+端口+模式
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:", StrBuf[0], 2, 
-						"Coap", "UDP");
-					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Ip地址:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "   >", StrBuf[1], 3, 3*8, true);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 7*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 15*8, (uiRowIdx)*16, ".", StrBuf[4], 3, 3*8, true);
+					if(StrBuf[0][0] > 1){
+						StrBuf[0][0] = 0;
+					}
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:", &StrBuf[0][0], 2, 
+						"Coap", "Udp");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "  IP:", StrBuf[1], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 12*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 16*8, (uiRowIdx)*16, ".", StrBuf[4], 3, 3*8, true);
 					uiRowIdx++;
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "端口号:", StrBuf[5], 5, 6*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Port:", StrBuf[5], 5, 6*8, true);
 					break;
 				}
-
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " 请输入");
-					currUi = uiRowIdx - 2 - 2;
+				ip[0] = (uint16) _atof(StrBuf[1]);
+				if(StrBuf[1][0] < '0' || StrBuf[1][0] > '9' || ip[0] > 255){
+					currUi = 3;
+					isUiFinish = false;
+					continue;
+				}
+				ip[1] = (uint16) _atof(StrBuf[2]);
+				if(StrBuf[2][0] < '0' || StrBuf[2][0] > '9' || ip[1] > 255){
+					currUi = 4;
+					isUiFinish = false;
+					continue;
+				}
+				ip[2] = (uint16) _atof(StrBuf[3]);
+				if(StrBuf[3][0] < '0' || StrBuf[3][0] > '9' || ip[2] > 255){
+					currUi = 5;
+					isUiFinish = false;
+					continue;
+				}
+				ip[3] = (uint16) _atof(StrBuf[4]);
+				if(StrBuf[4][0] < '0' || StrBuf[4][0] > '9' || ip[3] > 255){
+					currUi = 6;
 					isUiFinish = false;
 					continue;
 				}
 
-				Args.buf[i++] = 0x06;		// 命令字	06
-				ackLen = 7;					// 应答长度 7	
+				u32Tmp = (uint32)_atof(StrBuf[5]);
+				if(StrBuf[5][0] < '0' || StrBuf[5][0] > '9' || u32Tmp > 65535){
+					currUi = 7;
+					isUiFinish = false;
+					continue;
+				}
+
+				i = 0;
+				Args.buf[i++] = 0x0D;		// 命令字	0D
+				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				u32Tmp = (uint32) _atof(StrBuf[0]);
-				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
-				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+				Args.buf[i++] = 0x01;		// 命令选项：0-读取， 1-设置
+				Args.buf[i++] = (0xA0 + (uint8)StrBuf[0][0]);	// 模式：A0-coap, A1-udp
+				Args.buf[i++] = (uint8)(ip[0] & 0xFF);	// IP
+				Args.buf[i++] = (uint8)(ip[1] & 0xFF);	
+				Args.buf[i++] = (uint8)(ip[2] & 0xFF);		
+				Args.buf[i++] = (uint8)(ip[3] & 0xFF);	
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	// Port	
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
-				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
-				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
-				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
-				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
-				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1217,58 +1244,33 @@ void WaterCmdFunc_WorkingParams(void)
 				if(false == isUiFinish){
 					break;
 				}
-				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 4;					// 应答长度 5	
+				Args.buf[i++] = 0x0D;		// 命令字	0D
+				ackLen = 9;					// 应答长度 9	
 				// 数据域
-				Args.buf[i++] = 0x0A;		// 命令选项 0A	
+				Args.buf[i++] = 0x00;		// 命令选项：0-读取， 1-设置
 				Args.lastItemLen = i - 1;
 				break;
 				
 			case 3: 
-				CurrCmd = WaterCmd_ReadOperatorNumber;		// " 读运营商编号 ";
+				CurrCmd = WaterCmd_ReadNbOperaterNumber;		// " 读NB运营商编号 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
 				}
-				Args.buf[i++] = 0x07;		// 命令字	07
-				ackLen = 4;					// 应答长度 5	
+				Args.buf[i++] = 0x0E;		// 命令字	0E
+				ackLen = 7;					// 应答长度 7	
 				// 数据域
-				Args.buf[i++] = 0x0A;		// 命令选项 0A	
+				Args.buf[i++] = 0;			// 命令选项 0-读取， 1-设置	
 				Args.lastItemLen = i - 1;
 				break;
 
 			case 4: 
-				CurrCmd = WaterCmd_ReadImeiAndCcid;			// 读IMEI+CCID
+				CurrCmd = WaterCmd_ReadImeiAndCcid;			// 读IMEI+ICCID
 				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					if(StrBuf[1][0] == 0x00){
-						StrBuf[1][0] = 0x01;
-					}
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
-					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
-						"1", "10", "100", "1000");
-					break;
-				}
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " 请输入");
-					currUi = uiRowIdx - 2 - 2;
-					isUiFinish = false;
-					continue;
-				}
-
-				Args.buf[i++] = 0x06;		// 命令字	06
-				ackLen = 7;					// 应答长度 7	
+				Args.buf[i++] = 0x0F;		// 命令字	0F
+				ackLen = 22;				// 应答长度 12	
 				// 数据域
-				u32Tmp = (uint32) _atof(StrBuf[0]);
-				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
-				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
-				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
-				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
-				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
-				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
-				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
-				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+				Args.buf[i++] = 0;			// 脉冲系数	0-读取IMEI+ICCID，1-设置IMEI， 2-设置ICCID
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1444,6 +1446,22 @@ void WaterCmdFunc_WorkingParams(void)
 			case 13: 
 				CurrCmd = WaterCmd_ReadModuleRunningParams;		// 读取模块运行参数
 				/*---------------------------------------------*/
+				#if LOG_ON
+				_CloseCom();
+				_ComSetTran(CurrPort);
+				_ComSet(CurrBaud, 2);
+				TxLen = GetBytesFromStringHex(TxBuf, 0, 255, "55 55 D3 91 1D 00 10 00 0D FE 0F 02 20 19 00 00 20 19 00 00 08 69 48 70 30 02 05 71 00 00 00 4C 16 1E 03 19", ' ', false);
+				_GetComStr(TmpBuf, 1000, 100/10);			// clear , 100ms
+				_SendComStr(TxBuf, TxLen);
+				RxLen = _GetComStr(RxBuf, 255, 4000/10);	// receive, 4s
+				_CloseCom();
+
+				LogPrintBytes("Tx: ", TxBuf, TxLen);
+				LogPrintBytes("Rx: ", RxBuf, RxLen);
+				break;
+
+				#endif
+
 				if(false == isUiFinish){
 					break;
 				}
@@ -2753,11 +2771,11 @@ int main(void)
 	int fp;
 
 	fp = _Fopen("system.cfg", "R");
-#ifdef Project_6009_RF
-	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#else
-	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
-#endif
+	#ifdef Project_6009_RF
+		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+	#else
+		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+	#endif
 	_Fread(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	

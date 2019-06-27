@@ -275,8 +275,8 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 */
 static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 {
-	uint8 key, isShowIcon = 1, cnt = 0;
-	uint8 x, y, idx, lastIdx = 0xFF;
+	uint8 key, x, y, isShowIcon = 1, cnt = 0;
+	int8 idx, lastIdx = 127;
 
 	idx = *uiItem->ui.combox.currIdx;
 	
@@ -308,13 +308,15 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 		cnt++;
 
 		if(key == KEY_LEFT){
-			if(idx > 0){
-				idx--;
+			idx--;
+			if(idx < 0){
+				idx = uiItem->ui.combox.cnt -1;
 			}
 		}
 		if(key == KEY_RIGHT){
-			if(idx < uiItem->ui.combox.cnt -1){
-				idx++;
+			idx++;
+			if(idx > uiItem->ui.combox.cnt -1){
+				idx = 0;
 			}
 		}
 		else if(key == KEY_UP || key == KEY_DOWN
@@ -599,7 +601,8 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *currIdx, uint32 maxCnt, ...)
 {
 	va_list ap;
-	char i, *ptr;
+	uint8 i;
+	char *ptr;
 
 	va_start(ap, maxCnt);
 	for(i = 0; i < maxCnt && i < 10; i++){
@@ -716,7 +719,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 	}
 
 	// set the not-number str to null when back
-	if(ptr->text[0] > '9' || ptr->text[0] < '0'){
+	if(ptr->type == UI_TxtBox && (ptr->text[0] > '9' || ptr->text[0] < '0')){
 		ptr->text[0] = 0x00;
 	}
 

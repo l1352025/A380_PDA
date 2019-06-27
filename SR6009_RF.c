@@ -25,13 +25,13 @@ void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 }
 
 
-#ifdef	Use_CenterCmd
+#if CenterCmd_Enable
 // --------------------------------  集中器模块通信  -----------------------------------------
 // 1	常用命令
 void CenterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -41,37 +41,30 @@ void CenterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<常用命令";
-	menuList.no = 9;
-	menuList.MaxNum = 9;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "1. 读集中器号";
-	menuList.str[1] = "2. 读集中器版本";
-	menuList.str[2] = "3. 读集中器时钟";
-	menuList.str[3] = "4. 设集中器时钟";
-	menuList.str[4] = "5. 读GPRS参数";
-	menuList.str[5] = "6. 设GPRS参数";
-	menuList.str[6] = "7. 读GPRS信号强度";
-	menuList.str[7] = "8. 集中器初始化";
-	menuList.str[8] = "9. 读集中器工作模式";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 9, NULL,
+		"<<常用命令",
+		9,
+		"1. 读取集中器号",
+		"2. 读取集中器版本",
+		"3. 读取集中器时钟",
+		"4. 设置集中器时钟",
+		"5. 读取GPRS参数",
+		"6. 设置GPRS参数",
+		"7. 读GPRS信号强度",
+		"8. 集中器初始化",
+		"9. 读集中器工作模式"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -320,7 +313,7 @@ void CenterCmdFunc_CommonCmd(void)
 void CenterCmdFunc_DocumentOperation(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -330,33 +323,26 @@ void CenterCmdFunc_DocumentOperation(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<< 档案操作";
-	menuList.no = 5;
-	menuList.MaxNum = 5;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读档案数量";
-	menuList.str[1] = "  2. 读档案信息";
-	menuList.str[2] = "  3. 添加档案信息";
-	menuList.str[3] = "  4. 删除档案信息";
-	menuList.str[4] = "  5. 修改档案信息";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
+		"<<档案操作",
+		5,
+		"1. 读档案数量",
+		"2. 读档案信息",
+		"3. 添加档案信息",
+		"4. 删除档案信息",
+		"5. 修改档案信息"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -366,7 +352,7 @@ void CenterCmdFunc_DocumentOperation(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -522,7 +508,7 @@ void CenterCmdFunc_DocumentOperation(void)
 void CenterCmdFunc_RouteSetting(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -532,30 +518,23 @@ void CenterCmdFunc_RouteSetting(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<路径设置";
-	menuList.no = 2;
-	menuList.MaxNum = 2;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读自定义路由";
-	menuList.str[1] = "  2. 设自定义路由";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 2, NULL,
+		"<<路径设置",
+		2,
+		"1. 读取自定义路由",
+		"2. 设置自定义路由"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -565,7 +544,7 @@ void CenterCmdFunc_RouteSetting(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -681,7 +660,7 @@ void CenterCmdFunc_RouteSetting(void)
 void CenterCmdFunc_CommandTransfer(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -691,35 +670,28 @@ void CenterCmdFunc_CommandTransfer(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<< 命令转发";
-	menuList.no = 7;
-	menuList.MaxNum = 7;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读实时数据";
-	menuList.str[1] = "  2. 读定时定量数据";
-	menuList.str[2] = "  3. 读冻结数据";
-	menuList.str[3] = "  4. 开阀";
-	menuList.str[4] = "  5. 关阀";
-	menuList.str[5] = "  6. 读使能";
-	menuList.str[6] = "  7. 清异常";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
+		"<<命令转发",
+		7,
+		"1. 读实时数据",
+		"2. 读定时定量数据",
+		"3. 读冻结数据",
+		"4. 开阀",
+		"5. 关阀",
+		"6. 读使能",
+		"7. 清异常"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -729,7 +701,7 @@ void CenterCmdFunc_CommandTransfer(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -952,7 +924,7 @@ void CenterCmdFunc(void)
 void WaterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -962,35 +934,28 @@ void WaterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<常用命令";
-	menuList.no = 7;
-	menuList.MaxNum = 7;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读取用户用量";
-	menuList.str[1] = "  2. 读取冻结数据";
-	menuList.str[2] = "  3. 开阀";
-	menuList.str[3] = "  4. 强制开阀";
-	menuList.str[4] = "  5. 关阀";
-	menuList.str[5] = "  6. 强制关阀";
-	menuList.str[6] = "  7. 清异常命令";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
+		"<<常用命令",
+		7,
+		"1. 读取用户用量",
+		"2. 读取冻结数据",
+		"3. 开阀",
+		"4. 强制开阀",
+		"5. 关阀",
+		"6. 强制关阀",
+		"7. 清异常命令"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -1000,7 +965,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1200,7 +1165,7 @@ void WaterCmdFunc_CommonCmd(void)
 void WaterCmdFunc_TestCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -1211,38 +1176,31 @@ void WaterCmdFunc_TestCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<测试命令";
-	menuList.no = 10;
-	menuList.MaxNum = 8;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 表端重启";
-	menuList.str[1] = "  2. 读表温度";
-	menuList.str[2] = "  3. 读表电压";
-	menuList.str[3] = "  4. 清预缴参考量";
-	menuList.str[4] = "  5. 设置过流超时";
-	menuList.str[5] = "  6. 读运营商编号";
-	menuList.str[6] = "  7. 读上报路径";
-	menuList.str[7] = "  8. 设置表号";
-	menuList.str[8] = "  9. 读debug信息";
-	menuList.str[9] = " 10. 清debug信息";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 10, NULL,
+		"<<测试命令",
+		10,
+		"1. 表端重启",
+		"2. 读表温度",
+		"3. 读表电压",
+		"4. 清预缴参考量",
+		"5. 设置过流超时",
+		"6. 读运营商编号",
+		"7. 读上报路径",
+		"8. 设置表号",
+		"9. 读debug信息",
+		"10.清debug信息"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -1252,7 +1210,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1561,7 +1519,7 @@ void WaterCmdFunc_TestCmd(void)
 void WaterCmdFunc_Upgrade(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -1571,35 +1529,28 @@ void WaterCmdFunc_Upgrade(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<程序升级";
-	menuList.no = 7;
-	menuList.MaxNum = 7;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 单表升级";
-	menuList.str[1] = "  2. 查询升级";
-	menuList.str[2] = "  3. 广播升级";
-	menuList.str[3] = "  4. 添加档案";
-	menuList.str[4] = "  5. 删除档案";
-	menuList.str[5] = "  6. 查询档案";
-	menuList.str[6] = "  7. 升级统计";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
+		"<<程序升级",
+		7,
+		"1. 单表升级",
+		"2. 查询升级",
+		"3. 广播升级",
+		"4. 添加档案",
+		"5. 删除档案",
+		"6. 查询档案",
+		"7. 升级统计"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -1609,7 +1560,7 @@ void WaterCmdFunc_Upgrade(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1797,7 +1748,7 @@ void WaterCmdFunc_Upgrade(void)
 void WaterCmdFunc_PrepaiedVal(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -1807,35 +1758,28 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 	_ClearScreen();
 
-	// 菜单`
-	menuList.title = "<<预缴用量";
-	menuList.no = 6;
-	menuList.MaxNum = 6;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "  1. 读预缴参考用量";
-	menuList.str[1] = "  2. 设预缴参考用量";
-	menuList.str[2] = "  3. 读报警关阀限值";
-	menuList.str[3] = "  4. 设报警限值";
-	menuList.str[4] = "  5. 设关阀限值";
-	menuList.str[5] = "  6. 设报警关阀限值";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	// 菜单
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
+		"<<预缴用量",
+		6,
+		"1. 读预缴参考用量",
+		"2. 设预缴参考用量",
+		"3. 读报警关阀限值",
+		"4. 设报警限值",
+		"5. 设关阀限值",
+		"6. 设报警关阀限值"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);	
 		isUiFinish = false;
 
@@ -1845,7 +1789,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			// 公共部分 :  界面显示
 			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[5]);
+			sprintf(TmpBuf, "<<%s",&pByte[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -2103,7 +2047,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 void WaterCmdFunc_WorkingParams(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -2114,36 +2058,29 @@ void WaterCmdFunc_WorkingParams(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<工作参数";
-	menuList.no = 8;
-	menuList.MaxNum = 8;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "1. 设用量和脉冲系数";
-	menuList.str[1] = "2. 清除反转计量数据";
-	menuList.str[2] = "3. 读取功能使能状态";
-	menuList.str[3] = "4. 设置定时上传";
-	menuList.str[4] = "5. 设置定量上传";
-	menuList.str[5] = "6. 设置定时定量上传";
-	menuList.str[6] = "7. 读表端时钟";
-	menuList.str[7] = "8. 校表端时钟";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 8, NULL,
+		"<<工作参数",
+		8,
+		"1. 设用量和脉冲系数",
+		"2. 清除反转计量数据",
+		"3. 读取功能使能状态",
+		"4. 设置定时上传",
+		"5. 设置定量上传",
+		"6. 设置定时定量上传",
+		"7. 读表端时钟",
+		"8. 校表端时钟"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -2432,7 +2369,7 @@ void WaterCmdFunc_WorkingParams(void)
 void WaterCmdFunc_Other(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	_GuiLisStruEx menuList;
+	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -2442,33 +2379,26 @@ void WaterCmdFunc_Other(void)
 	_ClearScreen();
 
 	// 菜单
-	menuList.title = "<<其他操作";
-	menuList.no = 5;
-	menuList.MaxNum = 5;
-	menuList.isRt = 0;
-	menuList.x = 0;
-	menuList.y = 0;
-	menuList.with = 10 * 16;
-	menuList.str[0] = "1. 读收发磁扰阀控数";
-	menuList.str[1] = "2. 读取RXD和TXD信道";
-	menuList.str[2] = "3. 设置RXD和TXD信道";
-	menuList.str[3] = "4. 设置运营商编号";
-	menuList.str[4] = "5. 路径下发";
-	menuList.defbar = 1;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
+		"<<其他操作",
+		5,
+		"1. 读收发磁扰阀控数",
+		"2. 读取RXD和TXD信道",
+		"3. 设置RXD和TXD信道",
+		"4. 设置运营商编号",
+		"5. 路径下发"
+	);
 
 	while(1){
 
-		_ClearScreen();
-		menuItemNo = _ListEx(&menuList);
-
-		if (menuItemNo == 0){
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuList.defbar = menuItemNo;
+		menuItemNo = menuList.strIdx + 1;
+
 		memset(StrBuf, 0, TXTBUF_LEN * 10);
 		isUiFinish = false;
 
@@ -2777,7 +2707,7 @@ void WaterCmdFunc(void)
 }
 
 
-//-----------------------------------	主菜单	---------------------------
+//-----------------------------------	主界面	---------------------------
 // 读取用户用量
 void MainFuncReadRealTimeData(void)
 {
@@ -3693,7 +3623,7 @@ void MainFuncBatchMeterReading(void)
 	uint16 qryIndexXq, qryIndexLd;
 	uint32 recCnt;
 
-	// 批量抄表-菜单
+	// 菜单
 	//------------------------------------------------------------
 	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
 		"<<批量抄表",
@@ -3849,9 +3779,9 @@ void MainFuncBatchMeterReading(void)
 									continue;
 								}
 
-								_Replace(Idx_MeterReadStatus, "0");		// 重置抄表信息
+								_Replace(Idx_MeterReadStatus, "0");	
 								_Replace(Idx_MeterReadTime, "");
-								_Replace(Idx_MeterValue, "");
+								_Replace(Idx_MeterReadType, "");
 								_Replace(Idx_MeterValue, "");
 								_Replace(Idx_MeterStatusHex, "");
 								_Replace(Idx_MeterStatusStr, "");
@@ -3894,8 +3824,8 @@ void MainFuncBatchMeterReading(void)
 										break;
 									}
 									isUiFinish = true;
-								
 								}
+
 								// 时间有效值校验
 								if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
 									currUi = 1 + (i -1);
@@ -3908,6 +3838,10 @@ void MainFuncBatchMeterReading(void)
 								_SetDateTime(time);
 								break;
 							}
+							if (key == KEY_CANCEL){
+								break;
+							}
+
 							_Printfxy(8, 5*16, "当前楼栋           ", Color_White);
 							_Printfxy(8, 6*16, "抄表时间重置中... ", Color_White);
 							//------------------------------------------------------------
@@ -3973,12 +3907,12 @@ void MainFuncBatchMeterReading(void)
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
 			do{
-				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
-				strTmp[Size_MeterReadStatus - 1] = '\0';
-				if(strTmp[0] != '1'){
-					_Skip(1);	// 下一个数据库记录
-					continue;
-				}
+				// _ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+				// strTmp[Size_MeterReadStatus - 1] = '\0';
+				// if(strTmp[0] != '1'){
+				// 	_Skip(1);	// 下一个数据库记录
+				// 	continue;
+				// }
 				_Replace(Idx_MeterReadStatus, "0");
 				_Replace(Idx_MeterReadTime, "");
 				_Replace(Idx_MeterReadType, "");
@@ -4289,7 +4223,7 @@ void MainFuncBatchMeterReading(void)
 // 工程调试		------------------------------
 void MainFuncEngineerDebuging(void)
 {
-	#ifdef Use_CenterCmd
+	#if CenterCmd_Enable
 	_GuiMenuStru menu;
 
 	menu.top = 0;
@@ -4317,21 +4251,17 @@ int main(void)
 	int fp;
 
 	fp = _Fopen("system.cfg", "R");
-#ifdef Project_6009_RF
-	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#else
-	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
-#endif
+	#ifdef Project_6009_RF
+		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+	#else
+		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+	#endif
 	_Fread(StrDstAddr, TXTBUF_LEN, fp);
 	_Fclose(fp);
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
-#ifdef Project_6009_RF
 	MainMenu.no=8;
-#else
-	MainMenu.no=7;
-#endif 
 	MainMenu.title =  "     桑锐手持机    ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
@@ -4340,9 +4270,7 @@ int main(void)
 	MainMenu.str[4] = " 开阀 ";
 	MainMenu.str[5] = " 关阀 ";
 	MainMenu.str[6] = " 工程调试 ";
-#ifdef Project_6009_RF
 	MainMenu.str[7] = " 批量抄表 ";
-#endif 
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -4350,9 +4278,7 @@ int main(void)
 	MainMenu.key[4] = "5";
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
-#ifdef Project_6009_RF
 	MainMenu.key[7] = "8";
-#endif 
 	MainMenu.Function[0] = MainFuncReadRealTimeData;
 	MainMenu.Function[1] = MainFuncReadFrozenData;
 	MainMenu.Function[2] = MainFuncReadMeterTime;
@@ -4360,9 +4286,7 @@ int main(void)
 	MainMenu.Function[4] = MainFuncOpenValve;
 	MainMenu.Function[5] = MainFuncCloseValve;
 	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
-#ifdef Project_6009_RF
 	MainMenu.Function[7] = MainFuncBatchMeterReading;
-#endif 
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

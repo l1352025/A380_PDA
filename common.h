@@ -3,19 +3,42 @@
 
 
 // --------------------------------		类型定义	-----------------------------------------
+/*  串口物理端口： NO.1 / NO.2 / NO.3
+        物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
+        物理NO.2 (TP_COM_TXD / TP_COM_RXD)
+        物理NO.3 (TP_SCAN_TXD / TP_SCAN_RXD) 
+    串口逻辑端口：1.串口 / 2.普通红外 / 3.高速红外
+        _ComSetTran(logicPort)
+        （使用前先设置有效的物理端口 NO.1 / NO.2 / No.3）
+        如使用”高速红外“,则先选择物理端口NO.1 或 No.3： 
+            系统设置->模块设置->红外设置->高速红外->
+*/
+#define Trans_Scom          1   // 扫描端口
+#define Trans_IR            2   // 普通红外 
+#define Trans_IR_Quick      3   // 高速红外
 
-typedef unsigned char bool;
-#ifndef true
-#define true    1
+// 当前透传模块使用的通信端口 和 波特率
+#if defined(Project_6009_IR)
+    #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
+    #define VerInfo_RevNo   (char *)"2.3"              // 版本号
+    #define VerInfo_RevDate (char *)"2019-6-27"        // 版本日期
+    #define TransType   "红外透传"                      // 通信方式	
+	#define CurrPort    Trans_IR                
+	#define CurrBaud    (uint8 *)"1200,E,8,1"
+    #define AddrLen     8
+    #define LogPort     Trans_IR_Quick      // 日志输出串口
+#elif defined(Project_6009_RF)
+    #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
+    #define VerInfo_RevNo   (char *)"2.3"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-6-27"         // 版本日期
+    #define TransType   "Lora透传"                      // 通信方式	
+	#define CurrPort    Trans_IR_Quick          
+	#define CurrBaud    (uint8 *)"9600,E,8,1" 
+    #define AddrLen     6
+    #define LogPort     Trans_IR_Quick  // 日志输出串口
+    #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
-#ifndef false
-#define false   0
-#endif
-
-#define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-#define VerInfo_RevNo   (char *)"2.3"               // 版本号
-#define VerInfo_RevDate (char *)"2019-6-27"         // 版本日期
-//#define VerInfo_Release                             // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release           // 发布时必须定义该宏， 调试时注释
 
 
 #ifndef VerInfo_Release
@@ -28,45 +51,19 @@ typedef unsigned char bool;
 #define RxBeep_On   1       
 #endif
 
+typedef unsigned char bool;
+#ifndef true
+#define true    1
+#endif
+#ifndef false
+#define false   0
+#endif
+
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      15      // 最大UI控件数
 #define ListStrMax  256     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
-
-
-/*  串口物理端口： NO.1 / NO.2 / NO.3
-        物理NO.1 (TP_PORT_TXD / TP_PORT_RXD)
-        物理NO.2 (TP_COM_TXD / TP_COM_RXD)
-        物理NO.3 (TP_SCAN_TXD / TP_SCAN_RXD) 
-
-    串口逻辑端口：1.串口 / 2.普通红外 / 3.高速红外
-        _ComSetTran(logicPort)
-        （使用前先设置有效的物理端口 NO.1 / NO.2 / No.3）
-        如使用”高速红外“,则先选择物理端口NO.1 或 No.3： 
-            系统设置->模块设置->红外设置->高速红外->
-*/
-#define Trans_Scom          1   // 扫描端口
-#define Trans_IR            2   // 普通红外 
-#define Trans_IR_Quick      3   // 高速红外
-
-
-// 当前透传模块使用的通信端口 和 波特率
-
-#if defined(Project_6009_IR)
-	#define CurrPort    Trans_IR                
-	#define CurrBaud    (uint8 *)"1200,E,8,1"
-    #define TransType   "红外透传"      // 通信方式	
-    #define AddrLen     8
-    #define LogPort     Trans_IR_Quick // 日志输出串口
-#else //defined(Project_6009_RF)
-	#define CurrPort    Trans_IR_Quick          
-	#define CurrBaud    (uint8 *)"9600,E,8,1"
-    //#define Timeout     Trans_IR 
-    #define TransType   "Lora透传"      // 通信方式	
-    #define AddrLen     6
-    #define LogPort     Trans_IR_Quick // 日志输出串口
-#endif
 
 typedef enum{
     Color_White = 0,

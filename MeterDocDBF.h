@@ -28,7 +28,7 @@
 #define Size_MeterReadTime          20	//抄表时间长度	20
 #define Size_MeterValue             12	//表读数		12
 #define Size_MeterStatusHex         8	//表状态Hex长度	8
-#define Size_MeterStatusStr         40	//表状态Str长度	50
+#define Size_MeterStatusStr         50	//表状态Str长度	50
 #define Size_BatteryVoltage         6   //电池电压长度	5
 #define Size_SignalValue           	10 	//信号强度长度	10
 

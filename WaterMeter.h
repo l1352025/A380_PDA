@@ -127,7 +127,8 @@ typedef enum{
 	8	校表端时钟
 	9	设IP+端口+模式
 	10	读IP+端口+模式
-	11	读IMEI+CCID
+	11	读NB运营商编号
+	12	读IMEI+CCID
 	*/
 	WaterCmd_SetBaseValPulseRatio	= 0x51,
 	WaterCmd_ClearReverseMeasureData,
@@ -139,6 +140,7 @@ typedef enum{
 	WaterCmd_SetMeterTime,
 	WaterCmd_SetIpPortMode,
 	WaterCmd_ReadIpPortMode,
+	WaterCmd_ReadNbOperaterNumber,
 	WaterCmd_ReadImeiAndCcid,
 
 	/*
@@ -410,13 +412,18 @@ uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 		}
 
 		if(str != NULL){
-			len += sprintf(&buf[len], "  %s\n", str);
+			len += sprintf(&buf[len], "%s, ", str);
 			str = NULL;
 		}
 	}
 
 	if(len == 0){
-		len += sprintf(&buf[len], "  \n");
+		len += sprintf(&buf[len], " \n");
+	}
+	else{	// 后面 ", " --> 替换为 " \n"
+		buf[len - 2] = ' ';
+		buf[len - 1] = '\n';
+		buf[len] = 0x00;
 	}
 
 	return len;
@@ -833,8 +840,8 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp);
-				u32Tmp = ( (dispIdx - u32Tmp) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp));
+				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp - 1);
+				u32Tmp = ( (dispIdx - u32Tmp - 1) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp - 1));
 				MeterInfo.meterStatusStr[u32Tmp] = 0x00;
 			}
 		#endif
@@ -845,7 +852,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
-				sprintf(&MeterInfo.meterStatusStr[u32Tmp], "  阀门%s", ptr);
+				sprintf(&MeterInfo.meterStatusStr[u32Tmp], " , 阀门%s", ptr);
 			}
 		#endif
 		//电池电压
@@ -1392,6 +1399,98 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x14){
 			break;
 		}
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_SetIpPortMode:		// 设IP+端口+模式
+		if(rxlen < index + 2 && cmd != 0x0D){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadIpPortMode:		// 读IP+端口+模式
+		if(rxlen < index + 9 && cmd != 0x0D){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 工作模式
+		switch (buf[index]){
+		case 0xA0:	ptr = "Coap"; break;
+		case 0xA1:	ptr = "Udp"; break;
+		default: ptr = "未知"; break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "工作模式: %s\n", ptr);
+		index += 1;
+		// Ip地址
+		dispIdx += sprintf(&dispBuf[dispIdx], "Ip地址: %d.%d.%d.%d\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		// 端口号
+		dispIdx += sprintf(&dispBuf[dispIdx], "端口号: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadNbOperaterNumber: // 读NB运营商编号
+		if(rxlen < index + 7 && cmd != 0x0E){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 运营商编号/SIM卡类型
+		GetStringHexFromBytes(TmpBuf, buf, index, 4, 0, false);
+		if(TmpBuf[3] == '0' && TmpBuf[4] == '4'){
+			ptr = "中国移到";
+		}else if(TmpBuf[3] == '0' && TmpBuf[4] == '1'){
+			ptr = "中国联通";
+		}else if(TmpBuf[3] == '1' && TmpBuf[4] == '1'){
+			ptr = "中国电信";
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "运营商编号: %s\n", TmpBuf);
+		dispIdx += sprintf(&dispBuf[dispIdx], " SIM卡类型: %s\n", ptr);
+		index += 4;
+		// 通信频段
+		dispIdx += sprintf(&dispBuf[dispIdx], "  通信频段: %d\n", buf[index]);
+		index += 1;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadImeiAndCcid:		// 读IMEI+ICCID
+		if(rxlen < index + 22 && cmd != 0x0F){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// ICCID
+		GetStringHexFromBytes(&TmpBuf[0], buf, index, 10, 0, false);
+		TmpBuf[20] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "ICCID: %s\n", &TmpBuf[0]);
+		index += 10;
+		// IMEI
+		GetStringHexFromBytes(&TmpBuf[0], buf, index, 10, 0, false);
+		TmpBuf[20] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], " IMEI: %s\n", &TmpBuf[0]);
+		index += 10;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
@@ -2221,17 +2320,27 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 //----------------------------------	版本信息		--------------------------
 void VersionInfoFunc(void)
 {
-	_ClearScreen();
+	uint8 key;
 
-	_Printfxy(0, 0, "<<版本信息", Color_White);
-	_GUIHLine(0, 1*16 + 4, 160, Color_Black);
-	//--------------------------------------------------
-	PrintfXyMultiLine_VaList(0, 2*16, "  %s ", VerInfo_Name);
-	PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
-	PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
-	PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+	while(1){
+		_ClearScreen();
 
-	_ReadKey();		// 任意键返回
+		_Printfxy(0, 0, "<<版本信息", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);
+		//--------------------------------------------------
+		PrintfXyMultiLine_VaList(0, 2*16, "  %s ", VerInfo_Name);
+		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
+		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
+		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+		//--------------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+
+		key = _ReadKey();		// 任意键返回
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+	}
 }
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
