@@ -72,6 +72,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 void LogPrint(const char * format, ...)
 {
 #if LOG_ON
+	static uint8 LogBuf[1024] = {0};	// 1.使用静态内存
 	
 #if !(LogScom_On)
 	int fp;
@@ -80,7 +81,8 @@ void LogPrint(const char * format, ...)
 	va_list ap;
 	uint8 *buf;
 
-	buf = (uint8 *) _malloc(1024);
+	//buf = (uint8 *) _malloc(2048);	// 2.使用动态内存时
+	buf = &LogBuf[0];					// 静态内存
 
 	va_start(ap, format);
 	len += vsprintf(&buf[0], format, ap);
@@ -111,7 +113,7 @@ void LogPrint(const char * format, ...)
 
 #endif
 
-	_free(buf);
+	//_free(buf);					// 使用动态内存时
 
 #endif
 }
@@ -873,19 +875,19 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 */
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
-	static uint8 buf[512] = {0};
+	static uint8 buf[1024] = {0};
 	int len;
 	va_list ap;
 
 	va_start(ap, format);
 	len = vsprintf(buf, format, ap);
-	if(len < 0 || len > 512){
+	if(len < 0 || len > 2048){
 		len = 0;
 	}
 	buf[len] = '\0';
 	va_end(ap);
 
-	PrintfXyMultiLine(x, y, buf, 10);	// 最大显示10行
+	PrintfXyMultiLine(x, y, buf, 7);	// 最大显示10行
 }
 
 /*
@@ -1458,6 +1460,55 @@ uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min
 		sec[0] = 0x00;
 		errorCode = 6;
 	}
+
+	return errorCode;
+}
+
+/*
+* 描  述：校验时间字符串
+* 参  数： ip		- ip地址字节数组
+*		  strIp1/2/3/4	- IP地址第1/2/3/4段字符串 
+* 返回值：uint8 错误码：0 - IP地址正确,  1/2/3/4 - IP地址第1/2/3/4段字符串 错误
+*/
+uint8 GetIpBytesFromIpStrs(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4)
+{
+	uint8 errorCode = 0;
+	uint16 u16Tmp;
+
+	do{
+		// ip1
+		u16Tmp = _atof(strIp1);
+		if(strIp1[0] < '0' || strIp1[0] > '9' || u16Tmp > 255){
+			errorCode = 1;
+			break;
+		}
+		ip[0] = (uint8)(u16Tmp & 0xFF);
+
+		// ip2
+		u16Tmp = _atof(strIp2);
+		if(strIp2[0] < '0' || strIp2[0] > '9' || u16Tmp > 255){
+			errorCode = 2;
+			break;
+		}
+		ip[1] = (uint8)(u16Tmp & 0xFF);
+
+		// ip3
+		u16Tmp = _atof(strIp3);
+		if(strIp3[0] < '0' || strIp3[0] > '9' || u16Tmp > 255){
+			errorCode = 3;
+			break;
+		}
+		ip[2] = (uint8)(u16Tmp & 0xFF);
+
+		// ip4
+		u16Tmp = _atof(strIp4);
+		if(strIp4[0] < '0' || strIp4[0] > '9' || u16Tmp > 255){
+			errorCode = 4;
+			break;
+		}
+		ip[3] = (uint8)(u16Tmp & 0xFF);
+
+	}while(0);
 
 	return errorCode;
 }

@@ -272,13 +272,17 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 */
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
-	uint8 key, i, cnt, tryCnt, isCancel = false;
+	uint8 key, i, cnt, isCancel = false;
 	uint16 ackLen, timeout, dispIdx;
-	uint8 sendCnt = 0, cmdResult;
+	uint8 sendCnt = 0, tryCnt, cmdResult, lcdCtrl;
 	uint16 waitTime = 0, lastRxLen;
 	char *dispBuf = &DispBuf;
 	MeterInfoSt *meterInfo = &MeterInfo;
 	char strTmp[20];
+
+	if(meters->cnt == 0){
+		return KEY_CANCEL;
+	}
 
 	// 中继清空
 	for(i = 0; i < RELAY_MAX; i++){				
@@ -287,13 +291,31 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		}
 	}
 
-	cnt = 0;	// 已抄数初始化
+	// 初始化
+	cnt = 0;	
 	meters->readOkCnt = 0;
 	meters->readNgCnt = 0;
+	lcdCtrl = 0;
+
+	// 防止自动抄表时关机，重置自动关机时间
+	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
 	// 自动抄表
 	while(cnt < meters->cnt){
 
+		// LCD背景灯控制
+		if(lcdCtrl == 0){
+			_OpenLcdBackLight();
+			lcdCtrl++;
+		}
+		else if(lcdCtrl < 4){
+			lcdCtrl++;
+		}
+		else if(lcdCtrl == 4){
+			_CloseLcdBackLight();
+			lcdCtrl++;
+		}
+		
 		// 读取当前户表信息
 		meterInfo->dbIdx = meters->dbIdx[cnt];
 		QueryMeterInfo(meterInfo, &DbQuery);
@@ -304,7 +326,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		_Printfxy(0, 0, "<<自动抄表", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
-		dispBuf = &DispBuf;
+		//dispBuf = &DispBuf;
 		dispIdx = 0;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", meterInfo->meterNum);
 		dispIdx += sprintf(&dispBuf[dispIdx], "户号: %s\n", meterInfo->userNum);
@@ -350,7 +372,6 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		do{
 			// 发送 
 			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, sendCnt);
-			_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 			_SendComStr(TxBuf, TxLen);
 			sendCnt++;
 			if(sendCnt == 1){
@@ -371,10 +392,15 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			do{
 
 				RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 8);	// N x10 ms 检测接收, 时间校准为 N x90% x10
-				if(KEY_CANCEL == _GetKeyExt()){	// 已取消
+				key = _GetKeyExt();
+				if(key == KEY_CANCEL){	// 取消键，取消自动抄表
 					DispBuf[0] = 0x00;
 					isCancel = true;
 					break;
+				}
+				else if(key != 0 && lcdCtrl > 4){	// 其他键，打开背景灯
+					_OpenLcdBackLight();
+					lcdCtrl = 0;
 				}
 				waitTime += 100;
 
@@ -415,17 +441,35 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			_Printfxy(0, 9*16, " < 当前抄表: 失败 > ", Color_White);
 			meters->readNgCnt++;
 		}
-		_Sleep(1500);
+		_Sleep(1000);
+
+		// 显示电量
+		_Printfxy(0, 9*16, "                   ", Color_White);
+		_DispTimeSys();	
+		_Sleep(1000);
 
 		cnt++;
 	}
 
+	_OpenLcdBackLight();
+
 	if(isCancel){
 		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
+		#if RxBeep_On
+		_SoundOn();
+		_Sleep(100);
+		_SoundOff();
+		#endif
 	}
 	else{
 		_Printfxy(0, 9*16, "返回  <已完成>  确定", Color_White);
+		#if RxBeep_On
+		_SoundOn();
+		_Sleep(200);
+		_SoundOff();
+		#endif
 	}
+	
 
 	sprintf(strTmp, "成功:%d", meters->readOkCnt);
 	_Printfxy(6*16, 7*16 + 8 + 3, strTmp, Color_White);
@@ -435,7 +479,10 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		if(key == KEY_CANCEL || KEY_ENTER){
 			break;
 		}
+		_Sleep(100);
 	}
+
+	_SetShutDonwTime(60);	
 	
 	return key;
 }

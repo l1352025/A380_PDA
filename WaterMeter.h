@@ -660,7 +660,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	memcpy(&buf[index], args->items[args->itemCnt -1], args->lastItemLen);
 	index += args->lastItemLen;
 
-	if(cmd > 0x3A && cmd < 0x3F){
+	if(cmd >= 0x3A && cmd <= 0x3F){
 		buf[index++] = 0x55;		// 下行场强
 		buf[index++] = 0xAA;		// 上行场强
 	}else{

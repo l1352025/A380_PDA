@@ -3907,12 +3907,12 @@ void MainFuncBatchMeterReading(void)
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
 			do{
-				// _ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
-				// strTmp[Size_MeterReadStatus - 1] = '\0';
-				// if(strTmp[0] != '1'){
-				// 	_Skip(1);	// 下一个数据库记录
-				// 	continue;
-				// }
+				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+				strTmp[Size_MeterReadStatus - 1] = '\0';
+				if(strTmp[0] != '1'){
+					_Skip(1);	// 下一个数据库记录
+					continue;
+				}
 				_Replace(Idx_MeterReadStatus, "0");
 				_Replace(Idx_MeterReadTime, "");
 				_Replace(Idx_MeterReadType, "");

@@ -27,10 +27,10 @@
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
     #define AddrLen     8
     #define LogPort     Trans_IR_Quick      // 日志输出串口
-#elif defined(Project_6009_RF)
+#else // defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.3"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-6-27"         // 版本日期
+    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-6-28"         // 版本日期
     #define TransType   "Lora透传"                      // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -38,7 +38,7 @@
     #define LogPort     Trans_IR_Quick  // 日志输出串口
     #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
-//#define VerInfo_Release           // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release           // 发布时必须定义该宏， 调试时注释
 
 
 #ifndef VerInfo_Release
@@ -61,7 +61,7 @@ typedef unsigned char bool;
 
 #define TXTBUF_LEN	20      // 文本输入最大字符数
 #define RELAY_MAX   3       // 最大中继个数
-#define UI_MAX      15      // 最大UI控件数
+#define UI_MAX      20      // 最大UI控件数
 #define ListStrMax  256     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 
@@ -167,6 +167,7 @@ void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec);
 uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min, char *sec);
+uint8 GetIpBytesFromIpStrs(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern char Screenbuff[160*(160/3+1)*2]; 

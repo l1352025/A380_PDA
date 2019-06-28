@@ -1191,31 +1191,13 @@ void WaterCmdFunc_WorkingParams(void)
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Port:", StrBuf[5], 5, 6*8, true);
 					break;
 				}
-				ip[0] = (uint16) _atof(StrBuf[1]);
-				if(StrBuf[1][0] < '0' || StrBuf[1][0] > '9' || ip[0] > 255){
-					currUi = 3;
+				// ip
+				if((i = GetIpBytesFromIpStrs(ip, StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4])) > 0){
+					currUi = 2 + i;
 					isUiFinish = false;
 					continue;
 				}
-				ip[1] = (uint16) _atof(StrBuf[2]);
-				if(StrBuf[2][0] < '0' || StrBuf[2][0] > '9' || ip[1] > 255){
-					currUi = 4;
-					isUiFinish = false;
-					continue;
-				}
-				ip[2] = (uint16) _atof(StrBuf[3]);
-				if(StrBuf[3][0] < '0' || StrBuf[3][0] > '9' || ip[2] > 255){
-					currUi = 5;
-					isUiFinish = false;
-					continue;
-				}
-				ip[3] = (uint16) _atof(StrBuf[4]);
-				if(StrBuf[4][0] < '0' || StrBuf[4][0] > '9' || ip[3] > 255){
-					currUi = 6;
-					isUiFinish = false;
-					continue;
-				}
-
+				// port
 				u32Tmp = (uint32)_atof(StrBuf[5]);
 				if(StrBuf[5][0] < '0' || StrBuf[5][0] > '9' || u32Tmp > 65535){
 					currUi = 7;
@@ -1474,8 +1456,40 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetModuleRunningParams;		// 设置模块运行参数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表具类型:", &StrBuf[0][0], 4, 
+						"冷水表", "热水表", "燃气表", "电表");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "电池电压:", &StrBuf[0][1], 3, 
+						"3.6v", "6v", "4.5v");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  ", &StrBuf[0][2], 2, 
+						"单干簧管/霍尔", "双干簧管/霍尔", "三干簧管/霍尔", "光电直读", "厚膜直读");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[0][3], 2, 
+						"Coap", "Udp");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:", &StrBuf[0][4], 2, 
+						"Coap", "Udp");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "  IP:", StrBuf[1], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 12*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 16*8, (uiRowIdx)*16, ".", StrBuf[4], 3, 3*8, true);
+					uiRowIdx++;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Port:", StrBuf[5], 5, 6*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "正传用量:", StrBuf[6], 3, 3*8, true);
 					break;
 				}
+				// ip
+				if((i = GetIpBytesFromIpStrs(ip, StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4])) > 0){
+					currUi = 2 + i;
+					isUiFinish = false;
+					continue;
+				}
+				// port
+				u32Tmp = (uint32)_atof(StrBuf[5]);
+				if(StrBuf[5][0] < '0' || StrBuf[5][0] > '9' || u32Tmp > 65535){
+					currUi = 7;
+					isUiFinish = false;
+					continue;
+				}
+
+				i = 0;
 				Args.buf[i++] = 0x3F;		// 命令字	3F
 				ackLen = 1;					// 应答长度 1	
 				// 数据域
