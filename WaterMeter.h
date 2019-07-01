@@ -647,7 +647,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	buf[index++] = Fsn++;		// 任务号： mac fsn 发起方自累加
 	cmd = *args->items[0];
 	buf[index++] = cmd;			// 命令字
-	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， 10 - 冷水表， 11 - GPRS水表
+	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， FA - 上位机， 10 - 冷水表， 11 - GPRS水表
 	buf[index++] = 0x0F;		// 生命周期
 	buf[index++] = addrs->itemCnt & 0x0F;	// 路径信息:  当前位置|路径长度
 	// 地址域
@@ -663,6 +663,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	if(cmd >= 0x3A && cmd <= 0x3F){
 		buf[index++] = 0x55;		// 下行场强
 		buf[index++] = 0xAA;		// 上行场强
+		buf[7] = 0xFA;				// 设备类型改为 FA - 上位机
 	}else{
 		buf[index++] = 0x00;		// 下行场强
 		buf[index++] = 0x00;		// 上行场强
@@ -2157,7 +2158,14 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = RxResult_Ok;
 		// 模块运行参数
-		ptr = Water6009_GetStrDeviceType(buf[index]);
+		//ptr = Water6009_GetStrDeviceType(buf[index]);
+		switch (buf[index]){
+		case 0x10:	ptr = "冷水表";	break;
+		case 0x20:	ptr = "热水表";	break;
+		case 0x30:	ptr = "燃气表";	break;
+		case 0x40:	ptr = "电表";	break;
+		default:  ptr = "未知";	break;
+		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "仪表类型: %s\n", ptr);
 		index += 1;
 		switch (buf[index]){
@@ -2357,7 +2365,7 @@ void VersionInfoFunc(void)
 bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
 	uint8 sendCnt = 0, cmdResult, ret;
-	uint16 waitTime = 0, lastRxLen;
+	uint16 waitTime = 0, currRxLen;
 	int fp;
 
 	if(_Access("system.cfg", 0) < 0){
@@ -2410,13 +2418,14 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
 		waitTime = 0;
-		lastRxLen = 0;
+		currRxLen = 0;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
 		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
 
 		do{
 
-			RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 8);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			RxLen += currRxLen;
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
 				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -2425,24 +2434,17 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 				DispBuf[0] = 0x00;
 				return false;
 			}
-			waitTime += 100;
+			waitTime += 200;
 
 			if(waitTime % 1000 == 0){
 				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
 				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
 			}
 
-			if(lastRxLen > 0){
-				if(lastRxLen != RxLen){
-					lastRxLen = RxLen;
-					continue;
-				}else{
-					break;
-				}
-			}else{
-				lastRxLen = RxLen;
+			if(RxLen > 0 && currRxLen == 0){
+				break;
 			}
-		}while(waitTime < timeout);
+		}while(waitTime < timeout || currRxLen > 0);
 
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
 
@@ -2505,7 +2507,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
-	timeout = 3000;
+	timeout = 4000;
 	tryCnt = 3;
 #else
 	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
