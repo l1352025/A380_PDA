@@ -21,7 +21,7 @@
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
     #define VerInfo_RevNo   (char *)"2.4"              // 版本号
-    #define VerInfo_RevDate (char *)"2019-7-1"        // 版本日期
+    #define VerInfo_RevDate (char *)"2019-7-2"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -64,6 +64,7 @@ typedef unsigned char bool;
 #define UI_MAX      20      // 最大UI控件数
 #define ListStrMax  256     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
+#define CbxItem_Max 15      // 单选框最大项
 
 typedef enum{
     Color_White = 0,
@@ -97,7 +98,7 @@ typedef struct{
     
     union {
         struct{
-            char *strs[10];
+            char *strs[CbxItem_Max];
             uint8 cnt;
             uint8 *currIdx;
         }combox;

@@ -129,6 +129,9 @@ typedef enum{
 	10	读IP+端口+模式
 	11	读NB运营商编号
 	12	读IMEI+CCID
+	13  读取NB入网信息
+	14  读取北京水表参数
+	15  设置北京水表参数
 	*/
 	WaterCmd_SetBaseValPulseRatio	= 0x51,
 	WaterCmd_ClearReverseMeasureData,
@@ -142,6 +145,9 @@ typedef enum{
 	WaterCmd_ReadIpPortMode,
 	WaterCmd_ReadNbOperaterNumber,
 	WaterCmd_ReadImeiAndCcid,
+	WaterCmd_ReadNbJoinNetworkInfo,
+	WaterCmd_ReadBeiJingWaterMeterParams,
+	WaterCmd_SetBeiJingWaterMeterParams,
 
 	/*
 	其他操作：	
@@ -365,11 +371,15 @@ char * Water6009_GetStrSensorType(uint8 typeId)
 	case 0x01:	str = "双干簧管/霍尔";	break;
 	case 0x02:	str = "三干簧管/霍尔";	break;
 	case 0x03:	str = "骏普4位光电直读";	break;
-	case 0x04:	str = "厚膜直读表头";	break;
+	case 0x04:	str = "厚膜直读";	break;
 	case 0x05:	str = "骏普1位光电直读";	break;
 	case 0x06:	str = "188协议光电直读";	break;
 	case 0x07:	str = "188协议无磁直读";	break;
-	case 0x08:	str = "霍尔竟达传感器";	break;
+	case 0x08:	str = "2霍尔竟达";	break;
+	case 0x09:	str = "宁波无磁";	break;
+	case 0x0A:	str = "山科无磁";	break;
+	case 0x0B:	str = "东海无磁";	break;
+	case 0x0C:	str = "三川无磁";	break;
 	default:	str = "未知";	break;
 	}
 
@@ -609,7 +619,7 @@ uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
 	len += sprintf(&buf[len], " 接收电流测试  : %s\n", ((statusCode & 0x0020) > 0 ? "OK" : " NG"));
 	len += sprintf(&buf[len], " 阀控电路测试  : %s\n", ((statusCode & 0x0040) > 0 ? "OK" : " NG"));
 	len += sprintf(&buf[len], " 计量电路测试  : %s\n", ((statusCode & 0x0080) > 0 ? "OK" : " NG"));
-	len += sprintf(&buf[len], " LCD 测试     : %s\n", ((statusCode & 0x0100) > 0 ? "OK" : " NG"));
+	len += sprintf(&buf[len], " LCD测试       : %s\n", ((statusCode & 0x0100) > 0 ? "OK" : " NG"));
 
 	return len;
 }
@@ -2038,7 +2048,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
 		//tx|rx信道
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d , Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
 		index += 1;
 		//协议版本
 		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
@@ -2144,7 +2154,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
 		//tx|rx信道
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d , Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
 		index += 1;
 		//协议版本
 		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
@@ -2158,14 +2168,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = RxResult_Ok;
 		// 模块运行参数
-		//ptr = Water6009_GetStrDeviceType(buf[index]);
-		switch (buf[index]){
-		case 0x10:	ptr = "冷水表";	break;
-		case 0x20:	ptr = "热水表";	break;
-		case 0x30:	ptr = "燃气表";	break;
-		case 0x40:	ptr = "电表";	break;
-		default:  ptr = "未知";	break;
-		}
+		ptr = Water6009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "仪表类型: %s\n", ptr);
 		index += 1;
 		switch (buf[index]){
@@ -2177,11 +2180,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d脉冲/方\n", u16Tmp);
 		index += 1;
-		dispIdx += sprintf(&dispBuf[dispIdx], "磁干扰开阀时间: %d s\n", buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "磁扰开阀时间: %d s\n", buf[index]);
 		index += 1;
-		dispIdx += sprintf(&dispBuf[dispIdx], "计量脉冲闭合时间: %d ms\n", buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲闭合时间: %d ms\n", buf[index]);
 		index += 1;
-		dispIdx += sprintf(&dispBuf[dispIdx], "开关阀时间 : %d ms\n", (buf[index] + buf[index + 1] * 256));
+		dispIdx += sprintf(&dispBuf[dispIdx], "开关阀时间: %d ms\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "过流阀值: %d mA\n",buf[index]);
 		index += 1;
@@ -2250,7 +2253,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "参考用量:%d.%03d\n", u32Tmp, u16Tmp);
 		index += 6;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += sprintf(&dispBuf[dispIdx], "模块测试状态如下\n");
 		dispIdx += Water6009_GetStrTestStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
@@ -2266,10 +2269,12 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s\n", ptr);
 		index += 1;
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
 		dispIdx += Water6009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态如下\n");
+		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
 		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		u8Tmp = buf[index];
@@ -2282,7 +2287,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 10; // 保留
 		memcpy(&VerInfo[0], &buf[index], 40);
 		VerInfo[40] = 0x00;
-		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %s\n", &VerInfo[0]);
 		index += 40;
 		break;
 
@@ -2420,11 +2425,11 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		waitTime = 0;
 		currRxLen = 0;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
-		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
+		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
 
 		do{
 
-			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			currRxLen = _GetComStr(&RxBuf[RxLen], 100, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
 			RxLen += currRxLen;
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
@@ -2438,15 +2443,15 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 			if(waitTime % 1000 == 0){
 				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
-				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %d/%d \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
+				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
 			}
 
 			if(RxLen > 0 && currRxLen == 0){
 				break;
 			}
-		}while(waitTime < timeout || currRxLen > 0);
+		}while(waitTime <= timeout || currRxLen > 0);
 
-		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %d/%d \n", RxLen, ackLen);
+		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %3d/%-3d  \n", RxLen, ackLen);
 
 #if LOG_ON
 		LogPrintBytes("Tx: ", TxBuf, TxLen);

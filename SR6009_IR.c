@@ -1107,9 +1107,9 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 14, NULL,		
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 17, NULL,		
 		"<<工作参数",
-		14,
+		17,
 		"1. 设置IP+端口+模式",
 		"2. 读取IP+端口+模式",
 		"3. 读取运营商编号",
@@ -1122,8 +1122,11 @@ void WaterCmdFunc_WorkingParams(void)
 		"10.读表端时钟",
 		"11.校表端时钟",
 		"12.读收发磁扰阀控数",
-		"13.读取模块运行参数",		// 暂时屏蔽
-		"14.设置模块运行参数"		// 暂时屏蔽
+		"13.读取模块运行参数",		
+		"14.设置模块运行参数",
+		"15.读取NB入网信息",
+		"16.读取北京水表参数",		
+		"17.设置北京水表参数"	
 	);
 
 	_CloseCom();
@@ -1440,19 +1443,24 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetModuleRunningParams;		// 设置模块运行参数
 				/*---------------------------------------------*/
 				// UI-第1页
-				StrBuf[0][0] = 0;
-				StrBuf[0][1] = 0;
-				StrBuf[0][2] = 1;
 				if(false == isUiFinish){
+					StrBuf[0][0] = 0;
+					StrBuf[0][1] = 0;
+					StrBuf[0][2] = 1;
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
-                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表具类型:", &StrBuf[0][0], 4, 
-						"冷水表", "热水表", "燃气表", "电表");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "电池电压:", &StrBuf[0][1], 3, 
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "类型:", &StrBuf[0][0], 9, 
+						"RF冷水表", "GPRS冷水表", "NB冷水表", 
+						"RF热水表", "NB热水表", 
+						"RF燃气表", "GPRS燃气表", "NB燃气表", 
+						"电表");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "电池:", &StrBuf[0][1], 3, 
 						"3.6v", "6v", "4.5v");
-					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "传感器类型:");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  ", &StrBuf[0][2], 5, 
-						"单干簧管/霍尔", "双干簧管/霍尔", "三干簧管/霍尔", "光电直读", "厚膜直读");
-					
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "计量传感器:");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "", &StrBuf[0][2], 13, 
+						"单干簧管/霍尔", "双干簧管/霍尔", "三干簧管/霍尔", "骏普4位光电直读", 
+						"厚膜直读", "骏普1位光电直读", "188协议光电直读", "188协议无磁直读",
+						"两霍尔竟达", "宁波无磁", "山科无磁", "东海无磁",
+						"三川无磁");
 					break;
 				}
 				// UI-第2页
@@ -1494,8 +1502,8 @@ void WaterCmdFunc_WorkingParams(void)
 						isUiFinish = false;
 						continue;
 					}
-					u32Tmp = (uint32) _atof(StrBuf[0]);
-					u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
+					u32Tmp = (uint32) _atof(StrBuf[6]);
+					u16Tmp = (uint16)((float)((_atof(StrBuf[6]) - u32Tmp)*1000.0));
 					
 					// ip
 					if((i = GetIpBytesFromIpStrs(ip, StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4])) > 0){
@@ -1521,19 +1529,28 @@ void WaterCmdFunc_WorkingParams(void)
 
 				// UI-第3页
 				currUi = 0;
-				StrBuf[0][5] = 1;
-				StrBuf[0][6] = 1;
-				StrBuf[0][7] = 0;
+				StrBuf[0][5] = 0;
+				StrBuf[0][6] = 0;
+				StrBuf[0][7] = 1;
+				StrBuf[0][8] = 1;
+				StrBuf[0][9] = 0;
+				StrBuf[0][10] = 0;
 				while(1){
 					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
 					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
 					(*pUiCnt) = 0;
 					uiRowIdx = 2;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警:", &StrBuf[0][5], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "磁扰关阀:", &StrBuf[0][5], 2, 
 						"关闭", "开启");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "冻结上报:", &StrBuf[0][6], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "防拆检测:", &StrBuf[0][6], 2, 
 						"关闭", "开启");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "阀门防锈:", &StrBuf[0][7], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警:", &StrBuf[0][7], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "冻结上报:", &StrBuf[0][8], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "阀门防锈:", &StrBuf[0][9], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "掉电关阀:", &StrBuf[0][10], 2, 
 						"关闭", "开启");
 					
 					key = ShowUI(UiList, &currUi);
@@ -1545,9 +1562,13 @@ void WaterCmdFunc_WorkingParams(void)
 
 					// 使能状态
 					enableStatus = 0;
-					enableStatus |= (StrBuf[0][5] == 0 ? 0x0000 : 0x0010);	// 主动告警
-					enableStatus |= (StrBuf[0][6] == 0 ? 0x0000 : 0x0020);	// 冻结上报
-					enableStatus |= (StrBuf[0][7] == 0 ? 0x0000 : 0x0200);	// 阀门防锈
+					enableStatus |= (StrBuf[0][5] == 0 ? 0x0000 : 0x0001);	// 磁扰关阀
+					enableStatus |= (StrBuf[0][6] == 0 ? 0x0000 : 0x0002);	// 防拆检测
+					enableStatus |= (StrBuf[0][7] == 0 ? 0x0000 : 0x0010);	// 主动告警
+					enableStatus |= (StrBuf[0][8] == 0 ? 0x0000 : 0x0020);	// 冻结上报
+					enableStatus |= (StrBuf[0][9] == 0 ? 0x0000 : 0x0200);	// 阀门防锈
+					enableStatus |= (StrBuf[0][10] == 0 ? 0x0000 : 0x0400);	// 掉电关阀
+					
 
 					if(isUiFinish){
 						break;
@@ -1563,11 +1584,276 @@ void WaterCmdFunc_WorkingParams(void)
 				// 数据域
 				switch ((uint8)StrBuf[0][0]){			// 表类型
 				case 0: u8Tmp = 0x10; break;
-				case 1: u8Tmp = 0x20; break;
-				case 2: u8Tmp = 0x30; break;
-				case 3: u8Tmp = 0x40; break;
+				case 1: u8Tmp = 0x11; break;
+				case 2: u8Tmp = 0x12; break;
+				case 3: u8Tmp = 0x20; break;
+				case 4: u8Tmp = 0x21; break;
+				case 5: u8Tmp = 0x30; break;
+				case 6: u8Tmp = 0x31; break;
+				case 7: u8Tmp = 0x32; break;
+				case 8: u8Tmp = 0x40; break;
 				default: u8Tmp = 0x10; break;
 				}
+
+				Args.buf[i++] = u8Tmp;	
+				Args.buf[i++] = (uint8)StrBuf[0][3];	// 脉冲系数	
+				Args.buf[i++] = 50;			// 磁干扰开阀时间
+				Args.buf[i++] = 100;		// 计量脉冲最小闭合时间
+				Args.buf[i++] = (uint8)(12000 & 0xFF);	// 开关阀时间 12000
+				Args.buf[i++] = (uint8)(12000 >> 8);		
+				Args.buf[i++] = 150;		// 过流阀值
+				Args.buf[i++] = (uint8)StrBuf[0][1];	// 电池电压类型
+				Args.buf[i++] = 120;		// 定时上传时间间隔	
+				Args.buf[i++] = 2;			// 定量上传数量间隔	
+				Args.buf[i++] = 3;		// 每天定时定量最大上传次数	
+				Args.buf[i++] = (uint8)StrBuf[0][2];	// 计量传感器类型	
+				Args.buf[i++] = ip[0];		// IP的第1~4个字节	121.43.175.22 : 5683
+				Args.buf[i++] = ip[1];
+				Args.buf[i++] = ip[2];
+				Args.buf[i++] = ip[3];
+				Args.buf[i++] = (uint8)(port & 0xFF);	// 服务器连接端口
+				Args.buf[i++] = (uint8)((port >> 8) & 0xFF);
+				Args.buf[i++] = 10;			// 水表防锈定时间隔	
+				Args.buf[i++] = 0;			// 系统调试级别	
+				Args.buf[i++] = 0x46;			// 运营商编号/SIM卡类型 NB-IOT时：46001000
+				Args.buf[i++] = 0x00;	
+				Args.buf[i++] = 0x10;	
+				Args.buf[i++] = 0x00;		
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));	// 出厂/RF设定的系统时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
+				Args.buf[i++] = DecToBcd(_GetMonth());		
+				Args.buf[i++] = DecToBcd(_GetDay());			
+				Args.buf[i++] = DecToBcd(_GetHour());			
+				Args.buf[i++] = DecToBcd(_GetMin());			
+				Args.buf[i++] = DecToBcd(_GetSec());
+				Args.buf[i++] = 8;			// 通信频段	
+				Args.buf[i++] = ((uint8)StrBuf[0][4] + 1);	// NB连接方式	1 - coap ,  2- udp
+				Args.buf[i++] = 0;			// 预留	
+				Args.buf[i++] = 0;			// 预留
+				Args.buf[i++] = 0;			// 剩余用量报警限值	
+				Args.buf[i++] = 0;			// 剩余用量关阀限值	2 byte
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;			// 预缴费量数 6 byte
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;		
+				Args.buf[i++] = 0;			// 参考起始用量 6 byte
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;			// 模块测试状态	2 byte
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;			// 预留	
+				Args.buf[i++] = 0;			// 预留
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 正转用量	
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+				Args.buf[i++] = 0;			// 反转用量 6 byte
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;	
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0;
+				Args.buf[i++] = 0x00;		// 阀状态
+				Args.buf[i++] = (uint8)(enableStatus & 0xFF);	// 功能使能状态
+				Args.buf[i++] = (uint8)(enableStatus >> 8);	
+				Args.buf[i++] = 0x00;		// 报警状态标志位
+				Args.buf[i++] = 0x00;	
+				Args.buf[i++] = 0;			// 按日按月设置
+				Args.buf[i++] = 0;			// RF侦听起始时间	
+				Args.buf[i++] = 24;			// RF侦听工作时长	
+				Args.buf[i++] = 0;			// 预留	10 byte
+				for(u8Tmp = 0; u8Tmp < 9; u8Tmp++){
+					Args.buf[i++] = 0;
+				}
+				// 读取时返回：以上 + 模块软件版本号 40 byte	
+
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 15: 
+				CurrCmd = WaterCmd_ReadNbJoinNetworkInfo;		// 读取NB入网信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x10;		// 命令字	10
+				ackLen = 34;				// 应答长度 34	
+				// 数据域
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 16: 
+				CurrCmd = WaterCmd_ReadBeiJingWaterMeterParams;		// 读取北京水表参数
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x26;		// 命令字	26
+				ackLen = 69;				// 应答长度 69
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项 00 - 读取， 01 - 设置		
+				Args.lastItemLen = i - 1; 
+				break;
+
+			case 17: 
+				CurrCmd = WaterCmd_SetBeiJingWaterMeterParams;		// 设置北京水表参数
+				/*---------------------------------------------*/
+				// UI-第1页
+				if(false == isUiFinish){
+					StrBuf[0][0] = 0;
+					StrBuf[0][1] = 0;
+					StrBuf[0][2] = 1;
+					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "类型:", &StrBuf[0][0], 5, 
+						"三川NB无磁", "宁波NB无磁", "山科NB无磁", 
+						"东海NB无磁", "京源NB无磁");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表号:", StrBuf[1], 14, 14*8, true);
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "电池:", &StrBuf[0][1], 3, 
+						"3.6v", "6v", "4.5v");
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "计量传感器:");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "", &StrBuf[0][2], 13, 
+						"单干簧管/霍尔", "双干簧管/霍尔", "三干簧管/霍尔", "骏普4位光电直读", 
+						"厚膜直读", "骏普1位光电直读", "188协议光电直读", "188协议无磁直读",
+						"两霍尔竟达", "宁波无磁", "山科无磁", "东海无磁",
+						"三川无磁");
+					break;
+				}
+				// UI-第2页
+				currUi = 0;
+				StrBuf[0][3] = 1;
+				StrBuf[0][4] = 1;
+				sprintf(StrBuf[1], "121");
+				sprintf(StrBuf[2], "43");
+				sprintf(StrBuf[3], "175");
+				sprintf(StrBuf[4], "222");
+				sprintf(StrBuf[5], "5683");
+				while(1){
+					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
+					(*pUiCnt) = 0;
+					uiRowIdx = 2;
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[0][3], 4, 
+						"1", "10", "100", "1000");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "正转用量:", StrBuf[6], 10, 10*8, true);
+					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "NB连接方式:", &StrBuf[0][4], 2, 
+						"Coap", "Udp");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "  IP:", StrBuf[1], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 12*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 16*8, (uiRowIdx)*16, ".", StrBuf[4], 3, 3*8, true);
+					uiRowIdx++;
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "Port:", StrBuf[5], 5, 6*8, true);
+
+					key = ShowUI(UiList, &currUi);
+					
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+
+					// 正转用量
+					if(StrBuf[6][0] > '9' || StrBuf[6][0] < '0'){
+						currUi = 1;
+						isUiFinish = false;
+						continue;
+					}
+					u32Tmp = (uint32) _atof(StrBuf[6]);
+					u16Tmp = (uint16)((float)((_atof(StrBuf[6]) - u32Tmp)*1000.0));
+					
+					// ip
+					if((i = GetIpBytesFromIpStrs(ip, StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4])) > 0){
+						currUi = 2 + i;
+						isUiFinish = false;
+						continue;
+					}
+					// port
+					port = (uint32)_atof(StrBuf[5]);
+					if(StrBuf[5][0] < '0' || StrBuf[5][0] > '9' || port > 65535){
+						currUi = 7;
+						isUiFinish = false;
+						continue;
+					}
+
+					if(isUiFinish){
+						break;
+					}
+				}
+				if (key == KEY_CANCEL){
+					break;
+				}
+
+				// UI-第3页
+				currUi = 0;
+				StrBuf[0][5] = 0;
+				StrBuf[0][6] = 0;
+				StrBuf[0][7] = 1;
+				StrBuf[0][8] = 1;
+				StrBuf[0][9] = 0;
+				StrBuf[0][10] = 0;
+				while(1){
+					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
+					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+					(*pUiCnt) = 0;
+					uiRowIdx = 2;
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "磁扰关阀:", &StrBuf[0][5], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "防拆检测:", &StrBuf[0][6], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警:", &StrBuf[0][7], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "冻结上报:", &StrBuf[0][8], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "阀门防锈:", &StrBuf[0][9], 2, 
+						"关闭", "开启");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "掉电关阀:", &StrBuf[0][10], 2, 
+						"关闭", "开启");
+					
+					key = ShowUI(UiList, &currUi);
+					
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+
+					// 使能状态
+					enableStatus = 0;
+					enableStatus |= (StrBuf[0][5] == 0 ? 0x0000 : 0x0001);	// 磁扰关阀
+					enableStatus |= (StrBuf[0][6] == 0 ? 0x0000 : 0x0002);	// 防拆检测
+					enableStatus |= (StrBuf[0][7] == 0 ? 0x0000 : 0x0010);	// 主动告警
+					enableStatus |= (StrBuf[0][8] == 0 ? 0x0000 : 0x0020);	// 冻结上报
+					enableStatus |= (StrBuf[0][9] == 0 ? 0x0000 : 0x0200);	// 阀门防锈
+					enableStatus |= (StrBuf[0][10] == 0 ? 0x0000 : 0x0400);	// 掉电关阀
+					
+
+					if(isUiFinish){
+						break;
+					}
+				}
+				if (key == KEY_CANCEL){
+					break;
+				}
+				
+				i = 0;
+				Args.buf[i++] = 0x26;		// 命令字	26
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				switch ((uint8)StrBuf[0][0]){			// 表类型
+				case 0: u8Tmp = 0x41; break;
+				case 1: u8Tmp = 0x44; break;
+				case 2: u8Tmp = 0x35; break;
+				case 3: u8Tmp = 0x2A; break;
+				case 4: u8Tmp = 0x2B; break;
+				default: u8Tmp = 0x41; break;
+				}
+
 				Args.buf[i++] = u8Tmp;	
 				Args.buf[i++] = (uint8)StrBuf[0][3];	// 脉冲系数	
 				Args.buf[i++] = 50;			// 磁干扰开阀时间

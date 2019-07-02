@@ -296,8 +296,8 @@ static uint8 CombBoxGetCurrIndex(UI_Item *uiItem)
 		}
 
 		if(isShowIcon && cnt == 3){
-			_Printfxy(uiItem->x1, uiItem->y1, "<<", Color_White);
-			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, ">>", Color_White);
+			_Printfxy(uiItem->x1, uiItem->y1, "<<", Color_Black);
+			_Printfxy(uiItem->x1 + uiItem->width - 16, uiItem->y1, ">>", Color_Black);
 			isShowIcon = 0;
 			cnt = 0;
 		}else if(!isShowIcon && cnt == 3){
@@ -607,7 +607,7 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *cu
 	char *ptr;
 
 	va_start(ap, maxCnt);
-	for(i = 0; i < maxCnt && i < 10; i++){
+	for(i = 0; i < maxCnt && i < CbxItem_Max; i++){
 		ptr = va_arg(ap, char *);
 		if(ptr == NULL){
 			break;
