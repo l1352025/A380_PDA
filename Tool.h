@@ -23,8 +23,8 @@
 /*
 * 描  述：在数组中查找子数组，可指定查找的起始位置和范围
 * 参  数：srcArray - 源数组地址， srcLen - 源数组长度
-		  dstBytes - 目的数组地址， dstLen - 目的数组长度 
-		  startIndex - 源数组查找的起始位置，offset - 查找的范围
+*		  dstBytes - 目的数组地址， dstLen - 目的数组长度 
+*		  startIndex - 源数组查找的起始位置，offset - 查找的范围
 * 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
 */
 int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset)
@@ -66,7 +66,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 *		  	默认日志文件名定义为 #define LogName "debug.txt" ， 
 *			如需修改则在调用前重新定义 LogName 
 * 参  数：format	- 字符串格式
-		  ... 		- 可变参数
+*		  ... 		- 可变参数
 * 返回值：void
 */
 void LogPrint(const char * format, ...)
@@ -121,8 +121,8 @@ void LogPrint(const char * format, ...)
 /*
 * 描  述：打印日志到文件或串口No.2 , 通信串口在收发时不可打印到串口
 * 参  数：title	 - 标题
-		  buf	- 字节数组起始地址
-		  size	- 打印的字节数， 最大1024
+*		  buf	- 字节数组起始地址
+*		  size	- 打印的字节数， 最大1024
 * 返回值：void
 */
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
@@ -151,8 +151,8 @@ void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
 * 函数名：ShowProgressBar
 * 描  述：显示进度条
 * 参  数：y - 进度条y坐标，将显示在(0,y)位置，固定宽度为160，固定高度为16,黑色填充
-		  maxValue - 进度条最大值
-		  currValue - 进度条当前值
+*		  maxValue - 进度条最大值
+*		  currValue - 进度条当前值
 * 返回值：int 等于-1: 未找到， 大于/等于0 : 目的数组在源数组中的起始索引
 */
 void ShowProgressBar(uint8 y, uint32 maxValue, uint32 currValue)
@@ -731,8 +731,8 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 /*
 * 描  述：获取在屏幕x坐标开始显示多行字符串的行数
 * 参  数：x			- 屏幕中显示的x坐标
-		  buf		- 字符串起始地址
-		  lines		- 每行的起始地址
+*		  buf		- 字符串起始地址
+*		  lines		- 每行的起始地址
 * 返回值：uint8	 字符串总行数
 */
 uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
@@ -795,8 +795,8 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 /*
 * 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
 * 参  数：x, y		- 屏幕中坐标
-		  buf		- 字符串起始地址
-		  maxLines	- 最多能显示的行数
+*		  buf		- 字符串起始地址
+*		  maxLines	- 最多能显示的行数
 * 返回值：void
 */
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
@@ -869,8 +869,8 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 /*
 * 描  述：在屏幕 x,y 坐标显示多行字符串，可自动换行
 * 参  数：x, y		- 屏幕中坐标
-		  format	- 字符串格式
-		  ... 		- 可变参数
+*		  format	- 字符串格式
+*		  ... 		- 可变参数
 * 返回值：void
 */
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
@@ -893,7 +893,7 @@ void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 /*
 * 描  述：在屏幕 x,y 坐标显示实心三角形
 * 参  数：x, y		- 屏幕中坐标
-		  direction	- 三角形方向：0 - 向上 ▲ ， 1 - 向下 ▼
+*		  direction	- 三角形方向：0 - 向上 ▲ ， 1 - 向下 ▼
 * 返回值：void
 */
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
@@ -1230,11 +1230,11 @@ uint8 DecToBcd(uint8 dec)
 /*
 * 描  述：将字节数组转换成16进制字符串
 * 参  数：strHex - 目的字符串缓冲区地址
-		  bytes - 源字节数组
-		  iStart - 数组中需要转换的起始索引
-		  iLength - 需要转换的长度
-		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
+*		  bytes - 源字节数组
+*		  iStart - 数组中需要转换的起始索引
+*		  iLength - 需要转换的长度
+*		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
+*		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
 * 返回值：int - 转换后的字符数：0 - 转换失败
 */
 int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse)
@@ -1268,11 +1268,11 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 /*
 * 描  述：将16进制字符串转换成字节数组
 * 参  数：bytes - 目的字节数组
-		  iStart - 数组中保存的起始索引
-		  iLength - 数组中可保存最大长度
-		  strHex - 源字符串缓冲区地址
-		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
-		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
+*		  iStart - 数组中保存的起始索引
+*		  iLength - 数组中可保存最大长度
+*		  strHex - 源字符串缓冲区地址
+*		  separate - 字符串中Hex字节之间的间隔符：0 - 无间隔符， 其他字符 - 如空格或逗号
+*		  reverse - 是否需要倒序：false - 不倒序， true - 倒序
 * 返回值：int - 转换后的字节数：0 - 转换失败
 */
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse)

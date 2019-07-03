@@ -335,6 +335,29 @@ char * Water6009_GetStrDeviceType(uint8 typeId)
 }
 
 /*
+* 描  述：获取北京水表-设备类型名
+* 参  数：typeId	- 类型ID
+* 返回值：char *	- 解析后的字符串
+*/
+char * WaterBeiJing_GetStrDeviceType(uint8 typeId)
+{
+	char * str = NULL;
+	
+	switch(typeId){
+	case 0x41:	str = "三川无磁";	break;
+	case 0x44:	str = "宁波无磁";	break;
+	case 0x35:	str = "山科无磁";	break;
+	case 0x2A:	str = "东海无磁";	break;
+	case 0x2B:	str = "京源无磁";	break;
+	default:
+		str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+/*
 * 描  述：获取6009水表读数类型名
 * 参  数：typeId	- 类型ID
 * 返回值：char *	- 解析后的字符串
@@ -1509,6 +1532,158 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		break;
 
+	case WaterCmd_ReadNbJoinNetworkInfo:		// 读取NB入网信息
+		if(rxlen < index + 34 && cmd != 0x10){
+			break;
+		}
+		// 电池电压
+		dispIdx += sprintf(&dispBuf[dispIdx], "     Battery: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		index += 1;
+		// 信号功率
+		dispIdx += sprintf(&dispBuf[dispIdx], "Signal power: %d\n", (int16)(buf[index] + buf[index] * 256));
+		index += 2;
+		// 总功率
+		dispIdx += sprintf(&dispBuf[dispIdx], " Total power: %d\n", (int16)(buf[index] + buf[index] * 256));
+		index += 2;
+		// 发射功率
+		dispIdx += sprintf(&dispBuf[dispIdx], "    TX power: %d\n", (buf[index] + buf[index] * 256));
+		index += 2;
+		// 发射时间 ms
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "TX time: %d\n", u32Tmp);
+		index += 4;
+		// 接收时间 ms
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "RX time: %d\n", u32Tmp);
+		index += 4;
+		// 当前Cell ID
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "Cell ID: %d\n", (u32Tmp + buf[index + 4] * 256));
+		index += 5;
+		// ECL
+		dispIdx += sprintf(&dispBuf[dispIdx], "    ECL: %d\n", buf[index]);
+		index += 1;
+		// 信噪比
+		dispIdx += sprintf(&dispBuf[dispIdx], "    SNR: %d\n", (int16)(buf[index] + buf[index] * 256));
+		index += 2;
+		// 搜索频率信道号
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], " EARFUN: %d\n", (u32Tmp + buf[index + 4] * 256));
+		index += 5;
+		// 物理Cell ID
+		dispIdx += sprintf(&dispBuf[dispIdx], "    PCI: %d\n", (buf[index] + buf[index] * 256));
+		index += 2;
+		// 参考信号接收质量 
+		dispIdx += sprintf(&dispBuf[dispIdx], "   RSRQ: %d\n", (int16)(buf[index] + buf[index] * 256));
+		index += 2;
+		// 操作模式
+		dispIdx += sprintf(&dispBuf[dispIdx], "Operator Mode: %d\n", buf[index]);
+		index += 1;
+		// 注册状态
+		dispIdx += sprintf(&dispBuf[dispIdx], "RegisterState: %s\n", (buf[index] == 0 ? "失败" : "成功"));
+		index += 1;
+		break;
+
+	case WaterCmd_ReadBeiJingWaterMeterParams:		// 读取北京水表参数
+		if(rxlen < index + 69 && cmd != 0x26){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 设备类型
+		ptr = WaterBeiJing_GetStrDeviceType(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "设备类型: %s\n", ptr);
+		index += 1;
+		// 出厂表号
+		GetStringHexFromBytes(&TmpBuf[0], buf, index, 7, 0, false);
+		TmpBuf[14] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "出厂表号: \n  %s\n", &TmpBuf[0]);
+		index += 7;
+		// 过流告警阈值 L/h
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "过流告警阈值:%dL/h\n", u32Tmp);
+		index += 4;
+		// 过流告警时间 1分钟
+		dispIdx += sprintf(&dispBuf[dispIdx], "过流告警时间:%d分钟\n", buf[index]);
+		index += 1;
+		// 反流告警阈值 L/h
+		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "反流告警阈值:%dL/h\n", u32Tmp);
+		index += 4;
+		// 反流告警时间 1分钟
+		dispIdx += sprintf(&dispBuf[dispIdx], "反流告警时间:%d分钟\n", buf[index]);
+		index += 1;
+		// 电压告警阀值 0.01V
+		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "电压告警阀值:%dV\n", u16Tmp);
+		index += 2;
+		// IP地址
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-IP地址:\n  %d.%d.%d.%d\n", 
+			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		index += 4;
+		// 端口号
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-端口号:%d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// APN信息
+		memcpy(&TmpBuf[0], &buf[index], 6);
+		TmpBuf[6] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "APN信息: %s\n", &TmpBuf[0]);
+		index += 6;
+		// 上报重连次数
+		dispIdx += sprintf(&dispBuf[dispIdx], "上报重连次数:%d\n", buf[index]);
+		index += 1;
+		// 周期上报起始时间
+		dispIdx += sprintf(&dispBuf[dispIdx], "周期上报起始时间:\n 20%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], 
+			buf[index + 3], buf[index + 4], buf[index + 5]);
+		index += 6;
+		// 周期上报结束时间
+		dispIdx += sprintf(&dispBuf[dispIdx], "周期上报结束时间:\n 20%02X-%02X-%02X %02X:%02X:%02X\n", 
+			buf[index], buf[index + 1], buf[index + 2], 
+			buf[index + 3], buf[index + 4], buf[index + 5]);
+		index += 6;
+		// 周期上报估计时长
+		dispIdx += sprintf(&dispBuf[dispIdx], "周期上报估计时长:%d秒\n", buf[index]);
+		index += 1;
+		// 终端启停设置
+		dispIdx += sprintf(&dispBuf[dispIdx], "终端启停设置:%s\n", (buf[index] == 0 ? "停用" : "启用"));
+		index += 1;
+		// 周期上报频率
+		dispIdx += sprintf(&dispBuf[dispIdx], "周期上报频率:%d小时\n", buf[index]);
+		index += 1;
+		// 密集上报起始时间点
+		dispIdx += sprintf(&dispBuf[dispIdx], "密集上报起始时间点:\n  %d 点\n", buf[index]);
+		index += 1;
+		// 周期采样间隔
+		_DoubleToStr(&TmpBuf[0], 0.5 * buf[index], 1);
+		dispIdx += sprintf(&dispBuf[dispIdx], "周期采样间隔:%s小时\n", &TmpBuf[0]);
+		index += 1;
+		// 上报重连等待时间
+		dispIdx += sprintf(&dispBuf[dispIdx], "重连等待时间:%d分钟\n", buf[index]);
+		index += 1;
+		// 密集采样间隔
+		dispIdx += sprintf(&dispBuf[dispIdx], "密集采样间隔:%d分钟\n", buf[index]);
+		index += 1;
+		// AES KEY
+		memcpy(&TmpBuf[0], &buf[index], 16);
+		TmpBuf[16] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "KEY: %s\n", &TmpBuf[0]);
+		index += 1;
+		break;
+
+	case WaterCmd_SetBeiJingWaterMeterParams:		// 设置北京水表参数
+		if(rxlen < index + 2 && cmd != 0x26){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
 	//--------------------------------------		其他操作		---------------------
 	case WaterCmd_ReadRxTxMgnDistbCnt:		// 读收发磁扰阀控数
 		if(rxlen < index + 7 && cmd != 0x09){
@@ -2280,9 +2455,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = buf[index];
 		dispIdx += sprintf(&dispBuf[dispIdx], "按日按月设置: 按%s\n", (u8Tmp == 0x01 ? "日" : "月"));
 		index += 1;	
-		dispIdx += sprintf(&dispBuf[dispIdx], "侦听起始时间: %02d %s\n",  buf[index], (u8Tmp == 0x01 ? "点" : "号"));
+		dispIdx += sprintf(&dispBuf[dispIdx], "侦听起始时间: %02d%s\n",  buf[index], (u8Tmp == 0x01 ? "点" : "号"));
 		index += 1;	
-		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d %s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
+		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d%s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
 		index += 1;	
 		index += 10; // 保留
 		memcpy(&VerInfo[0], &buf[index], 40);
