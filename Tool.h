@@ -588,6 +588,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, char *tex
 	item->ui.txtbox.dataLen = maxLen;
 	item->ui.txtbox.isClear = isClear;
 	item->ui.txtbox.dotEnable = 0;		// 默认不允许输入'.' , 如需输入则在textbox创建后设置该标志为1
+	item->ui.txtbox.isInputAny = 0;		// 默认只允许输入数字，如需输入其它任何字符则在textbox创建后设置该标志为1
 }
 
 /*
@@ -644,6 +645,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 	uint8 key, x, y;
 	uint8 i;
 	UI_Item *ptr;
+	_GuiInputBoxStru inputSt;
 
 	for(i = 0; i < uiList.cnt; i++){
 		ptr = &uiList.items[i];
@@ -673,7 +675,25 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		if(ptr->type == UI_TxtBox){
 			do{
 				//接收输入
-				key = GetInputNumStr(ptr);
+				if(ptr->ui.txtbox.isInputAny){
+					inputSt.left = ptr->x1;
+					inputSt.top = ptr->y1;
+					inputSt.width = ptr->width;
+					inputSt.hight = ptr->height;
+					inputSt.caption = "";
+					inputSt.context = ptr->text;
+					inputSt.datelen = ptr->ui.txtbox.dataLen;
+					inputSt.IsClear = ptr->ui.txtbox.isClear;
+					inputSt.keyUpDown = true;
+					inputSt.type = 3;	
+					_SetInputMode(3);	// 默认大写字母
+					_DisInputMode(1);	// 允许输入法切换
+
+					key = _GetStr(&inputSt);
+				}
+				else{
+					key = GetInputNumStr(ptr);
+				}
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
 					if((ptr->ui.txtbox.dataLen == 12 || ptr->ui.txtbox.dataLen == 16)
@@ -1391,7 +1411,7 @@ uint8 GetSum8(uint8 *buf, uint16 len)
 *		 year/month/day/hour/min/sec - 输出参数：年/月/日/时/分/秒 字符串缓冲区
 * 返回值：void
 */
-void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec)
+void DatetimeToTimeStrs(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec)
 {
 	if(year[0] == 0x00){
 		year[0] = datetime[0];		// year
@@ -1428,85 +1448,120 @@ void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, ch
 }
 
 /*
-* 描  述：校验时间字符串
-* 参  数：year/month/day/hour/min/sec - 年/月/日/时/分/秒 字符串缓冲区
+* 描  述：时间字符串 转换为 时间数组
+* 参  数：bytes		- 时间字节数组 7 byte: yy yy MM dd HH mm ss
+*		  year/month/day/hour/min/sec - 年/月/日/时/分/秒 字符串缓冲区
 * 返回值：uint8 错误码：0 - 正确, 1/2/3/4/5/6 - 年/月/日/时/分/秒 错误
 */
-uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min, char *sec)
+uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, char *hour, char *min, char *sec)
 {
 	uint8 errorCode = 0;
+	uint32 tmp;
 
-	if((year[0] > '9' && year[0] < '0') || year[0] == '0' ){
-		year[0] = 0x00;
-		errorCode = 1;
-	}
-	else if(_atof(month) < 1 || _atof(month) > 12 ){
-		month[0] = 0x00;
-		errorCode = 2;
-	}
-	else if(_atof(day) < 1 || _atof(day) > 31 ){
-		day[0] = 0x00;
-		errorCode = 3;
-	}
-	else if((hour[0] > '2' && hour[0] < '0') || _atof(hour) > 23 ){
-		hour[0] = 0x00;
-		errorCode = 4;
-	}
-	else if((min[0] > '5' && min[0] < '0') || _atof(min) > 59 ){
-		min[0] = 0x00;
-		errorCode = 5;
-	}
-	else if((sec[0] > '5' && sec[0] < '0') || _atof(sec) > 59 ){
-		sec[0] = 0x00;
-		errorCode = 6;
-	}
+	do{
+		// year
+		tmp = _atof(year);
+		if( year[0] > '9' || year[0] < '0' || tmp < 2019 ){
+			year[0] = 0x00;
+			errorCode = 1;
+			break;
+		}
+		bytes[0] = (uint8)((tmp / 100) & 0xFF);
+		bytes[1] = (uint8)((tmp % 100) & 0xFF);
+
+		// month
+		tmp = _atof(month);
+		if(tmp < 1 || tmp > 12 ){
+			month[0] = 0x00;
+			errorCode = 2;
+			break;
+		}
+		bytes[2] = (uint8)(tmp & 0xFF);
+
+		// day
+		tmp = _atof(day);
+		if(tmp < 1 || tmp > 31 ){
+			day[0] = 0x00;
+			errorCode = 3;
+			break;
+		}
+		bytes[3] = (uint8)(tmp & 0xFF);
+
+		// hour
+		tmp = _atof(hour);
+		if(hour[0] < '0' || tmp > 23 ){
+			hour[0] = 0x00;
+			errorCode = 4;
+			break;
+		}
+		bytes[4] = (uint8)(tmp & 0xFF);
+
+		// min
+		tmp = _atof(min);
+		if(min[0] < '0' || tmp > 59 ){
+			min[0] = 0x00;
+			errorCode = 5;
+			break;
+		}
+		bytes[5] = (uint8)(tmp & 0xFF);
+		
+		// sec
+		tmp = _atof(sec);
+		if(sec[0] < '0' || tmp > 59 ){
+			sec[0] = 0x00;
+			errorCode = 6;
+			break;
+		}
+		bytes[6] = (uint8)(tmp & 0xFF);
+
+	}while(0);
 
 	return errorCode;
 }
 
 /*
-* 描  述：校验时间字符串
+* 描  述：Ip字符串 转换为 Ip字节数组
 * 参  数： ip		- ip地址字节数组
 *		  strIp1/2/3/4	- IP地址第1/2/3/4段字符串 
-* 返回值：uint8 错误码：0 - IP地址正确,  1/2/3/4 - IP地址第1/2/3/4段字符串 错误
+* 返回值：uint8 错误码：0 - 转换成功  1/2/3/4 - IP地址第1/2/3/4段字符串 错误
 */
-uint8 GetIpBytesFromIpStrs(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4)
+uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4)
 {
 	uint8 errorCode = 0;
-	uint16 u16Tmp;
+	uint32 tmp;
 
 	do{
 		// ip1
-		u16Tmp = _atof(strIp1);
-		if(strIp1[0] < '0' || strIp1[0] > '9' || u16Tmp > 255){
+		tmp = _atof(strIp1);
+		if(strIp1[0] < '0' || strIp1[0] > '9' || tmp > 255){
 			errorCode = 1;
 			break;
 		}
-		ip[0] = (uint8)(u16Tmp & 0xFF);
+		ip[0] = (uint8)(tmp & 0xFF);
 
 		// ip2
-		u16Tmp = _atof(strIp2);
-		if(strIp2[0] < '0' || strIp2[0] > '9' || u16Tmp > 255){
+		tmp = _atof(strIp2);
+		if(strIp2[0] < '0' || strIp2[0] > '9' || tmp > 255){
 			errorCode = 2;
 			break;
 		}
-		ip[1] = (uint8)(u16Tmp & 0xFF);
+		ip[1] = (uint8)(tmp & 0xFF);
 
 		// ip3
-		u16Tmp = _atof(strIp3);
-		if(strIp3[0] < '0' || strIp3[0] > '9' || u16Tmp > 255){
+		tmp = _atof(strIp3);
+		if(strIp3[0] < '0' || strIp3[0] > '9' || tmp > 255){
 			errorCode = 3;
 			break;
 		}
-		ip[2] = (uint8)(u16Tmp & 0xFF);
+		ip[2] = (uint8)(tmp & 0xFF);
 
 		// ip4
-		u16Tmp = _atof(strIp4);
-		if(strIp4[0] < '0' || strIp4[0] > '9' || u16Tmp > 255){
+		tmp = _atof(strIp4);
+		if(strIp4[0] < '0' || strIp4[0] > '9' || tmp > 255){
 			errorCode = 4;
 			break;
 		}
-		ip[3] = (uint8)(u16Tmp & 0xFF);
+		ip[3] = (uint8)(tmp & 0xFF);
 
 	}while(0);
 

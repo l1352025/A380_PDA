@@ -65,7 +65,7 @@ void CenterCmdFunc_CommonCmd(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -343,7 +343,7 @@ void CenterCmdFunc_DocumentOperation(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -535,7 +535,7 @@ void CenterCmdFunc_RouteSetting(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -692,7 +692,7 @@ void CenterCmdFunc_CommandTransfer(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -956,7 +956,7 @@ void WaterCmdFunc_CommonCmd(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -1201,7 +1201,7 @@ void WaterCmdFunc_TestCmd(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -1551,7 +1551,7 @@ void WaterCmdFunc_Upgrade(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -1780,7 +1780,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);	
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);	
 		isUiFinish = false;
 
 		while(1){
@@ -2050,7 +2050,7 @@ void WaterCmdFunc_WorkingParams(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
+	uint8 * pByte, *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -2081,7 +2081,7 @@ void WaterCmdFunc_WorkingParams(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -2262,8 +2262,8 @@ void WaterCmdFunc_WorkingParams(void)
 			case WaterCmd_SetMeterTime:		// 校表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					_GetDateTime(&TmpBuf[200], '-',  ':');
-					GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					_GetDateTime(time, '-',  ':');
+					DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
 					
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
@@ -2275,27 +2275,27 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 				// 时间有效值校验
-				if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+				if( (i = TimeStrsToTimeBytes(timeBytes, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
 					currUi = 2 + (i -1);
 					isUiFinish = false;
 					continue;
 				}
 
-				sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+				sprintf(time, "%s-%s-%s %s:%s:%s",
 					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
-				_SetDateTime(&TmpBuf[200]);
+				_SetDateTime(time);
 
 				i = 0;
 				Args.buf[i++] = 0x14;		// 命令字	14
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));		// 时间 - yyyy/mm/dd HH:mm:ss
-				Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
-				Args.buf[i++] = DecToBcd(_GetMonth());		
-				Args.buf[i++] = DecToBcd(_GetDay());			
-				Args.buf[i++] = DecToBcd(_GetHour());			
-				Args.buf[i++] = DecToBcd(_GetMin());			
-				Args.buf[i++] = DecToBcd(_GetSec());	
+				Args.buf[i++] = DecToBcd(timeBytes[0]);		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = DecToBcd(timeBytes[1]);		
+				Args.buf[i++] = DecToBcd(timeBytes[2]);		
+				Args.buf[i++] = DecToBcd(timeBytes[3]);			
+				Args.buf[i++] = DecToBcd(timeBytes[4]);			
+				Args.buf[i++] = DecToBcd(timeBytes[5]);			
+				Args.buf[i++] = DecToBcd(timeBytes[6]);	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -2399,7 +2399,7 @@ void WaterCmdFunc_Other(void)
 		}
 		menuItemNo = menuList.strIdx + 1;
 
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		while(1){
@@ -2721,7 +2721,7 @@ void MainFuncReadRealTimeData(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -2844,7 +2844,7 @@ void MainFuncReadFrozenData(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -2982,7 +2982,7 @@ void MainFuncReadMeterTime(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -3095,12 +3095,13 @@ void MainFuncSetMeterTime(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
+	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 
 	_CloseCom();
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -3137,8 +3138,8 @@ void MainFuncSetMeterTime(void)
 		case WaterCmd_SetMeterTime:		// "设置表端时钟"
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
-				_GetDateTime(&TmpBuf[200], '-',  ':');
-				GetDatetimeStr(&TmpBuf[200], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_GetDateTime(time, '-',  ':');
+				DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
 				
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
@@ -3150,27 +3151,27 @@ void MainFuncSetMeterTime(void)
 				break;
 			}
 			// 时间有效值校验
-			if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+			if( (i = TimeStrsToTimeBytes(timeBytes, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
 				currUi = 2 + (i -1);
 				isUiFinish = false;
 				continue;
 			}
 
-			sprintf(&TmpBuf[200], "%s-%s-%s %s:%s:%s",
+			sprintf(time, "%s-%s-%s %s:%s:%s",
 				StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
-			_SetDateTime(&TmpBuf[200]);
+			_SetDateTime(time);
 
 			i = 0;
 			Args.buf[i++] = 0x14;		// 命令字	14
 			ackLen = 2;					// 应答长度 2	
 			// 数据域
-			Args.buf[i++] = DecToBcd((uint8)(_GetYear()/100));		// 时间 - yyyy/mm/dd HH:mm:ss
-			Args.buf[i++] = DecToBcd((uint8)(_GetYear()%100));		
-			Args.buf[i++] = DecToBcd(_GetMonth());		
-			Args.buf[i++] = DecToBcd(_GetDay());			
-			Args.buf[i++] = DecToBcd(_GetHour());			
-			Args.buf[i++] = DecToBcd(_GetMin());			
-			Args.buf[i++] = DecToBcd(_GetSec());	
+			Args.buf[i++] = DecToBcd(timeBytes[0]);		// 时间 - yyyy/mm/dd HH:mm:ss
+			Args.buf[i++] = DecToBcd(timeBytes[1]);		
+			Args.buf[i++] = DecToBcd(timeBytes[2]);		
+			Args.buf[i++] = DecToBcd(timeBytes[3]);			
+			Args.buf[i++] = DecToBcd(timeBytes[4]);			
+			Args.buf[i++] = DecToBcd(timeBytes[5]);			
+			Args.buf[i++] = DecToBcd(timeBytes[6]);	
 			Args.lastItemLen = i - 1;
 			break;
 
@@ -3250,7 +3251,7 @@ void MainFuncClearException(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -3372,7 +3373,7 @@ void MainFuncOpenValve(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -3495,7 +3496,7 @@ void MainFuncCloseValve(void)
 	_ComSetTran(CurrPort);
 	_ComSet(CurrBaud, 2);
 
-	memset(StrBuf, 0, TXTBUF_LEN * 10);
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
 
 	while(1){
@@ -3642,7 +3643,7 @@ void MainFuncBatchMeterReading(void)
 		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		memset(StrBuf, 0, TXTBUF_LEN * 10);
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
 		_Select(1);
@@ -3800,14 +3801,14 @@ void MainFuncBatchMeterReading(void)
 							//-------------------------------------------------------
 							_GUIRectangleFill(0, 3*16 - 8, 160, 7*16 + 8, Color_White);
 							_GUIRectangle(0, 3*16 - 8, 160, 7*16 + 8, Color_Black);
-							memset(StrBuf, 0, TXTBUF_LEN * 10);
+							memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 							isUiFinish = false;
 							while(true){
 								if(false == isUiFinish){
 									(*pUiCnt) = 0;
 									uiRowIdx = 3;
 									_GetDateTime(time, '-',  ':');
-									GetDatetimeStr(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+									DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
 									
 									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
 									TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
@@ -3827,7 +3828,7 @@ void MainFuncBatchMeterReading(void)
 								}
 
 								// 时间有效值校验
-								if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+								if( (i = TimeStrsToTimeBytes(&TmpBuf[0], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
 									currUi = 1 + (i -1);
 									isUiFinish = false;
 									continue;
@@ -3940,7 +3941,7 @@ void MainFuncBatchMeterReading(void)
 					uiRowIdx = 3;
 
 					_GetDateTime(time, '-',  ':');
-					GetDatetimeStr(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
 					
 					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
@@ -3960,7 +3961,7 @@ void MainFuncBatchMeterReading(void)
 				
 				}
 				// 时间有效值校验
-				if( (i = CheckDatetimeStr(StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+				if( (i = TimeStrsToTimeBytes(&TmpBuf[0], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
 					currUi = 1 + (i -1);
 					isUiFinish = false;
 					continue;

@@ -20,7 +20,7 @@ uint8 VerInfo[41];
 uint16 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
-char StrBuf[10][TXTBUF_LEN];    // extend input buffer
+char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
@@ -1664,7 +1664,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		// 密集采样间隔
 		dispIdx += sprintf(&dispBuf[dispIdx], "密集采样间隔:%d分钟\n", buf[index]);
 		index += 1;
-		// AES KEY
+		// KEY
 		memcpy(&TmpBuf[0], &buf[index], 16);
 		TmpBuf[16] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "KEY: %s\n", &TmpBuf[0]);

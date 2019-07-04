@@ -44,7 +44,7 @@
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
-#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
 #define LOG_ON      0 
@@ -59,7 +59,8 @@ typedef unsigned char bool;
 #define false   0
 #endif
 
-#define TXTBUF_LEN	20      // 文本输入最大字符数
+#define TXTBUF_MAX  20      // 文本输入缓冲区最大个数
+#define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      20      // 最大UI控件数
 #define ListStrMax  256     // 最大列表字符串数
@@ -107,6 +108,7 @@ typedef struct{
             uint8 dataLen;
             uint8 isClear;
             uint8 dotEnable;
+            uint8 isInputAny;
         }txtbox;
     }ui;
 }UI_Item;
@@ -166,9 +168,9 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep);
 uint8 ShowScrollStrEx(char *strBuf, uint8 lineStep);
 void LogPrint(const char * format, ...);
 void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
-void GetDatetimeStr(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec);
-uint8 CheckDatetimeStr(char *year, char *month, char *day, char *hour, char *min, char *sec);
-uint8 GetIpBytesFromIpStrs(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
+void DatetimeToTimeStrs(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec);
+uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, char *hour, char *min, char *sec);
+uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
 
 //--------------------------------		全局变量	 ---------------------------------------
 extern char Screenbuff[160*(160/3+1)*2]; 
@@ -180,7 +182,7 @@ extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[9];
 extern uint8 DstAddr[9];
 extern uint8 VerInfo[41];
-extern char StrBuf[10][TXTBUF_LEN];    // extend input buffer
+extern char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
