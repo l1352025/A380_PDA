@@ -80,12 +80,16 @@ void LogPrint(const char * format, ...)
 	uint32 len = 0; 
 	va_list ap;
 	uint8 *buf;
+	char time[24];
 
 	//buf = (uint8 *) _malloc(2048);	// 2.使用动态内存时
 	buf = &LogBuf[0];					// 静态内存
 
+	_GetDateTime(time, '-', ':');
+	len += sprintf(&buf[len], "[ %s ] ", time);
+
 	va_start(ap, format);
-	len += vsprintf(&buf[0], format, ap);
+	len += vsprintf(&buf[len], format, ap);
 	buf[len++] = '\n';
 	buf[len++] = '\0';
 	va_end(ap);
@@ -98,7 +102,6 @@ void LogPrint(const char * format, ...)
 	_SendComStr(buf, len);
 	_CloseCom();
 #else
-
 	#ifndef LogName
 		#define LogName "debug.txt"
 	#endif
@@ -107,10 +110,14 @@ void LogPrint(const char * format, ...)
 	}else{
 		fp = _Fopen(LogName, "RW");
 	}
+	
+	if(_Filelenth(fp) > 1024*1024){		// 大于 1MB 时，重建日志文件
+		_Remove(LogName);
+		fp = _Fopen(LogName, "W");
+	}
 	_Lseek(fp, 0, 2);
 	_Fwrite(buf, len, fp);
 	_Fclose(fp);
-
 #endif
 
 	//_free(buf);					// 使用动态内存时
@@ -1281,7 +1288,7 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 			strHex[index++] = separate;
 		}
 	}
-	strHex[index++] = 0;
+	strHex[index++] = 0x00;
 
 	return index;
 }

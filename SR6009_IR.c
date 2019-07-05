@@ -1102,7 +1102,7 @@ void WaterCmdFunc_WorkingParams(void)
 	uint8 * pByte, *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, enableStatus, u16Tmp;
-	uint32 port, u32Tmp, u32Args[20]; // (uint32 *)&TmpBuf[512];
+	uint32 port, u32Tmp, u32Args[20];
 	uint8 ip[4], u8Tmp;
 
 	_ClearScreen();

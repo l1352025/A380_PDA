@@ -20,8 +20,8 @@
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.4"              // 版本号
-    #define VerInfo_RevDate (char *)"2019-7-2"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-07-05"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -30,7 +30,7 @@
 #else // defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-6-28"         // 版本日期
+    #define VerInfo_RevDate (char *)"2019-06-28"        // 版本日期
     #define TransType   "Lora透传"                      // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -38,8 +38,9 @@
     #define LogPort     Trans_IR_Quick  // 日志输出串口
     #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
-//#define VerInfo_Release           // 发布时必须定义该宏， 调试时注释
 
+#define VerInfo_Previwer    (char *)"预览版1"    // 预览版时,定义该宏
+//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -173,21 +174,21 @@ uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, cha
 uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
 
 //--------------------------------		全局变量	 ---------------------------------------
-extern char Screenbuff[160*(160/3+1)*2]; 
+//extern char Screenbuff[160*(160/3+1)*2]; 
 extern uint8 TmpBuf[1080];
 extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint8 DispBuf[2048];
 extern uint32 RxLen, TxLen;
-extern const uint8 LocalAddr[9];
-extern uint8 DstAddr[9];
-extern uint8 VerInfo[41];
+extern const uint8 LocalAddr[10];	// 地址 201900002019/0000，12/16字符
+extern uint8 DstAddr[10];
+extern uint8 VerInfo[42];
+extern uint16 CurrCmd;
+extern ParamsBuf Addrs;		
+extern ParamsBuf Args;
 extern char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
-extern uint16 CurrCmd;
-extern ParamsBuf Addrs;		
-extern ParamsBuf Args;
 
 #endif

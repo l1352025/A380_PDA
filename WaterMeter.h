@@ -8,15 +8,15 @@
 #endif
 
 // --------------------------------  全局变量  -----------------------------------------
-char Screenbuff[160*(160/3+1)*2]; 
+//char Screenbuff[160*(160/3+1)*2]; 
 uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint8 DispBuf[2048];
 uint32 RxLen, TxLen;
-const uint8 LocalAddr[9] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
-uint8 DstAddr[9];
-uint8 VerInfo[41];
+const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
+uint8 DstAddr[10];
+uint8 VerInfo[42];
 uint16 CurrCmd;
 ParamsBuf Addrs;		
 ParamsBuf Args;
@@ -809,7 +809,20 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	// 跳过 长度 --> 路径信息
 	index += 8;
-	// 跳过 地址域
+
+	// 地址域
+	if(memcmp(&buf[index], DstAddr, AddrLen) != 0){
+
+		// 广播命令时，将应答的表地址作为新的目的地址
+		GetStringHexFromBytes(StrDstAddr, buf, index, AddrLen, 0, false);
+
+		dispIdx = 0;
+		#if (AddrLen == 6)
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
+		#else
+		dispIdx += sprintf(&dispBuf[dispIdx], "表号: \n   %s\n", StrDstAddr);
+		#endif
+	}
 	index += addrsCnt * AddrLen;
 
 	// 集中器转发的命令头部
@@ -2520,6 +2533,9 @@ void VersionInfoFunc(void)
 		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
 		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
 		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+		#ifdef VerInfo_Previwer
+		PrintfXyMultiLine_VaList(0, 7*16, "      %s   ", VerInfo_Previwer);
+		#endif
 		//--------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -2574,11 +2590,10 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 #endif
 
 	do{
+		// 发送 
 		_CloseCom();
 		_ComSetTran(CurrPort);
 		_ComSet(CurrBaud, 2);
-
-		// 发送 
 		TxLen = PackWater6009RequestFrame(TxBuf, addrs, cmdid, args, sendCnt);
 		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		_SendComStr(TxBuf, TxLen);
@@ -2594,14 +2609,20 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			PrintfXyMultiLine_VaList(0, 9*16, " <  命令重发...%d  > ", sendCnt);
 		}
 
+		#if LOG_ON
+			LogPrintBytes("Tx: ", TxBuf, TxLen);
+		#endif
+
 		// 接收
+		_CloseCom();
+		_ComSetTran(CurrPort);
+		_ComSet(CurrBaud, 2);
 		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
 		waitTime = 0;
 		currRxLen = 0;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
 		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
-
 		do{
 
 			currRxLen = _GetComStr(&RxBuf[RxLen], 100, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
@@ -2628,10 +2649,9 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %3d/%-3d  \n", RxLen, ackLen);
 
-#if LOG_ON
-		LogPrintBytes("Tx: ", TxBuf, TxLen);
-		LogPrintBytes("Rx: ", RxBuf, RxLen);
-#endif
+		#if LOG_ON
+			LogPrintBytes("Rx: ", RxBuf, RxLen);
+		#endif
 
 		cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
 
