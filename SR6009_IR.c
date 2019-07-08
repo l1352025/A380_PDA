@@ -1709,13 +1709,14 @@ void WaterCmdFunc_WorkingParams(void)
 				// UI-第1页
 				if(false == isUiFinish){
 					StrBuf[0][0] = 0;
+					StrBuf[1][0] = 0;
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "水表类型:");
                     CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  ", &StrBuf[0][0], 5, 
 						"三川NB无磁", "宁波NB无磁", "山科NB无磁", 
 						"东海NB无磁", "京源NB无磁");
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "出厂表号:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrBuf[1], 16, 17*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrBuf[1], 14, 15*8, true);
 					break;
 				}
 				// 水表类型
@@ -1726,8 +1727,8 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
-				memcpy(&TmpBuf[0], &StrBuf[1][8 - 7], 7);
-				StrBuf[1][7] = 0x00;
+				memcpy(&TmpBuf[0], &StrBuf[1][0], 14);
+				TmpBuf[14] = 0x00;
 
 				// UI-第2页
 				currUi = 0;
@@ -1788,6 +1789,7 @@ void WaterCmdFunc_WorkingParams(void)
 				sprintf(StrBuf[3], "175");
 				sprintf(StrBuf[4], "222");
 				sprintf(StrBuf[5], "5683");
+				memset(StrBuf[6], 0x00, 10);
 				sprintf(StrBuf[6], "CMIOT");
 				sprintf(StrBuf[7], "1");
 				while(1){
@@ -1833,7 +1835,7 @@ void WaterCmdFunc_WorkingParams(void)
 						continue;
 					}
 					// APN
-					memcpy(&TmpBuf[10], &StrBuf[6][0], 6);
+					memcpy(&TmpBuf[20], &StrBuf[6][0], 6);
 					// 上报重连次数
 					u32Args[8] = StrBuf[0][1];
 
@@ -1946,14 +1948,14 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = (uint8)((u32Args[1] >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Args[1] >> 16) & 0xFF);	
 				Args.buf[i++] = (uint8)((u32Args[1] >> 24) & 0xFF);	
-				Args.buf[i++] = (uint8)(u32Args[2] & 0xFF);	// 过流告警时间 2 byte
-				Args.buf[i++] = (uint8)((u32Args[2] >> 8) & 0xFF);	
+				Args.buf[i++] = (uint8)(u32Args[2] & 0xFF);	// 过流告警时间 1 byte
+
 				Args.buf[i++] = (uint8)(u32Args[3] & 0xFF);	// 反流告警阈值 4 byte
 				Args.buf[i++] = (uint8)((u32Args[3] >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)((u32Args[3] >> 16) & 0xFF);	
 				Args.buf[i++] = (uint8)((u32Args[3] >> 24) & 0xFF);	
-				Args.buf[i++] = (uint8)(u32Args[4] & 0xFF);	// 反流告警时间 2 byte
-				Args.buf[i++] = (uint8)((u32Args[4] >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)(u32Args[4] & 0xFF);	// 反流告警时间 1 byte
+
 				Args.buf[i++] = (uint8)(u32Args[5] & 0xFF);	// 电压告警阀值 2 byte
 				Args.buf[i++] = (uint8)((u32Args[5] >> 8) & 0xFF);		
 				Args.buf[i++] = ip[0];					// IP	121.43.175.22 : 5683
@@ -1962,7 +1964,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = ip[3];
 				Args.buf[i++] = (uint8)(port & 0xFF);	// port 2 byte
 				Args.buf[i++] = (uint8)((port >> 8) & 0xFF);
-				memcpy(&Args.buf[i], &TmpBuf[10], 6);	// APN	6 byte
+				memcpy(&Args.buf[i], &TmpBuf[20], 6);	// APN	6 byte
 				i += 6;
 				Args.buf[i++] = (uint8)(u32Args[8] & 0xFF);	// 上报重连次数 2 byte
 				Args.buf[i++] = DecToBcd(timeBytes[1]);	// 周期上报起始时间 YY MM dd HH mm ss		

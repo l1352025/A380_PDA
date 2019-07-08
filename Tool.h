@@ -703,7 +703,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 				}
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
-					if((ptr->ui.txtbox.dataLen == 12 || ptr->ui.txtbox.dataLen == 16)
+					if((ptr->ui.txtbox.dataLen == 12 || ptr->ui.txtbox.dataLen == 14 || ptr->ui.txtbox.dataLen == 16)
 						&& (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
 						_leftspace(ptr->text, ptr->ui.txtbox.dataLen, '0');
 						if(strncmp(ZeroAddr, ptr->text, ptr->ui.txtbox.dataLen) == 0){
@@ -829,6 +829,7 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 {
 	static uint8 dispLine[21] = {0};
+	static char EmptyLine[21] = "                    ";
 	uint8 lineCnt = 0, col = 0; 
 	uint8 *pcurrLine, *pnextLine, *pr;
 
@@ -862,6 +863,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 
 			memcpy(dispLine, pcurrLine, col);
 			dispLine[col] = 0x00;
+			_Printfxy(x, y, EmptyLine, Color_White);
 			_Printfxy(x, y, dispLine, Color_White);
 			lineCnt++;
 			pcurrLine = pnextLine;
@@ -888,6 +890,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 	if(pcurrLine != 0x00 && lineCnt < maxLines){
 		memcpy(dispLine, pcurrLine, col);
 		dispLine[col] = 0x00;
+		_Printfxy(x, y, EmptyLine, Color_White);
 		_Printfxy(x, y, dispLine, Color_White);
 	}
 	
