@@ -602,10 +602,6 @@ void WaterCmdFunc_Upgrade(void)
 		"6. 升级统计"
 	);
 
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
-
 	while(1){
 
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -795,7 +791,6 @@ void WaterCmdFunc_Upgrade(void)
 		
 	}
 
-	_CloseCom();
 }
 
 // 4	预缴用量
@@ -823,10 +818,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 		"5. 设关阀限值",
 		"6. 设报警关阀限值"
 	);
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -1087,8 +1078,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 
@@ -1128,10 +1117,6 @@ void WaterCmdFunc_WorkingParams(void)
 		"16.读取北京水表参数",		
 		"17.设置北京水表参数"	
 	);
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -2047,8 +2032,6 @@ void WaterCmdFunc_WorkingParams(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 6	其他操作
@@ -2074,10 +2057,6 @@ void WaterCmdFunc_Other(void)
 		"4. 设置运营商编号",
 		"5. 路径下发"
 	);
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	while(1){
 
@@ -2337,8 +2316,6 @@ void WaterCmdFunc_Other(void)
 			}
 		}
 	}
-
-	_CloseCom();
 }
 
 
@@ -2389,10 +2366,6 @@ void MainFuncReadRealTimeData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2489,8 +2462,6 @@ void MainFuncReadRealTimeData(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 读取冻结数据
@@ -2501,10 +2472,6 @@ void MainFuncReadFrozenData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2616,8 +2583,6 @@ void MainFuncReadFrozenData(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 读取表端时钟
@@ -2628,10 +2593,6 @@ void MainFuncReadMeterTime(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2723,8 +2684,6 @@ void MainFuncReadMeterTime(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 设置表端时钟
@@ -2736,10 +2695,6 @@ void MainFuncSetMeterTime(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2863,8 +2818,6 @@ void MainFuncSetMeterTime(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 清异常命令
@@ -2875,10 +2828,6 @@ void MainFuncClearException(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2974,8 +2923,6 @@ void MainFuncClearException(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 开阀
@@ -2986,10 +2933,6 @@ void MainFuncOpenValve(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3086,8 +3029,6 @@ void MainFuncOpenValve(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 关阀
@@ -3098,10 +3039,6 @@ void MainFuncCloseValve(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3198,8 +3135,111 @@ void MainFuncCloseValve(void)
 			continue;
 		}
 	}
+}
 
-	_CloseCom();
+// 读取NB入网信息
+void MainFuncReadNbJoinNetworkInfo(void)
+{
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		_Printfxy(0, 0, "<<读取NB入网信息", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
+			#if (AddrLen == 6)
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			#else
+			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			#endif
+		}
+		
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_ReadNbJoinNetworkInfo;
+		
+		switch(CurrCmd){
+		case WaterCmd_ReadNbJoinNetworkInfo:		// 读取NB入网信息
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x10;		// 命令字	10
+				ackLen = 34;				// 应答长度 34	
+				// 数据域
+				Args.lastItemLen = i - 1;
+				break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 0;
+				continue;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#if (AddrLen == 6)
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+		#else
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
+		#endif
+
+		// 应答长度、超时时间、重发次数
+		ackLen += 14 + Addrs.itemCnt * AddrLen;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
+
+		// 发送、接收、结果显示
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+
 }
 
 // --------------------------------   主函数   -----------------------------------------------
@@ -3219,16 +3259,15 @@ int main(void)
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
-	MainMenu.no=8;
+	MainMenu.no=7;
 	MainMenu.title =  "     桑锐手持机    ";
 	MainMenu.str[0] = " 读取用户用量 ";
 	MainMenu.str[1] = " 读取冻结数据 ";
-	MainMenu.str[2] = " 读取表端时钟 ";
-	MainMenu.str[3] = " 设置表端时钟 ";
-	MainMenu.str[4] = " 开阀 ";
-	MainMenu.str[5] = " 关阀 ";
-    MainMenu.str[6] = " 清异常 ";
-	MainMenu.str[7] = " 工程调试 ";
+	MainMenu.str[2] = " 开阀 ";
+	MainMenu.str[3] = " 关阀 ";
+    MainMenu.str[4] = " 清异常 ";
+	MainMenu.str[5] = " 读取NB入网信息 ";
+	MainMenu.str[6] = " 工程调试 ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -3236,15 +3275,13 @@ int main(void)
 	MainMenu.key[4] = "5";
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
-	MainMenu.key[7] = "8";
 	MainMenu.Function[0] = MainFuncReadRealTimeData;
 	MainMenu.Function[1] = MainFuncReadFrozenData;
-	MainMenu.Function[2] = MainFuncReadMeterTime;
-	MainMenu.Function[3] = MainFuncSetMeterTime;
-	MainMenu.Function[4] = MainFuncOpenValve;
-	MainMenu.Function[5] = MainFuncCloseValve;
-    MainMenu.Function[6] = MainFuncClearException;
-	MainMenu.Function[7] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.Function[2] = MainFuncOpenValve;
+	MainMenu.Function[3] = MainFuncCloseValve;
+    MainMenu.Function[4] = MainFuncClearException;
+	MainMenu.Function[5] = MainFuncReadNbJoinNetworkInfo;
+	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

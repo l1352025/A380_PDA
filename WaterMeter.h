@@ -1549,6 +1549,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 34 && cmd != 0x10){
 			break;
 		}
+		ret = RxResult_Ok;
 		// 电池电压
 		dispIdx += sprintf(&dispBuf[dispIdx], "Battery: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
@@ -1609,6 +1610,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 69 && cmd != 0x26){
 			break;
 		}
+		ret = RxResult_Ok;
 		// 命令选项跳过
 		index += 1;
 		// CCID
@@ -2626,14 +2628,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 			PrintfXyMultiLine_VaList(0, 9*16, " <  命令重发...%d  > ", sendCnt);
 		}
 
-		#if LOG_ON
-			LogPrintBytes("Tx: ", TxBuf, TxLen);
-		#endif
-
 		// 接收
-		_CloseCom();
-		_ComSetTran(CurrPort);
-		_ComSet(CurrBaud, 2);
 		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
 		waitTime = 0;
@@ -2642,7 +2637,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
 		do{
 
-			currRxLen = _GetComStr(&RxBuf[RxLen], 100, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
 			RxLen += currRxLen;
 			if(KEY_CANCEL == _GetKeyExt()){
 				//------------------------------------------------------
@@ -2667,6 +2662,7 @@ bool Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %3d/%-3d  \n", RxLen, ackLen);
 
 		#if LOG_ON
+			LogPrintBytes("Tx: ", TxBuf, TxLen);
 			LogPrintBytes("Rx: ", RxBuf, RxLen);
 		#endif
 
@@ -2724,7 +2720,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
-	timeout = 4000;
+	timeout = 5000;
 	tryCnt = 3;
 #else
 	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;

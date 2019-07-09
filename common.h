@@ -21,7 +21,7 @@
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
     #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-07-08"        // 版本日期
+    #define VerInfo_RevDate (char *)"2019-07-09"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -39,7 +39,7 @@
     #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
 
-#define VerInfo_Previwer    (char *)"预览版2"    // 预览版时,定义该宏
+//#define VerInfo_Previwer    (char *)"预览版3"    // 预览版时,定义该宏
 #define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
