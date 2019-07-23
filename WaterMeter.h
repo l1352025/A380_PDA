@@ -324,7 +324,7 @@ char * Water6009_GetStrDeviceType(uint8 typeId)
 	case 0xFA:	str = "上位机器";	break;
 	case 0xFB:	str = "UART串口";	break;
 	case 0xFC:	str = "集中器";	break;
-	case 0xFD:	str = "中继器";	break;
+	case 0xFD:	str = "中继器";	break; 
 	case 0xFE:	str = "手持机";	break;
 	default:
 		str = "未知";
@@ -431,7 +431,9 @@ uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 		case 0x04:	str = "传感器线断开";	break;
 		case 0x08:	str = "电池欠压";	break;
 		case 0x10:	str = "光电表,一组光管坏";	break;
-		case 0x20:	str = "磁干扰标志";	break;
+		#ifdef Project_6009_IR
+		case 0x20:	str = "磁干扰标志";	break;		// 6009_RF v2.5： 不显示 “磁干扰标志”
+		#endif
 		case 0x40:	str = "光电表,多组光管坏";	break;
 		case 0x80:	str = "光电表,正强光干扰";	break;
 		case 0x0100:	str = "水表反转";	break;

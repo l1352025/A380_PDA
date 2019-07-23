@@ -29,8 +29,8 @@
     #define LogPort     Trans_IR_Quick      // 日志输出串口
 #else // defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-06-28"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.5"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-07-17"        // 版本日期
     #define TransType   "Lora透传"                      // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
