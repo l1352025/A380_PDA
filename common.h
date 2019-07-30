@@ -20,8 +20,8 @@
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-07-09"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.6"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-07-30"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -39,8 +39,8 @@
     #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
 
-//#define VerInfo_Previwer    (char *)"预览版3"    // 预览版时,定义该宏
-#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Previwer    (char *)"预览版1"    // 预览版时,定义该宏
+//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -64,7 +64,7 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      20      // 最大UI控件数
-#define ListStrMax  256     // 最大列表字符串数
+#define ListStrMax  300     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 #define CbxItem_Max 15      // 单选框最大项
 

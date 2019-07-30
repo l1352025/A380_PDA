@@ -7,8 +7,8 @@
 #define Invalid_dbIdx	0				// 无效索引, 数据库记录序号从1开始
 
 #define District_Max				20	// 最大小区数
-#define Building_Max				50	// 一个小区-最大楼栋数
-#define Meter_Max					256	// 一栋楼-最大表数
+#define Building_Max				100	// 一个小区-最大楼栋数
+#define Meter_Max					300	// 一栋楼-最大表数
 
 #define	Size_ListStr	20				// 列表字符串长度
 
