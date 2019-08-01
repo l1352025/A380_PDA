@@ -20,8 +20,8 @@
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-07-09"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.6"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-07-30"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -29,8 +29,8 @@
     #define LogPort     Trans_IR_Quick      // 日志输出串口
 #else // defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.5"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-07-17"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.6"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-08-01"        // 版本日期
     #define TransType   "Lora透传"                      // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -64,7 +64,7 @@ typedef unsigned char bool;
 #define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
 #define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      20      // 最大UI控件数
-#define ListStrMax  256     // 最大列表字符串数
+#define ListStrMax  300     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 #define CbxItem_Max 15      // 单选框最大项
 

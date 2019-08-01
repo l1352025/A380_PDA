@@ -63,7 +63,7 @@ void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 	_Go(0);
 	districts->cnt = 0;
 	districts->idx = 0;
-	query->reqMaxCnt = (query->reqMaxCnt == 0 ? District_Max : query->reqMaxCnt);
+	query->reqMaxCnt = District_Max;
 	query->resultCnt = 0;
 	query->errorCode = 0;
 	for(i = 0; i < recCnt; i++){
@@ -112,7 +112,7 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 	_Go(0);
 	buildings->cnt = 0;
 	buildings->idx = 0;
-	query->reqMaxCnt = (query->reqMaxCnt == 0 ? Building_Max : query->reqMaxCnt);
+	query->reqMaxCnt = Building_Max;
 	query->resultCnt = 0;
 	query->errorCode = 0;
 	for(i = 0; i < recCnt; i++){
@@ -147,6 +147,10 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 	}
 	_Use("");		// ¹Ø±ÕÊý¾Ý¿â
 
+	#if LOG_ON
+		LogPrint("query->reqMaxCnt = %d, buildings->cnt = %d", query->reqMaxCnt, buildings->cnt);
+	#endif
+
 	query->dbCurrIdx = i;
 }
 
@@ -172,7 +176,6 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	meters->meterCnt = 0;
 	meters->readOkCnt = 0;
 	meters->readNgCnt = 0;
-	//query->reqMaxCnt = (query->reqMaxCnt == 0 ? Meter_Max : query->reqMaxCnt);
 	query->reqMaxCnt = Meter_Max;
 	query->resultCnt = 0;
 	query->errorCode = 0;

@@ -324,7 +324,7 @@ char * Water6009_GetStrDeviceType(uint8 typeId)
 	case 0xFA:	str = "上位机器";	break;
 	case 0xFB:	str = "UART串口";	break;
 	case 0xFC:	str = "集中器";	break;
-	case 0xFD:	str = "中继器";	break; 
+	case 0xFD:	str = "中继器";	break;
 	case 0xFE:	str = "手持机";	break;
 	default:
 		str = "未知";
@@ -1557,12 +1557,12 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 信号功率
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		ptr = (u16Tmp & 0x8000 > 0 ? "-" : "");
+		ptr = ((u16Tmp & 0x8000) > 0 ? "-" : "");
 		dispIdx += sprintf(&dispBuf[dispIdx], "Signal power: %s%d\n", ptr, (u16Tmp & 0x7FFF));
 		index += 2;
 		// 总功率
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		ptr = (u16Tmp & 0x8000 > 0 ? "-" : "");
+		ptr = ((u16Tmp & 0x8000) > 0 ? "-" : "");
 		dispIdx += sprintf(&dispBuf[dispIdx], " Total power: %s%d\n", ptr, (u16Tmp & 0x7FFF));
 		index += 2;
 		// 发射功率
@@ -1585,7 +1585,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 信噪比
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		ptr = (u16Tmp & 0x8000 > 0 ? "-" : "");
+		ptr = ((u16Tmp & 0x8000) > 0 ? "-" : "");
 		dispIdx += sprintf(&dispBuf[dispIdx], "    SNR: %s%d\n", ptr, (u16Tmp & 0x7FFF));
 		index += 2;
 		// 搜索频率信道号
@@ -1597,7 +1597,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		// 参考信号接收质量 
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		ptr = (u16Tmp & 0x8000 > 0 ? "-" : "");
+		ptr = ((u16Tmp & 0x8000) > 0 ? "-" : "");
 		dispIdx += sprintf(&dispBuf[dispIdx], "   RSRQ: %s%d\n", ptr, (u16Tmp & 0x7FFF));
 		index += 2;
 		// 操作模式
@@ -2736,6 +2736,10 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	}
 
 	key = ShowScrollStr(&DispBuf, 7);
+
+	#if LOG_ON
+			LogPrint("解析结果: \r\n %s", DispBuf);
+	#endif
 
 	return key;
 }

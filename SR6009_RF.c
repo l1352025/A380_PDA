@@ -3735,6 +3735,7 @@ void MainFuncBatchMeterReading(void)
 
 						case 4:		// 抄表统计
 							Meters.selectField = Idx_Invalid;
+							_Printfxy(0, 9*16, "    <  统计中  >    ", Color_White);
 							QueryMeterList(&Meters, &DbQuery);
 							key = ShowMeterReadCountInfo(&Meters);
 							break;
@@ -4202,6 +4203,7 @@ void MainFuncBatchMeterReading(void)
 					Meters.qryDistricNum = (qryTypeXq == 0 ? NULL : Districts.nums[qryIndexXq]);
 					Meters.qryBuildingNum = (qryTypeLd == 0 ? NULL : Buildings.nums[qryIndexLd]);
 					Meters.selectField = Idx_Invalid;
+					_Printfxy(0, 9*16, "    <  统计中  >    ", Color_White);
 					QueryMeterList(&Meters, &DbQuery);
 					if(Meters.districName[0] == 0x00){
 						strcpy(Meters.districName, "全部");
