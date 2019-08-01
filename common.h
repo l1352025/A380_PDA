@@ -29,8 +29,8 @@
     #define LogPort     Trans_IR_Quick      // 日志输出串口
 #else // defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.4"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-06-28"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.5"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-08-01"        // 版本日期
     #define TransType   "Lora透传"                      // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -40,7 +40,7 @@
 #endif
 
 //#define VerInfo_Previwer    (char *)"预览版1"    // 预览版时,定义该宏
-//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
