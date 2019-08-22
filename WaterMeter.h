@@ -540,6 +540,19 @@ char * Water6009_GetStrErrorMsg(uint8 errorCode)
 	case 0xD2:
 	    str = "无此功能";
 		break;
+	case 0xD3:
+	    str = "网络未注册";
+		break;
+	case 0xD4:
+	    str = "网络用户码错误";
+		break;
+	case 0xD5:
+	    str = "校验码错误";
+		break;
+	case 0xD6:
+	    str = "数据禁止访问";
+		break;
+	case 0xD7:
 	default:
 		str = "未知错误";
 		break;
