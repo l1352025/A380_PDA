@@ -1,7 +1,0 @@
-
-把 "arm" 的整个目录放入到C: 盘根目录
-把 源码所有文件（包括arm 和 EditPlus）放到 其他盘英文目录($dir)下：如 E:\A380_Project
-编译工具是  $dir \EditPlus 3 \ EditPlus.exe 运行他即可，打开C文件，然后CTRL+1 就是编译, CTRL+2 是下载
-
-EditPlus 3 注册信息: kariryo
-5387D-12450-BCZ8B-D6W0B-85TE1
