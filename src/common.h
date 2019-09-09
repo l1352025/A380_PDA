@@ -186,6 +186,7 @@ uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char
 
 //--------------------------------      宏函数      ---------------------------------------
 #define sprintf(...)  ((int)sprintf(__VA_ARGS__))
+#define sprintf(s, format, ...)  ((int)sprintf((char *)s, (const char *)format, __VA_ARGS__))
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 
