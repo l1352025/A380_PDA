@@ -1,7 +1,12 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include "HJLIB.H"      // 引用其中的数据类型定义
+typedef unsigned char  uint8;                
+typedef signed   char  int8;                     
+typedef unsigned short uint16;                  
+typedef signed   short int16;                   
+typedef unsigned int   uint32;                 
+typedef signed   int   int32;   
 
 // --------------------------------		类型定义	-----------------------------------------
 /*  串口物理端口： NO.1 / NO.2 / NO.3
@@ -94,7 +99,8 @@ typedef struct{
 typedef enum{
     UI_TxtBox,
     UI_CombBox,
-    UI_Lable
+    UI_Lable,
+    UI_Button
 }UI_Type;
 
 typedef struct{

@@ -591,54 +591,80 @@ void WaterCmdFunc_Upgrade(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 6, NULL,
-		"<<程序升级",
-		6,
-		"1. 单表升级",
-		"2. 查询升级状态",
-		"3. 添加档案",
-		"4. 删除档案",
-		"5. 查询未升级档案",
-		"6. 升级统计"
-	);
+	(*pUiCnt) = 0;
+	uiRowIdx = 2;
+	_Printfxy(0, 0, "<<程序升级", Color_White);
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "1. 选择升级文件");	
+	LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 输入表号");	
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  > ", StrBuf[0], 1, 2*8, true);
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "3. 开始升级");	
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "4. 查询升级状态");				
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+	_Printfxy(0, 9*16, "返回            确定", Color_White);
 
 	while(1){
 
+		_Printfxy(0, 0, "<<程序升级", Color_White);
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		key = ShowListBox(&menuList);
+		key = ShowUI(UiList, &currUi);
 		//------------------------------------------------------------
 		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-		menuItemNo = menuList.strIdx + 1;
 
 		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
+
+		switch (currUi)
+		{
+		case 0:	// 选择升级文件
+			{
+
+
+			}
+			break;
+
+		case 3:	// 开始升级
+			{
+
+			}
+			break;
+
+		case 4:	// 查询升级状态
+			{
+
+			}
+			break;
+		
+		case 2:	// 输入表号
+		default:
+			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 2;
+				continue;
+			}
+
+			break;
+		}
 
 		while(1){
 			
 			_ClearScreen();
 
-			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
-			_Printfxy(0, 0, TmpBuf, Color_White);
+			_Printfxy(0, 0, "<<开始升级", Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
+			PrintfXyMultiLine_VaList(0, 2*16, "版本：%s  CRC：%s");
+			PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s");
+			PrintfXyMultiLine_VaList(0, 5*16, "%s");	// cmd name
+			PrintfXyMultiLine_VaList(0, 6*16, "%s");	// cmd reponse
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <升级中>   ", Color_White);
 
-			if(false == isUiFinish){
-				(*pUiCnt) = 0;
-				uiRowIdx = 2;
-				#if (AddrLen == 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
-				#else
-				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
-				#endif
-			}
 			
 			// 命令参数处理
 			i = 0;	
@@ -648,119 +674,68 @@ void WaterCmdFunc_Upgrade(void)
 			CurrCmd = (0x30 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+                Args.buf[i++] = 0x70;		// 命令字	70
+				ackLen = 41;				// 应答长度 41	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 水表电压
+				Args.buf[i++] = 0x00;		// 气表电压
+				Args.buf[i++] = 0x00;		// RSSI门限
+				Args.buf[i++] = 0x00;		// SNR门限
+				Args.buf[i++] = 0x00;		// 程序版本 40 byte
+				Args.buf[i++] = 0x00;		// 版本CRC16
+				Args.buf[i++] = 0x00;		
+				Args.buf[i++] = 0x00;		// 总包数
+				Args.buf[i++] = 0x00;
+				Args.buf[i++] = 0x00;		// 前26K CRC16
+				Args.buf[i++] = 0x00;	
+				Args.buf[i++] = 0x00;		// 后26K CRC16
+				Args.buf[i++] = 0x00;	
+				Args.buf[i++] = 0x00;		// 总52K CRC16
+				Args.buf[i++] = 0x00;	
+				Args.buf[i++] = 0x00;		// RXD信道 0/1
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "  "
+			case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x71;		// 命令字	71
+				ackLen = 41;				// 应答长度 41	
+				// 数据域
+				Args.buf[i++] = 0x00;	
+				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// "  "
+			case WaterCmd_SendUpgradePacket:			// 发送升级数据
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x72;		// 命令字	72
+				ackLen = 0;					// 应答长度 0	
+				// 数据域
+				Args.buf[i++] = 0x00;	
+				Args.lastItemLen = i - 1;
 				break;
 			
-			case WaterCmd_OpenValveForce:		// "  ";
+			case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x73;		// 命令字	73
+				ackLen = 93;				// 应答长度 93	
+				// 数据域
+				Args.buf[i++] = 0x00;	
+				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:		// "  ";
+            case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
 				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
+				Args.buf[i++] = 0x74;		// 命令字	74
+				ackLen = 41;				// 应答长度 41	
+				// 数据域
+				Args.buf[i++] = 0x00;	
+				Args.lastItemLen = i - 1;
 				break;
 
 			default: 
 				break;
-			}
-
-
-			// 创建 “中继地址输入框” 后， 显示UI
-			if(false == isUiFinish){
-		
-				key = ShowUI(UiList, &currUi);
-
-				if (key == KEY_CANCEL){
-					break;
-				}
-
-				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-					sprintf(StrDstAddr, " 请输入");
-					currUi = 0;
-					continue;
-				}
-
-				isUiFinish = true;
-				continue;	// go back to get ui args
 			}
 
 			// 地址填充

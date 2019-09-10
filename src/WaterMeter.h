@@ -83,21 +83,17 @@ typedef enum{
 
 	/*
 	程序升级：	
-	1	单表升级
-	2	查询升级
-	3	广播升级
-	4	添加档案
-	5	删除档案
-	6	查询档案
-	7	升级统计
+	1	通知系统升级_在app
+	2	通知系统升级_在boot
+	3	发送升级数据
+	4	查询升级状态_在boot
+	5	查询升级状态_在app
 	*/
-	WaterCmd_SingleUpgrade			= 0x31,
-	WaterCmd_QueryUpgrade,
-	WaterCmd_BroadcastUpgrade, 
-	WaterCmd_DocAdd,
-	WaterCmd_DocDelete,
-	WaterCmd_DocQuery,	
-	WaterCmd_UpgradeStatistics,
+	WaterCmd_NoticeUpgrade_OnApp		= 0x31,
+	WaterCmd_NoticeUpgrade_OnBoot,
+	WaterCmd_SendUpgradePacket, 
+	WaterCmd_QueryUpgradeStatus_OnBoot,
+	WaterCmd_QueryUpgradeStatus_OnApp,	
 
 	/*
 	预缴用量：	
@@ -1817,7 +1813,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 
 	//--------------------------------------		程序升级		---------------------
-	case WaterCmd_SingleUpgrade:		// 单表升级
+	case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
@@ -1825,15 +1821,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 		break;
 
-	case WaterCmd_QueryUpgrade:			// 查询升级
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = RxResult_Ok;
-		
-		break;
-
-	case WaterCmd_BroadcastUpgrade:		// 广播升级
+	case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
@@ -1841,7 +1829,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		
 		break;
 
-	case WaterCmd_DocAdd:			// 添加档案
+	case WaterCmd_SendUpgradePacket:			// 发送升级数据
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
@@ -1849,7 +1837,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		
 		break;
 
-	case WaterCmd_DocDelete:		// 删除档案
+	case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
@@ -1857,15 +1845,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		
 		break;
 
-	case WaterCmd_DocQuery:			// 查询档案
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = RxResult_Ok;
-		
-		break;
-
-	case WaterCmd_UpgradeStatistics:	// 升级统计
+	case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}

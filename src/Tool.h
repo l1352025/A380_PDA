@@ -571,6 +571,24 @@ void LableCreate(UI_Item *item, uint8 x, uint8 y, const char *title)
 }
 
 /*
+* 描  述：创建按钮
+* 参  数：x, y		- UI组件前面的标签的起始坐标
+*		 item		- UI组件属性
+*		 title		- UI组件前面的标签
+* 返回值：void
+*/
+void ButtonCreate(UI_Item *item, uint8 x, uint8 y, const char *title)
+{
+	item->x = x;
+	item->y = y;
+	item->title = title;
+	item->x1 = x + strlen(title) * 8;
+	item->y1 = y;
+	item->text = NULL;
+	item->type = UI_Button;
+}
+
+/*
 * 描  述：创建输入框
 * 参  数：x, y		- UI组件前面的标签的起始坐标
 *		 item		- UI组件属性
@@ -717,6 +735,11 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 		}
 		else if(ptr->type == UI_CombBox){
 			key = CombBoxGetCurrIndex(ptr);
+		}
+		else if(ptr->type == UI_Button){
+			_Printfxy(ptr->x, ptr->y, ptr->title, Color_Black);
+			key = _ReadKey();
+			_Printfxy(ptr->x, ptr->y, ptr->title, Color_White);
 		}
 		else{	// UI_Lable
 		}
