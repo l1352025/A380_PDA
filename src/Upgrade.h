@@ -24,6 +24,4 @@ typedef struct
     uint8   crc16_appVer[2];
 }UpgradeInfo;
 
-
-
 #endif

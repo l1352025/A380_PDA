@@ -14,6 +14,7 @@ DistrictListSt Districts;
 BuildingListSt Buildings;
 MeterListSt Meters;
 DbQuerySt DbQuery;
+bool LcdOpened;
 
 //----------------------	数据库信息-操作函数		-------------------------------------
 
@@ -269,16 +270,29 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 }
 
 /*
+* 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
+* 参 数：currKey	- 命令收发时定周期检测的按键值
+* 返 回：void
+*/
+static void OnHook_OpenLcdLight_WhenKeyPress(uint8 currKey)
+{
+	if(currKey != 0){	// 其他键，打开背景灯
+		_OpenLcdBackLight();
+		LcdOpened = true;
+	}
+}
+
+/*
 * 描 述：显示 xx小区-xx楼栋- 自动抄表
 * 参 数：meters		- 抄表情况列表
 * 返 回：uint8 	- 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
 */
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
-	uint8 key, i, cnt, isCancel = false;
+	uint8 key, i, cnt;
 	uint16 ackLen, timeout, dispIdx;
-	uint8 sendCnt = 0, tryCnt, cmdResult, lcdCtrl;
-	uint16 waitTime = 0, lastRxLen;
+	uint8 tryCnt, lcdCtrl;
+	CmdResult cmdResult = CmdResult_Ok;
 	char *dispBuf = &DispBuf;
 	MeterInfoSt *meterInfo = &MeterInfo;
 	char strTmp[20];
@@ -310,6 +324,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		if(lcdCtrl == 0){
 			_OpenLcdBackLight();
 			lcdCtrl++;
+			LcdOpened = true;
 		}
 		else if(lcdCtrl < 4){
 			lcdCtrl++;
@@ -317,6 +332,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		else if(lcdCtrl == 4){
 			_CloseLcdBackLight();
 			lcdCtrl++;
+			LcdOpened = false;
 		}
 		
 		// 读取当前户表信息
@@ -368,72 +384,17 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		_CloseCom();
-		_ComSetTran(CurrPort);
-		_ComSet(CurrBaud, 2);
-		sendCnt = 0;
-		do{
-			// 发送 
-			TxLen = PackWater6009RequestFrame(TxBuf, &Addrs, CurrCmd, &Args, sendCnt);
-			_SendComStr(TxBuf, TxLen);
-			sendCnt++;
-			if(sendCnt == 1){
-				sprintf(strTmp, "发送...");
-			}
-			else{
-				sprintf(strTmp, "重发..%d", sendCnt);
-			}
+		TranceiverCycleHook = OnHook_OpenLcdLight_WhenKeyPress;
+		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 
-			// 接收
-			_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
-			RxLen = 0;
-			waitTime = 0;
-			lastRxLen = 0;
-			_DoubleToStr(TmpBuf, (double)(timeout / 1000), 0);
-			PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
+		if(LcdOpened && lcdCtrl > 4){	
+			lcdCtrl = 0;
+		}
 
-			do{
-
-				RxLen += _GetComStr(&RxBuf[lastRxLen], 100, 8);	// N x10 ms 检测接收, 时间校准为 N x90% x10
-				key = _GetKeyExt();
-				if(key == KEY_CANCEL){	// 取消键，取消自动抄表
-					DispBuf[0] = 0x00;
-					isCancel = true;
-					break;
-				}
-				else if(key != 0 && lcdCtrl > 4){	// 其他键，打开背景灯
-					_OpenLcdBackLight();
-					lcdCtrl = 0;
-				}
-				waitTime += 100;
-
-				if(waitTime % 1000 == 0){
-					_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 0);
-					PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
-				}
-
-				if(lastRxLen > 0){
-					if(lastRxLen != RxLen){
-						lastRxLen = RxLen;
-						continue;
-					}else{
-						break;
-					}
-				}else{
-					lastRxLen = RxLen;
-				}
-			}while(waitTime < timeout);
-
-			cmdResult = ExplainWater6009ResponseFrame(RxBuf, RxLen, LocalAddr, CurrCmd, ackLen, DispBuf);
-
-		}while(sendCnt < tryCnt && (cmdResult == RxResult_Timeout || cmdResult == RxResult_CrcError));
-
-
-		if(isCancel){	// 取消轮抄
+		if(cmdResult == CmdResult_Cancel){	// 取消轮抄
 			break;
 		}
-		
-		if(cmdResult == RxResult_Ok){
+		else if(cmdResult == CmdResult_Ok){
 			// 成功，保存结果到数据库
 			SaveMeterReadResult(meterInfo);
 			_Printfxy(0, 9*16, " < 当前抄表: 成功 > ", Color_White);
@@ -456,7 +417,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 
 	_OpenLcdBackLight();
 
-	if(isCancel){
+	if(cmdResult == CmdResult_Cancel){
 		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
 		#if RxBeep_On
 		_SoundOn();

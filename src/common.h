@@ -7,6 +7,13 @@ typedef unsigned short uint16;
 typedef signed   short int16;                   
 typedef unsigned int   uint32;                 
 typedef signed   int   int32;   
+typedef unsigned char bool;
+#ifndef true
+#define true    1
+#endif
+#ifndef false
+#define false   0
+#endif
 
 // --------------------------------		类型定义	-----------------------------------------
 /*  串口物理端口： NO.1 / NO.2 / NO.3
@@ -68,13 +75,6 @@ typedef signed   int   int32;
 #define RxBeep_On   1       
 #endif
 
-typedef unsigned char bool;
-#ifndef true
-#define true    1
-#endif
-#ifndef false
-#define false   0
-#endif
 
 #define TXTBUF_MAX  20      // 文本输入缓冲区最大个数
 #define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
@@ -137,6 +137,7 @@ typedef struct{
 }UI_ItemList;
 
 typedef void (*FillListFunc)(char **strs, int16 dstIdx, int16 srcIdx, uint16 cnt);
+
 typedef struct{
     uint8 x;        
     uint8 y;
@@ -154,6 +155,18 @@ typedef struct{
 
 }ListBox;
 
+
+typedef enum{
+	CmdResult_Ok,
+	CmdResult_Failed,
+	CmdResult_CrcError,
+	CmdResult_Timeout,
+    CmdResult_Cancel
+}CmdResult;
+
+typedef void (*FuncCmdCycleHandler)(uint8 currKey);
+typedef uint8 (*FuncCmdFramePack)(uint8 *txBuf, ParamsBuf *addrs, uint16 cmdid, ParamsBuf *args, uint8 sendCnt);
+typedef uint8 (*FuncCmdFrameExplain)(uint8 *rxBuf, uint16 rxlen, const uint8 *dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
 //---------------------------------		函数声明	 -----------------------------------------
 int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset);
@@ -189,10 +202,7 @@ void LogPrintBytes(const char *title, uint8 *buf, uint16 size);
 void DatetimeToTimeStrs(const char *datetime, char *year, char *month, char *day, char *hour, char *min, char *sec);
 uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, char *hour, char *min, char *sec);
 uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
-
-//--------------------------------      宏函数      ---------------------------------------
-#define sprintf(...)  ((int)sprintf(__VA_ARGS__))
-#define sprintf(s, format, ...)  ((int)sprintf((char *)s, (const char *)format, __VA_ARGS__))
+CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 
@@ -211,5 +221,7 @@ extern char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
-
+extern FuncCmdCycleHandler TranceiverCycleHook;
+extern FuncCmdFramePack FramePack;
+extern FuncCmdFrameExplain FrameExplain;
 #endif

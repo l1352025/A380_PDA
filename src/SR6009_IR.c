@@ -489,7 +489,7 @@ void WaterCmdFunc_TestCmd(void)
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
-				if(true == Protol6009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
+				if(CmdResult_Ok == Protol6009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
 					i = 0;
 					Args.buf[i++] = 0x07;		// 命令字	07
 					ackLen = 1;					// 应答长度 1	
@@ -501,7 +501,7 @@ void WaterCmdFunc_TestCmd(void)
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;
 
-					if(true == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
+					if(CmdResult_Ok == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
 						memcpy(StrDstAddr, StrBuf[0], TXTBUF_LEN);
 					}
 				}

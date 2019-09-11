@@ -28,6 +28,7 @@ char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
+FuncCallback Func_TranceiverCycleHook = NULL;
 
 //----------------------------------------  表端命令  ------------------------
 /*
@@ -248,15 +249,6 @@ typedef enum{
 	CenterCmd_ClearException
 
 }CenterCmdDef;
-
-
-typedef enum{
-	RxResult_Ok,
-	RxResult_Failed,
-	RxResult_CrcError,
-	RxResult_Timeout
-}CmdRxResult;
-
 
 //---------------------------------------		8009 解析函数	-------------------------------------
 
@@ -742,7 +734,7 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 */
 uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
-	bool ret = RxResult_Failed;
+	bool ret = CmdResult_Failed;
 	uint8 crc8, addrsCnt, cmd, i, u8Tmp;
 	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
@@ -766,7 +758,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 		if(rxlen < index + 27){
 			sprintf(&dispBuf[dispIdx], "结果: 超时,无应答");
-			return RxResult_Timeout;
+			return CmdResult_Timeout;
 		}
 
 		// start check
@@ -795,7 +787,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		crc8 = GetCrc8(&buf[index], length - 2);
 		if(crc8 !=  buf[index + length - 2]){
 			sprintf(&dispBuf[dispIdx], "结果: 有应答,CRC错误");
-			return RxResult_CrcError;
+			return CmdResult_CrcError;
 		}
 
 		// pass
@@ -854,7 +846,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 21 && cmd != 0x01){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		// 类型
 		ptr = Water8009_GetStrValueType((buf[index] >> 4));
@@ -930,7 +922,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 88 && cmd != 0x02){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 冻结数据类型
 		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
 		index += 1;
@@ -1033,7 +1025,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 3 && cmd != 0x03){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -1052,7 +1044,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 124 && cmd != 0x04){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 84;
 		memcpy(&VerInfo[0], &buf[index], 40);
 		VerInfo[40] = 0x00;
@@ -1066,7 +1058,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x05){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -1078,7 +1070,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
@@ -1090,7 +1082,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		//环境温度
 		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
@@ -1102,7 +1094,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		//电池电压
 		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
@@ -1113,7 +1105,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
@@ -1125,14 +1117,14 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 3 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 命令状态
 		if(buf[index] != Args.buf[2] || buf[index + 1] != Args.buf[3] || buf[index + 2] != Args.buf[4]){
 			ptr = Water8009_GetStrErrorMsg(buf[index]);
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 			index += 1;
-			ret = RxResult_Failed;
+			ret = CmdResult_Failed;
 		}
 		else{
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
@@ -1149,7 +1141,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 4 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 运营商编号
 		dispIdx += sprintf(&dispBuf[dispIdx], "运营商编号: %2X%2X%2X%2X\n", 
@@ -1161,7 +1153,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 63 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 
 		// 路径1长度 6*n
@@ -1196,7 +1188,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
@@ -1208,7 +1200,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			dispIdx += sprintf(&dispBuf[dispIdx], "新表号: %s\n", &TmpBuf[0]);
 		}
 		else{
-			ret = RxResult_Failed;
+			ret = CmdResult_Failed;
 		}
 		index += 6;
 		break;
@@ -1217,7 +1209,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 58 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// debug信息
 		dispIdx += sprintf(&dispBuf[dispIdx], "模块发射次数: %d\n", (buf[index] + buf[index + 1] * 256));
@@ -1276,11 +1268,11 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x07){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		index += 1;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1290,7 +1282,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 预缴用量
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		index += 4;
@@ -1309,10 +1301,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x16){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "数据非法");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 数据非法原因
@@ -1331,10 +1323,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x17){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = (buf[index] == 0xAB ? "操作失败" : "操作成功");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 操作成功时结果
@@ -1354,10 +1346,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x18){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		// 新版可能+ 2 byte
@@ -1368,7 +1360,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x06){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 用户用量
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		index += 4;
@@ -1391,7 +1383,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 6 && cmd != 0x0A){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 反转读数
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		index += 4;
@@ -1405,7 +1397,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x0B){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
@@ -1418,7 +1410,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x0C){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		if(buf[index] == 0xAA){
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 			index += 1;
@@ -1435,7 +1427,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x13){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表端时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
 			, buf[index + 4], buf[index + 5], buf[index + 6]);
@@ -1448,7 +1440,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1461,7 +1453,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1489,7 +1481,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1517,7 +1509,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1540,7 +1532,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 10;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1549,7 +1541,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 34 && cmd != 0x10){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 电池电压
 		dispIdx += sprintf(&dispBuf[dispIdx], "Battery: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
@@ -1610,7 +1602,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 69 && cmd != 0x26){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令选项跳过
 		index += 1;
 		// CCID
@@ -1711,7 +1703,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
@@ -1721,7 +1713,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x09){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "发射次数: %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "接收次数: %d\n", (buf[index] + buf[index + 1] * 256));
@@ -1736,9 +1728,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x1B){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		if(buf[index] == 0xAB){
-			ret = RxResult_Failed;
+			ret = CmdResult_Failed;
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作失败\n");
 			index += 1;
 			if(rxlen >= index + 1 + 4){
@@ -1757,9 +1749,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x1B){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		if(buf[index] == 0xAB){
-			ret = RxResult_Failed;
+			ret = CmdResult_Failed;
 			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作失败\n");
 			index += 1;
 			if(rxlen >= index + 1 + 4){
@@ -1780,7 +1772,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		if(rxlen >= index + 1 + 4){
@@ -1794,7 +1786,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		if(rxlen >= index + 1 + 4){
@@ -1808,7 +1800,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 
 		break;
 
@@ -1816,7 +1808,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1824,7 +1816,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1832,7 +1824,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1840,7 +1832,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1848,7 +1840,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1856,7 +1848,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 12 && cmd != 0x15){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		
 		break;
 
@@ -1869,7 +1861,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 6 && cmd != 0x41){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 集中器号
 		dispIdx += sprintf(&dispBuf[dispIdx], "集中器号: \n    %02X%02X%02X%02X%02X%02X\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3], buf[index + 4], buf[index + 5]);
@@ -1880,7 +1872,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 6 && cmd != 0x40){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 软件版本
 		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %02X%02X \n", buf[index], buf[index + 1]);
 		index += 2;
@@ -1896,7 +1888,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x43){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 集中器时钟
 		dispIdx += sprintf(&dispBuf[dispIdx], "集中器时钟: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
@@ -1908,7 +1900,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x44){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -1919,7 +1911,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 16 && cmd != 0x45){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 首先IP + 端口
 		dispIdx += sprintf(&dispBuf[dispIdx], "首先IP: %d.%d.%d.%d\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
@@ -1958,7 +1950,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x46){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -1969,7 +1961,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 4 && cmd != 0x47){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 信号强度
 		if(buf[index] == 0){
 			ptr = "<= -113dBm";
@@ -2008,7 +2000,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 2 && cmd != 0x48){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 数据上传功能
 		ptr = (buf[index] == 0 ? "清空档案和路径" : "清空所有数据");
 		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
@@ -2023,7 +2015,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x49){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 工作类型
 		ptr = (buf[index] == 0 ? "抄定时定量" : (buf[index] == 1 ? "抄冻结" : "无效"));
 		dispIdx += sprintf(&dispBuf[dispIdx], "工作类型: %s\n", ptr);
@@ -2054,7 +2046,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 3 && cmd != 0x50){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "设备类型: %s\n", ptr);
@@ -2067,7 +2059,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 3 && cmd != 0x51){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 节点总数量
 		dispIdx += sprintf(&dispBuf[dispIdx], "节点总数量  : %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
@@ -2094,7 +2086,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x52){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 设置的节点数量
 		dispIdx += sprintf(&dispBuf[dispIdx], "设置的节点数量: %d\n", (buf[index]));
 		index += 1;
@@ -2115,7 +2107,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x53){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// N个节点设置结果
 		u8Tmp = (rxlen - index - 4) / 7;
 		for(i = 0; i < u8Tmp; i++){
@@ -2133,7 +2125,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x54){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -2145,7 +2137,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 10 && cmd != 0x55){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = Water8009_GetStrErrorMsg(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
@@ -2187,7 +2179,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x56){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
 		TmpBuf[6] = 0x00;
@@ -2204,7 +2196,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 28 && cmd != 0x63){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
 		TmpBuf[6] = 0x00;
@@ -2266,7 +2258,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 7 && cmd != 0x64){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
 		TmpBuf[6] = 0x00;
@@ -2373,7 +2365,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 124 && cmd != 0x3A){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 模块运行参数
 		ptr = Water8009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "仪表类型: %s\n", ptr);
@@ -2502,17 +2494,17 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 1 && cmd != 0x3F){
 			break;
 		}
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? RxResult_Ok : RxResult_Failed);
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		break;
 
 
 	default:
-		ret = RxResult_Ok;
+		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "该命令[%02X]暂未解析\n", cmd);
 		break;
 	}
@@ -2670,7 +2662,7 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 
 		cmdResult = ExplainWater8009ResponseFrame(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
 
-	}while(sendCnt < tryCnt && (cmdResult == RxResult_Timeout || cmdResult == RxResult_CrcError));
+	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
 
 	// 显示结果
 #if RxBeep_On
@@ -2678,7 +2670,7 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 	_Sleep(50);
 	_SoundOff();
 #endif
-	if(cmdResult == RxResult_Ok){
+	if(cmdResult == CmdResult_Ok){
 		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		//------------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -2692,7 +2684,7 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		_Sleep(30);
 		_SoundOff();
 #endif
-		if(cmdResult == RxResult_Failed){
+		if(cmdResult == CmdResult_Failed){
 		//	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 		}
 		//-----------------------------------------------------

@@ -1601,4 +1601,91 @@ uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char
 	return errorCode;
 }
 
+/*
+* 描述： 命令发送/接收处理，使用到协议打包和解析宏函数定义
+* 参数： cmdid	- 当前命令标识
+*		addrs	- 地址域		
+*		args	- 命令参数：args->items[0] - 命令ID, args->items[1] - 数据域
+*		ackLen	- 应答长度 (byte)
+*		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
+*		tryCnt	- 重试次数 默认3次
+* 返回： CmdResult  - 命令执行结果： true - 成功， false - 失败		
+*/
+CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+{
+	CmdResult cmdResult;
+	uint8 sendCnt = 0, key = 0;
+	uint16 waitTime = 0, currRxLen;
+	char strTmp[20];
+	
+	if(FramePack == NULL || FrameExplain == NULL)
+	{
+		return CmdResult_Cancel;
+	}
+
+	do{
+		_CloseCom();
+		_ComSetTran(CurrPort);
+		_ComSet(CurrBaud, 2);
+
+		// 发送 
+		TxLen = FramePack(TxBuf, addrs, cmdid, args, sendCnt);
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		_SendComStr(TxBuf, TxLen);
+		sendCnt++;
+		if(sendCnt == 1){
+			sprintf(strTmp, "发送...");
+		}
+		else{
+			sprintf(strTmp, "重发..%d", sendCnt);
+		}
+
+		// 接收
+		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		RxLen = 0;
+		waitTime = 0;
+		currRxLen = 0;
+		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 0);
+		PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
+		
+		do{
+
+			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			RxLen += currRxLen;
+			key = _GetKeyExt();
+			if(KEY_CANCEL == key){
+				_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
+				DispBuf[0] = 0x00;
+				return CmdResult_Cancel;
+			}
+			waitTime += 200;
+
+			if(TranceiverCycleHook != NULL){
+				TranceiverCycleHook(key); 
+			}
+			
+			if(waitTime % 1000 == 0){
+				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 0);
+				PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
+			}
+
+			if(RxLen > 0 && currRxLen == 0){
+				break;
+			}
+		}while(waitTime <= timeout || currRxLen > 0);
+
+		#if LOG_ON
+			LogPrintBytes("Tx: ", TxBuf, TxLen);
+			LogPrintBytes("Rx: ", RxBuf, RxLen);
+		#endif
+
+		cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
+
+	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
+
+	_CloseCom();
+
+	return cmdResult;
+}
+
 #endif
