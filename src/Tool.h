@@ -771,7 +771,9 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 	}
 
 	// set the not-number str to null when back
-	if(ptr->type == UI_TxtBox && (ptr->text[0] > '9' || ptr->text[0] < '0')){
+	if(ptr->type == UI_TxtBox 
+		&& ptr->text[0] != 'D'	/* D4D4D4D4D4D4D4D4 */
+		&& (ptr->text[0] > '9' || ptr->text[0] < '0')){
 		ptr->text[0] = 0x00;
 	}
 
@@ -790,6 +792,7 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 	uint8 lineCnt = 0, col = 0; 
 	uint8 *pcurrLine, *pnextLine, *pr;
 
+	lines[0] = NULL;
 	pcurrLine = buf;
 	pr = buf;
 
@@ -835,7 +838,7 @@ uint8 GetPrintLines(uint8 x, const char * buf, char * lines[])
 	}
 
 	// last line 
-	if(pcurrLine != 0x00){
+	if(*pcurrLine != 0x00){
 		lines[lineCnt++] = pcurrLine;
 	}
 
@@ -855,6 +858,8 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 	static char EmptyLine[21] = "                    ";
 	uint8 lineCnt = 0, col = 0; 
 	uint8 *pcurrLine, *pnextLine, *pr;
+
+	if(buf == NULL) return;
 
 	pcurrLine = buf;
 	pr = buf;
@@ -910,7 +915,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 	}
 
 	// last line 
-	if(pcurrLine != 0x00 && lineCnt < maxLines){
+	if(*pcurrLine != 0x00 && lineCnt < maxLines){
 		memcpy(dispLine, pcurrLine, col);
 		dispLine[col] = 0x00;
 		_Printfxy(x, y, EmptyLine, Color_White);
@@ -1393,6 +1398,35 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
     crc ^= 0xFFFF;
 
     return crc;
+}
+
+/*
+* 描  述：计算CRC16 （可持续计算，便于计算文件的Crc16）
+* 参  数：Buf - 数据缓存起始地址
+*		  Len - 计算的总长度
+*		  Seed - 如电力/水力固定使用 0x8408
+*		  CrcKeep	- crc16持续计算的累计值，第一次计算前必须初始化为 *CrcKeep = 0xFFFF
+*					若要持续计算，不可对 *CrcKeep 重新赋值 ！
+* 返回值：当前的CRC16值： 即 （*CrcKeep ^ 0xFFFF）
+*/
+uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep)
+{
+    uint8 i;
+
+	while (Len--){
+        *CrcKeep ^= * Buf++;
+        for(i = 0; i < 8; i++){
+            if (*CrcKeep & 0x0001){
+                *CrcKeep >>= 1;
+                *CrcKeep ^= Seed;
+            }
+            else{
+                *CrcKeep >>= 1;
+            }
+        }
+    }
+
+    return (*CrcKeep ^ 0xFFFF);
 }
 
 /*

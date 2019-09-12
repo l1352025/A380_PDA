@@ -3,6 +3,9 @@
 
 #include "Common.h"
 
+#define Upgrd_FileMaxSize   (52 * 1024)
+#define Upgrd_PacketSize    128
+
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 
 {
@@ -23,5 +26,15 @@ typedef struct
     uint8   upgradeStatus;
     uint8   crc16_appVer[2];
 }UpgradeInfo;
+
+typedef struct
+{
+    uint8   bitFlags[52];   // max cnt = 52 = Upgrd_FileMaxSize / Upgrd_PacketSize / 8
+    uint16  packetCnt;      // max cnt = 416 = Upgrd_FileMaxSize / Upgrd_PacketSize
+    uint16  missCnt;
+    uint16  missList[460];  
+
+}PacketInfo;
+
 
 #endif

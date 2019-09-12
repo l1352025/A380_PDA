@@ -28,6 +28,7 @@ void WaterCmdFunc_CommonCmd(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
+	char strDstAddrTmp[20];
 
 	_ClearScreen();
 
@@ -73,11 +74,17 @@ void WaterCmdFunc_CommonCmd(void)
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
+				if(menuItemNo == 1){ // 读用量时
+					sprintf(strDstAddrTmp, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
+				}
+				else{
+					sprintf(strDstAddrTmp, StrDstAddr);	
+				}
 				#if (AddrLen == 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", strDstAddrTmp, 12, 13*8, true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", strDstAddrTmp, 16, 17*8, true);	
                 #endif
 			}
 
@@ -219,8 +226,10 @@ void WaterCmdFunc_CommonCmd(void)
 					break;
 				}
 
-				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
-					sprintf(StrDstAddr, " 请输入");
+				if( strcmp(strDstAddrTmp, "D4D4D4D4D4D4D4D4") != 0 
+					&& (strDstAddrTmp[0] < '0' || strDstAddrTmp[0] > '9'))
+				{
+					sprintf(strDstAddrTmp, " 请输入");
 					currUi = 0;
 					continue;
 				}
@@ -228,6 +237,8 @@ void WaterCmdFunc_CommonCmd(void)
 				isUiFinish = true;
 				continue;	// go back to get ui args
 			}
+
+			memcpy(StrDstAddr, strDstAddrTmp, 20);
 
 			// 地址填充
 			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
@@ -2341,6 +2352,7 @@ void MainFuncReadRealTimeData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
+	char strDstAddrTmp[20];
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2360,11 +2372,12 @@ void MainFuncReadRealTimeData(void)
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
+			sprintf(strDstAddrTmp, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
 			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", strDstAddrTmp, 12, 13*8, true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", strDstAddrTmp, 16, 17*8, true);	
 			#endif
 		}
 			
@@ -2402,8 +2415,10 @@ void MainFuncReadRealTimeData(void)
 				break;
 			}
 
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, " 请输入");
+			if( strcmp(strDstAddrTmp, "D4D4D4D4D4D4D4D4") != 0 
+				&& (strDstAddrTmp[0] < '0' || strDstAddrTmp[0] > '9'))
+			{
+				sprintf(strDstAddrTmp, " 请输入");
 				currUi = 0;
 				continue;
 			}
@@ -2411,6 +2426,8 @@ void MainFuncReadRealTimeData(void)
 			isUiFinish = true;
 			continue;	// go back to get ui args
 		}
+
+		memcpy(StrDstAddr, strDstAddrTmp, 20);
 
 		// 地址填充
 		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);

@@ -742,7 +742,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 * 描  述：解析水表命令响应帧
 * 参  数：buf		- 接收缓存起始地址
 *		  rxlen		- 接收的长度
-*		  dstAddr	- 目的地址，判断接收的目的地址是否是自己
+*		  dstAddr	- 目的地址，判断接收的目的地址是否是本机地址
 *		  cmdId		- 命令字
 *		  ackLen	- 应答长度
 *		  dispBuf 	- 解析的显示数据
@@ -2567,7 +2567,8 @@ void VersionInfoFunc(void)
 *		ackLen	- 应答长度 (byte)
 *		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
 *		tryCnt	- 重试次数 默认3次
-* 返回： bool  - 命令执行结果： true - 成功， false - 失败		
+* 返回： 命令执行结果： CmdResult_OK - 成功， CmdResult_Failed - 失败	
+*		CmdResult_CrcError - crc错误, CmdResult_Timeout - 超时, CmdResult_Cancel - 已取消
 */
 CmdResult Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
@@ -2653,20 +2654,14 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
-	timeout = 5000;
+	timeout = 2000;
 	tryCnt = 3;
 #else
 	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 #endif
 
-	if(false == Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
-		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
-			DispBuf[0] = NULL;
-		}
-	}
-
-
+	Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
 
 	key = ShowScrollStr(&DispBuf, 7);
 

@@ -33,8 +33,8 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.6"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-07-30"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.7-预览1"			// 版本号
+    #define VerInfo_RevDate (char *)"2019-09-12"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"1200,E,8,1"
@@ -68,7 +68,7 @@ typedef unsigned char bool;
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
-#define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
 #define LOG_ON      0 
@@ -171,6 +171,7 @@ typedef uint8 (*FuncCmdFrameExplain)(uint8 *rxBuf, uint16 rxlen, const uint8 *ds
 //---------------------------------		函数声明	 -----------------------------------------
 int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset);
 uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed);
+uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep);
 uint8 GetCrc8(uint8 *Buf, int len);
 uint8 GetSum8(uint8 *buf, uint16 len);
 char HexToChar(uint8 b);

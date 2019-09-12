@@ -317,6 +317,9 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	// 防止自动抄表时关机，重置自动关机时间
 	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
+	// 自动轮抄时 有按键则打开屏幕背景灯
+	TranceiverCycleHook = OnHook_OpenLcdLight_WhenKeyPress;
+
 	// 自动抄表
 	while(cnt < meters->cnt){
 
@@ -384,7 +387,6 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		TranceiverCycleHook = OnHook_OpenLcdLight_WhenKeyPress;
 		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 
 		if(LcdOpened && lcdCtrl > 4){	
@@ -416,6 +418,9 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	}
 
 	_OpenLcdBackLight();
+
+	// 轮抄结束后 取消收发时回调函数
+	TranceiverCycleHook = NULL;
 
 	if(cmdResult == CmdResult_Cancel){
 		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
