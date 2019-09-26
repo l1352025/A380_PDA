@@ -10,11 +10,12 @@
 #define Building_Max				100	// 一个小区-最大楼栋数
 #define Meter_Max					300	// 一栋楼-最大表数
 
-#define	Size_ListStr	20				// 列表字符串长度
+#define	Size_ListStr	21				// 列表字符串长度
+#define	Size_DbMaxStr	100				// 数据库字段最大长度
 
-#define	Size_DistrictNum			12	// 小区编号 长度	10
+#define	Size_DistrictNum			16	// 小区编号 长度	10
 #define	Size_DistrictName			50	// 小区名称 长度	50
-#define	Size_BuildingNum			12	// 楼栋编号 长度	10
+#define	Size_BuildingNum			20	// 楼栋编号 长度	10
 #define	Size_BuildingName			50	// 楼栋名称 长度	50
 
 #define	Size_MeterNum				16	//表号长度 		12

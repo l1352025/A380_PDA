@@ -33,11 +33,11 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.7-预览1"			// 版本号
+    #define VerInfo_RevNo   (char *)"2.7-预览1"	// 版本号
     #define VerInfo_RevDate (char *)"2019-09-12"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
-	#define CurrPort    Trans_IR                
-	#define CurrBaud    (uint8 *)"1200,E,8,1"
+	#define CurrPort    Trans_IR_Quick                
+	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define AddrLen     8
     #define LogPort     Trans_IR_Quick      // 日志输出串口
 #elif defined(Project_6009_RF)
@@ -62,7 +62,7 @@ typedef unsigned char bool;
     #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
 #endif
 
-//#define VerInfo_Previwer    (char *)"预览版1"    // 预览版时,定义该宏
+#define VerInfo_Previwer    (char *)"预览版2-高速"    // 预览版时,定义该宏
 #define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release

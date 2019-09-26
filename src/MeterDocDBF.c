@@ -55,8 +55,10 @@ int FindStrInList(char ** strs, uint8 strLen, uint16 strCnt, const char *dstStr,
 void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp1[50];
-	char strTmp2[50];
+	//char strTmp1[Size_DbMaxStr];
+	//char strTmp2[Size_DbMaxStr];
+	char *strTmp1 = &TmpBuf[500];
+	char *strTmp2 = &TmpBuf[650];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -103,9 +105,12 @@ void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[50];
-	char strTmp1[50];
-	char strTmp2[50];
+	//char strTmp[Size_DbMaxStr];
+	//char strTmp1[Size_DbMaxStr];
+	//char strTmp2[Size_DbMaxStr];
+	char *strTmp = &TmpBuf[500];
+	char *strTmp1 = &TmpBuf[650];
+	char *strTmp2 = &TmpBuf[800];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -164,7 +169,9 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[50];
+	//char strTmp[Size_DbMaxStr];
+	char *strTmp = &TmpBuf[500];
+
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库

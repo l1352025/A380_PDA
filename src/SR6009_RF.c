@@ -1942,7 +1942,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " ÇëÊä??");
+					sprintf(StrBuf[0], " ÇëÊäÈë");
 					currUi = 1;
 					isUiFinish = false;
 					continue;
@@ -3618,8 +3618,8 @@ void MainFuncBatchMeterReading(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint8 *pByte;
 	uint16 dispIdx, i;
-	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
-	char qryStrXq[50], qryStrLd[50];
+	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[150];
+	char *qryStrXq = &TmpBuf[200], *qryStrLd = &TmpBuf[350];
 	uint8 qryTypeXq, qryTypeLd;
 	uint16 qryIndexXq, qryIndexLd;
 	uint32 recCnt;
