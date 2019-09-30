@@ -11,7 +11,7 @@
 #define Meter_Max					300	// 一栋楼-最大表数
 
 #define	Size_ListStr	21				// 列表字符串长度
-#define	Size_DbMaxStr	100				// 数据库字段最大长度
+#define	Size_DbMaxStr	200				// 数据库字段最大长度
 
 #define	Size_DistrictNum			16	// 小区编号 长度	10
 #define	Size_DistrictName			50	// 小区名称 长度	50

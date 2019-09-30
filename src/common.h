@@ -36,7 +36,7 @@ typedef unsigned char bool;
     #define VerInfo_RevNo   (char *)"2.7-预览1"	// 版本号
     #define VerInfo_RevDate (char *)"2019-09-12"        // 版本日期
     #define TransType   "红外透传"                      // 通信方式	
-	#define CurrPort    Trans_IR_Quick                
+	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define AddrLen     8
     #define LogPort     Trans_IR_Quick      // 日志输出串口

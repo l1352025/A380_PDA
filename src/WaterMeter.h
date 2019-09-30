@@ -518,7 +518,7 @@ char * Water6009_GetStrErrorMsg(uint8 errorCode)
 	    str = "超时错误";
 		break;
 	case 0xCD:
-	    str = "单论运行超时";
+	    str = "单轮运行超时";
 		break;
 	case 0xCE:
 	    str = "正在执行";
@@ -583,7 +583,7 @@ uint16 Water6009_GetStrValveCtrlFailed(uint16 errorCode, char * buf)
 		case 0x80:	str = "等待按键开阀";	break;
 		case 0x100:	str = "阀门已经到位";	break;
 		case 0x200:	str = "设备类型错误";	break;
-		case 0x400:	str = "time申请失败";	break;
+		case 0x400:	str = "timer申请失败";	break;
 		case 0x800:	str = "系统欠费";	break;
 		default:	
 			break;
@@ -1391,7 +1391,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		case 0x03:	u16Tmp = 1000;	break;
 		default:  u16Tmp = buf[index];	break;
 		}
-		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数:%d脉冲/方\n", u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d脉冲/方\n", u16Tmp);
 		index += 1;
 		break;
 
@@ -1432,9 +1432,9 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			index += 1;
 		}
 		if(rxlen >= index + 2 + 4){		// 新协议增加
-			dispIdx += sprintf(&dispBuf[dispIdx], "定时上传间隔:%d 小时\n", buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "定时上传间隔: %d h\n", buf[index]);
 			index += 1;
-			dispIdx += sprintf(&dispBuf[dispIdx], "定量上传间隔:%d m3\n", buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "定量上传间隔: %d m3\n", buf[index]);
 			index += 1;
 		}
 		break;
@@ -1511,7 +1511,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		// 运营商编号/SIM卡类型
 		GetStringHexFromBytes(TmpBuf, buf, index, 4, 0, false);
 		if(TmpBuf[3] == '0' && TmpBuf[4] == '4'){
-			ptr = "中国移到";
+			ptr = "中国移动";
 		}else if(TmpBuf[3] == '0' && TmpBuf[4] == '1'){
 			ptr = "中国联通";
 		}else if(TmpBuf[3] == '1' && TmpBuf[4] == '1'){
@@ -1662,11 +1662,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "电压告警阀值:%d x0.01V\n", u16Tmp);
 		index += 2;
 		// IP地址
-		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-IP地址:\n  %d.%d.%d.%d\n", 
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-IP地址: \n  %d.%d.%d.%d\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
 		index += 4;
 		// 端口号
-		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-端口号:%d\n", (buf[index] + buf[index + 1] * 256));
+		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-端口号: %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
 		// APN信息
 		memcpy(&TmpBuf[0], &buf[index], 6);
@@ -1913,7 +1913,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = CmdResult_Ok;
 		// 首先IP + 端口
-		dispIdx += sprintf(&dispBuf[dispIdx], "首先IP: %d.%d.%d.%d\n", 
+		dispIdx += sprintf(&dispBuf[dispIdx], "首选IP: %d.%d.%d.%d\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
 		index += 4;
 		dispIdx += sprintf(&dispBuf[dispIdx], "  端口: %d\n", (buf[index] + buf[index + 1] * 256));
@@ -2247,7 +2247,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
 		index += 1;
 		//tx|rx信道
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d , Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
 		index += 1;
 		//协议版本
 		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
@@ -2415,7 +2415,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		GetStringHexFromBytes(TmpBuf, buf, index, 4, 0, false);
 		if(TmpBuf[3] == '0' && TmpBuf[4] == '4'){
-			ptr = "中国移到";
+			ptr = "中国移动";
 		}else if(TmpBuf[3] == '0' && TmpBuf[4] == '1'){
 			ptr = "中国联通";
 		}else if(TmpBuf[3] == '1' && TmpBuf[4] == '1'){
