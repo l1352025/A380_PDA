@@ -36,5 +36,6 @@ typedef struct
 
 }PacketInfo;
 
+extern void Func_Upgrade(void);    // 程序升级-入口
 
 #endif

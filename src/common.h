@@ -33,9 +33,9 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.7-预览1"	// 版本号
+    #define VerInfo_RevNo   (char *)"2.7-预览1"	        // 版本号
     #define VerInfo_RevDate (char *)"2019-09-12"        // 版本日期
-    #define TransType   "红外透传"                      // 通信方式	
+    #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define AddrLen     8
@@ -44,12 +44,12 @@ typedef unsigned char bool;
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"2.5"               // 版本号
     #define VerInfo_RevDate (char *)"2019-08-01"        // 版本日期
-    #define TransType   "Lora透传"                      // 通信方式	
+    #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     6
-    #define LogPort     Trans_IR_Quick  // 日志输出串口
-    #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
+    #define LogPort     Trans_IR_Quick      // 日志输出串口
+    #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"1.0"               // 版本号
@@ -58,11 +58,11 @@ typedef unsigned char bool;
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     5
-    #define LogPort     Trans_IR_Quick  // 日志输出串口
-    #define CenterCmd_Enable    0       // 集中器命令可使用：目前不可用
+    #define LogPort     Trans_IR_Quick      // 日志输出串口
+    #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
 #endif
 
-#define VerInfo_Previwer    (char *)"预览版2-高速"    // 预览版时,定义该宏
+#define VerInfo_Previwer    (char *)"预览版2"    // 预览版时,定义该宏
 #define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
@@ -211,6 +211,7 @@ extern uint8 TmpBuf[1080];
 extern uint8 TxBuf[1080];
 extern uint8 RxBuf[1080];
 extern uint8 DispBuf[2048];
+extern uint8 BackupBuf[1024];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[10];	// 地址 201900002019/0000，12/16字符
 extern uint8 DstAddr[10];

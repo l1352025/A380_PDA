@@ -17,6 +17,7 @@ uint8 TmpBuf[1080];
 uint8 TxBuf[1080];
 uint8 RxBuf[1080];
 uint8 DispBuf[2048];
+uint8 BackupBuf[1024];
 uint32 RxLen, TxLen;
 const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// µØÖ· 2019000020190000£¬12/16×Ö·û
 uint8 DstAddr[10];

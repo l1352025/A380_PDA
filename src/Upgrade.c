@@ -6,7 +6,7 @@
 #include "Common.h"
 #include "WaterMeter.h"
 
-void WaterCmdFunc_Upgrade(void)
+void Func_Upgrade(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
 	ListBox menuList;
@@ -43,6 +43,10 @@ void WaterCmdFunc_Upgrade(void)
 			break;
 		}
 
+		_MessageBoxEx("", "unavailable now", MSG_OK);
+		_Sleep(1000);
+		return;
+
 		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
 
@@ -55,6 +59,16 @@ void WaterCmdFunc_Upgrade(void)
 			}
 			break;
 
+		case 2:	// 输入表号
+		default:
+			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 2;
+				continue;
+			}
+
+			break;
+
 		case 3:	// 开始升级
 			{
 
@@ -65,16 +79,6 @@ void WaterCmdFunc_Upgrade(void)
 			{
 
 			}
-			break;
-		
-		case 2:	// 输入表号
-		default:
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
-				sprintf(StrDstAddr, " 请输入");
-				currUi = 2;
-				continue;
-			}
-
 			break;
 		}
 

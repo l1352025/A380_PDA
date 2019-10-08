@@ -461,7 +461,7 @@ uint8 ShowListBox(ListBox *lbx)
 		//-------------------------------------------------
 		currIndex = (lbx->totalCnt == 0 ? 0 : lbx->currIdx + 1);
 		sprintf(temp, "%d/%d", currIndex, lbx->totalCnt);
-		StringPadLeft(temp, (lbx->maxCol - strlen(lbx->title) - 1), ' ');
+		StringPadLeft(temp, (lbx->maxCol - strlen(lbx->title)), ' ');
 		sprintf(title, "%s%s", lbx->title, temp);	
 		_Printfxy(lbx->x, lbx->y, title, Color_White);
 		_GUIHLine(lbx->x, lbx->y + 16 + 4, x1, Color_Black);	
