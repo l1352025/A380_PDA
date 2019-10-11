@@ -9,10 +9,10 @@
 void Func_Upgrade(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	ListBox menuList;
+	//ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
+	//uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 

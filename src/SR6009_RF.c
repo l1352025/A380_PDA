@@ -4010,7 +4010,7 @@ int main(void)
 	MainMenu.Function[3] = MainFuncSetMeterTime;
 	MainMenu.Function[4] = MainFuncOpenValve;
 	MainMenu.Function[5] = MainFuncCloseValve;
-	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.Function[6] = MainFuncEngineerDebuging;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.Function[7] = MainFuncBatchMeterReading;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();

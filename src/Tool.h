@@ -1528,7 +1528,7 @@ uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, cha
 	do{
 		// year
 		tmp = _atof(year);
-		if( year[0] > '9' || year[0] < '0' || tmp < 2019 ){
+		if( year[0] > '9' || year[0] < '0'){
 			year[0] = 0x00;
 			errorCode = 1;
 			break;

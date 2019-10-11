@@ -13,7 +13,15 @@
 #include "Common.h"
 #include "Tool.h"
 #include "WaterMeter.h"
+#include "Upgrade.h"
+#include "Upgrade.c"
 
+
+
+// 输入参数备份类型： 保存在备份缓存的第一个字节 BackupBuf[0]
+typedef enum{
+	Param_BeijingWMtr = 0x11	// 北京水表参数备份
+}BackUpParamType;
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
@@ -591,192 +599,7 @@ void WaterCmdFunc_TestCmd(void)
 // 3	程序升级
 void WaterCmdFunc_Upgrade(void)
 {
-	uint8 key, menuItemNo, tryCnt = 0, i;
-	ListBox menuList;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
-
-	_ClearScreen();
-
-	// 菜单
-	(*pUiCnt) = 0;
-	uiRowIdx = 2;
-	_Printfxy(0, 0, "<<程序升级", Color_White);
-	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-	/*---------------------------------------------*/
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "1. 选择升级文件");	
-	LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 输入表号");	
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  > ", StrBuf[0], 1, 2*8, true);
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "3. 开始升级");	
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "4. 查询升级状态");				
-	//----------------------------------------------
-	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-	_Printfxy(0, 9*16, "返回            确定", Color_White);
-
-	while(1){
-
-		_Printfxy(0, 0, "<<程序升级", Color_White);
-		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		key = ShowUI(UiList, &currUi);
-		//------------------------------------------------------------
-		if (key == KEY_CANCEL){	// 返回
-			break;
-		}
-
-		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-		isUiFinish = false;
-
-		switch (currUi)
-		{
-		case 0:	// 选择升级文件
-			{
-
-
-			}
-			break;
-
-		case 3:	// 开始升级
-			{
-
-			}
-			break;
-
-		case 4:	// 查询升级状态
-			{
-
-			}
-			break;
-		
-		case 2:	// 输入表号
-		default:
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
-				sprintf(StrDstAddr, " 请输入");
-				currUi = 2;
-				continue;
-			}
-
-			break;
-		}
-
-		while(1){
-			
-			_ClearScreen();
-
-			_Printfxy(0, 0, "<<开始升级", Color_White);
-			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			/*---------------------------------------------*/
-			PrintfXyMultiLine_VaList(0, 2*16, "版本：%s  CRC：%s");
-			PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s");
-			PrintfXyMultiLine_VaList(0, 5*16, "%s");	// cmd name
-			PrintfXyMultiLine_VaList(0, 6*16, "%s");	// cmd reponse
-			//----------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <升级中>   ", Color_White);
-
-			
-			// 命令参数处理
-			i = 0;	
-			Args.itemCnt = 2;
-			Args.items[0] = &Args.buf[0];   // 命令字
-			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x30 + menuItemNo);
-
-			switch(CurrCmd){
-			case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
-				/*---------------------------------------------*/
-                Args.buf[i++] = 0x70;		// 命令字	70
-				ackLen = 41;				// 应答长度 41	
-				// 数据域
-				Args.buf[i++] = 0x00;		// 水表电压
-				Args.buf[i++] = 0x00;		// 气表电压
-				Args.buf[i++] = 0x00;		// RSSI门限
-				Args.buf[i++] = 0x00;		// SNR门限
-				Args.buf[i++] = 0x00;		// 程序版本 40 byte
-				Args.buf[i++] = 0x00;		// 版本CRC16
-				Args.buf[i++] = 0x00;		
-				Args.buf[i++] = 0x00;		// 总包数
-				Args.buf[i++] = 0x00;
-				Args.buf[i++] = 0x00;		// 前26K CRC16
-				Args.buf[i++] = 0x00;	
-				Args.buf[i++] = 0x00;		// 后26K CRC16
-				Args.buf[i++] = 0x00;	
-				Args.buf[i++] = 0x00;		// 总52K CRC16
-				Args.buf[i++] = 0x00;	
-				Args.buf[i++] = 0x00;		// RXD信道 0/1
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
-				/*---------------------------------------------*/
-				Args.buf[i++] = 0x71;		// 命令字	71
-				ackLen = 41;				// 应答长度 41	
-				// 数据域
-				Args.buf[i++] = 0x00;	
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_SendUpgradePacket:			// 发送升级数据
-				/*---------------------------------------------*/
-				Args.buf[i++] = 0x72;		// 命令字	72
-				ackLen = 0;					// 应答长度 0	
-				// 数据域
-				Args.buf[i++] = 0x00;	
-				Args.lastItemLen = i - 1;
-				break;
-			
-			case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
-				/*---------------------------------------------*/
-				Args.buf[i++] = 0x73;		// 命令字	73
-				ackLen = 93;				// 应答长度 93	
-				// 数据域
-				Args.buf[i++] = 0x00;	
-				Args.lastItemLen = i - 1;
-				break;
-
-            case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
-				/*---------------------------------------------*/
-				Args.buf[i++] = 0x74;		// 命令字	74
-				ackLen = 41;				// 应答长度 41	
-				// 数据域
-				Args.buf[i++] = 0x00;	
-				Args.lastItemLen = i - 1;
-				break;
-
-			default: 
-				break;
-			}
-
-			// 地址填充
-			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-			#if (AddrLen == 6)
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-			#else
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-			#endif
-
-			// 应答长度、超时时间、重发次数
-			ackLen += 14 + Addrs.itemCnt * AddrLen;
-			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-			tryCnt = 3;
-
-			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-			
-			
-			// 继续 / 返回
-			if (key == KEY_CANCEL){
-				break;
-			}else{
-				isUiFinish = false;
-				continue;
-			}
-		}
-		
-	}
-
+	Func_Upgrade();
 }
 
 // 4	预缴用量
@@ -1679,8 +1502,13 @@ void WaterCmdFunc_WorkingParams(void)
 				/*---------------------------------------------*/
 				// UI-第1页
 				if(false == isUiFinish){
-					StrBuf[0][0] = 0;
-					StrBuf[1][0] = 0;
+					if(BackupBuf[0] != Param_BeijingWMtr){		
+						StrBuf[0][0] = 0;
+						StrBuf[1][0] = 0;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[1 * 20], 2 * 20);
+					}
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "水表类型:");
                     CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  ", &StrBuf[0][0], 5, 
@@ -1698,17 +1526,26 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
+
 				memcpy(&TmpBuf[0], &StrBuf[1][0], 14);
 				TmpBuf[14] = 0x00;
 
+				memcpy(&BackupBuf[1 * 20], &StrBuf[0][0], 2 * 20);
+
 				// UI-第2页
 				currUi = 0;
-				sprintf(StrBuf[1], "40");
-				sprintf(StrBuf[2], "1");
-				sprintf(StrBuf[3], "40");
-				sprintf(StrBuf[4], "1");
-				sprintf(StrBuf[5], "10");
-				sprintf(StrBuf[6], "14");
+				if(BackupBuf[0] != Param_BeijingWMtr){	
+					sprintf(StrBuf[1], "40");
+					sprintf(StrBuf[2], "1");
+					sprintf(StrBuf[3], "40");
+					sprintf(StrBuf[4], "1");
+					sprintf(StrBuf[5], "10");
+					sprintf(StrBuf[6], "14");
+				}
+				else{
+					memcpy(&StrBuf[1][0], &BackupBuf[3 * 20], 6 * 20);
+				}
+				
 				while(1){
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					(*pUiCnt) = 0;
@@ -1751,18 +1588,26 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
+				memcpy(&BackupBuf[3 * 20], &StrBuf[1][0], 6 * 20);
+
 				// UI-第3页
 				currUi = 0;
-				StrBuf[0][0] = 1;
-				StrBuf[0][1] = 2;
-				sprintf(StrBuf[1], "121");
-				sprintf(StrBuf[2], "43");
-				sprintf(StrBuf[3], "175");
-				sprintf(StrBuf[4], "222");
-				sprintf(StrBuf[5], "5683");
-				memset(StrBuf[6], 0x00, 10);
-				sprintf(StrBuf[6], "CMIOT");
-				sprintf(StrBuf[7], "1");
+				if(BackupBuf[0] != Param_BeijingWMtr){	
+					StrBuf[0][0] = 1;
+					StrBuf[0][1] = 2;
+					sprintf(StrBuf[1], "121");
+					sprintf(StrBuf[2], "43");
+					sprintf(StrBuf[3], "175");
+					sprintf(StrBuf[4], "222");
+					sprintf(StrBuf[5], "5683");
+					memset(StrBuf[6], 0x00, 10);
+					sprintf(StrBuf[6], "CMIOT");
+					sprintf(StrBuf[7], "1");
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[9 * 20], 8 * 20);
+				}
+				
 				while(1){
 					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
@@ -1806,7 +1651,12 @@ void WaterCmdFunc_WorkingParams(void)
 						continue;
 					}
 					// APN
-					memcpy(&TmpBuf[20], &StrBuf[6][0], 6);
+					i = strlen(StrBuf[6]);
+					if(i < 6){
+						memset(&StrBuf[6][i], 0x00, 6 - i);
+					}
+					memcpy(&TmpBuf[20], &StrBuf[6][0], i);
+					
 					// 上报重连次数
 					u32Args[8] = StrBuf[0][1];
 
@@ -1826,12 +1676,20 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
+				memcpy(&BackupBuf[9 * 20], &StrBuf[0][0], 8 * 20);
+
 				// UI-第4页
 				currUi = 0;
-				for(i = 0; i < 14; i++){
-					StrBuf[i][0] = 0x00;
+				if(BackupBuf[0] != Param_BeijingWMtr){		
+					for(i = 0; i < 14; i++){
+						StrBuf[i][0] = 0x00;
+					}
+					sprintf(StrBuf[13], "24");
 				}
-				sprintf(StrBuf[13], "24");
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[17 * 20], 14 * 20);
+				}
+				
 				while(1){
 					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
 					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
@@ -1841,7 +1699,7 @@ void WaterCmdFunc_WorkingParams(void)
 					_GetDateTime(time, '-',  ':');
 					DatetimeToTimeStrs(time, StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5], StrBuf[6]);
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "周期上报起始时间:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[1], 4, 4*8, false);	// YYYY
+					LableCreate(&pUi[(*pUiCnt)++], 1*8, (uiRowIdx)*16, StrBuf[1]);			// YYYY - 不可修改
 					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// MM
 					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[3], 2, 2*8, false);	// dd
 					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[4], 2, 2*8, false);	// HH
@@ -1851,7 +1709,7 @@ void WaterCmdFunc_WorkingParams(void)
 					_GetDateTime(time, '-',  ':');
 					DatetimeToTimeStrs(time, StrBuf[7], StrBuf[8], StrBuf[9], StrBuf[10], StrBuf[11], StrBuf[12]);
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "周期上报结束时间:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[7], 4, 4*8, false);	// YYYY
+					LableCreate(&pUi[(*pUiCnt)++], 1*8, (uiRowIdx)*16, StrBuf[7]);			// YYYY - 不可修改
 					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[8], 2, 2*8, false);	// MM
 					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[9], 2, 2*8, false);	// dd
 					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[10], 2, 2*8, false);	// HH
@@ -1898,6 +1756,10 @@ void WaterCmdFunc_WorkingParams(void)
 				if (key == KEY_CANCEL){
 					break;
 				}
+
+				memcpy(&BackupBuf[17 * 20], &StrBuf[0][0], 14 * 20);
+
+				BackupBuf[0] = Param_BeijingWMtr;
 				
 				i = 0;
 				Args.buf[i++] = 0x26;		// 命令字	26
@@ -1938,18 +1800,18 @@ void WaterCmdFunc_WorkingParams(void)
 				memcpy(&Args.buf[i], &TmpBuf[20], 6);	// APN	6 byte
 				i += 6;
 				Args.buf[i++] = (uint8)(u32Args[8] & 0xFF);	// 上报重连次数 2 byte
-				Args.buf[i++] = DecToBcd(timeBytes[1]);	// 周期上报起始时间 YY MM dd HH mm ss		
-				Args.buf[i++] = DecToBcd(timeBytes[2]);		
-				Args.buf[i++] = DecToBcd(timeBytes[3]);			
-				Args.buf[i++] = DecToBcd(timeBytes[4]);			
-				Args.buf[i++] = DecToBcd(timeBytes[5]);			
-				Args.buf[i++] = DecToBcd(timeBytes[6]);
-				Args.buf[i++] = DecToBcd(timeBytes[8]);	// 周期上报结束时间 YY MM dd HH mm ss		
-				Args.buf[i++] = DecToBcd(timeBytes[9]);		
-				Args.buf[i++] = DecToBcd(timeBytes[10]);			
-				Args.buf[i++] = DecToBcd(timeBytes[11]);			
-				Args.buf[i++] = DecToBcd(timeBytes[12]);			
-				Args.buf[i++] = DecToBcd(timeBytes[13]);
+				Args.buf[i++] = (timeBytes[1]);	// 周期上报起始时间 YY MM dd HH mm ss		
+				Args.buf[i++] = (timeBytes[2]);		
+				Args.buf[i++] = (timeBytes[3]);			
+				Args.buf[i++] = (timeBytes[4]);			
+				Args.buf[i++] = (timeBytes[5]);			
+				Args.buf[i++] = (timeBytes[6]);
+				Args.buf[i++] = (timeBytes[8]);	// 周期上报结束时间 YY MM dd HH mm ss		
+				Args.buf[i++] = (timeBytes[9]);		
+				Args.buf[i++] = (timeBytes[10]);			
+				Args.buf[i++] = (timeBytes[11]);			
+				Args.buf[i++] = (timeBytes[12]);			
+				Args.buf[i++] = (timeBytes[13]);
 				Args.buf[i++] = (uint8)(u32Args[10] & 0xFF);	// 周期上报估计时长
 				Args.buf[i++] = (uint8)(u32Args[7] & 0xFF);		// 终端启停设置	
 				Args.buf[i++] = (uint8)(u32Args[11] & 0xFF);	// 周期上报频率
@@ -3234,6 +3096,12 @@ void MainFuncReadNbJoinNetworkInfo(void)
 
 }
 
+// 工程调试
+void MainFuncEngineerDebuging(void)
+{
+	WaterCmdFunc();		// 工程调试 --> 即原来的 表端操作
+}
+
 // --------------------------------   主函数   -----------------------------------------------
 int main(void)
 {
@@ -3273,7 +3141,7 @@ int main(void)
 	MainMenu.Function[3] = MainFuncCloseValve;
     MainMenu.Function[4] = MainFuncClearException;
 	MainMenu.Function[5] = MainFuncReadNbJoinNetworkInfo;
-	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.Function[6] = MainFuncEngineerDebuging;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
