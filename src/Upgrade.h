@@ -5,6 +5,8 @@
 
 #define Upgrd_FileMaxSize   (52 * 1024)
 #define Upgrd_PacketSize    128
+#define Upgrd_PacketCntMax  (Upgrd_FileMaxSize / Upgrd_PacketSize)
+#define Upgrd_MeterMax      256
 
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 
@@ -25,17 +27,37 @@ typedef struct
     uint8   rssi;
     uint8   upgradeStatus;
     uint8   crc16_appVer[2];
-}UpgradeInfo;
+}AppFileInfo;
 
 typedef struct
 {
-    uint8   bitFlags[52];   // max cnt = 52 = Upgrd_FileMaxSize / Upgrd_PacketSize / 8
-    uint16  packetCnt;      // max cnt = 416 = Upgrd_FileMaxSize / Upgrd_PacketSize
+    char *  fileName;
+    uint32  fileSize;
+    uint16  fileKbSize;
+    uint16  fileCrc16;
+    char *  version;
+    uint16  verCrc16;
+    uint16  packetSize;
+    uint16  lastPktSize;
+    uint16  packetCnt;      
+    uint8   bitFlags[Upgrd_PacketCntMax / 8];   
     uint16  missCnt;
-    uint16  missList[460];  
-
+    uint16  missList[Upgrd_PacketCntMax];  
+    
 }PacketInfo;
 
+typedef struct{
+    uint16 cnt;
+    uint16 idx;
+    uint8 mtrNos[Upgrd_MeterMax][20];
+    uint8 states[Upgrd_MeterMax];
+}UpgradeDocs;
+
 extern void Func_Upgrade(void);    // 程序升级-入口
+extern void InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize);
+extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf, int bufIdx);
+extern void ClearMissPktFlags(PacketInfo *pktInfo);
+extern void AddMissPktFlags(PacketInfo *pktInfo, uint8 *bitflags, uint16 byteCnt);
+extern void GetMissPktList(PacketInfo *pktInfo);
 
 #endif

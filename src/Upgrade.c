@@ -200,3 +200,105 @@ void Func_Upgrade(void)
 
 }
 
+AppFileInfo AppInfo;
+PacketInfo PktInfo;
+UpgradeDocs UpgrdDocs;
+
+/*
+* 描  述：初始化数据包结构
+* 参  数：
+*		pktInfo	- 数据包信息结构 （set pktInfo.all）
+*		fileName - 文件名
+*		pktSize - 分包大小
+*		pktStartIdx - 数据包在文件中的起始位置
+* 返回值：int  - 数据包初始化结果 0 - 成功， 1 - 文件不存在， 2 - 其他错误
+*/
+extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint32 pktStartIdx)
+{
+	int fp;
+	uint32 fileLen, readLen;
+	uint16 crc16, crc16Keep = 0xFFFF;
+	uint8 *tmpBuf = &TmpBuf[0];
+
+	if(_Access(fileName, 0) < 0){
+		return 1;
+	}
+
+	fp = _Fopen(fileName, "R");
+	fileLen = _Filelenth(fp);
+	_Fread((uint8 *)AppInfo, sizeof(AppInfo), fp);
+	_Lseek(fp, pktStartIdx, 0);
+	while(0 == _Feof(fp)){
+		_Fread(tmpBuf, 1024, fp);
+		crc16 = GetCrc16_Continue(tmpBuf, readLen, 0x8408, &crc16Keep);
+	}
+	_Fclose(fp);
+
+	if(fileLen <= pktStartIdx){
+		return 2;
+	}
+
+	pktInfo->fileName = fileName;
+	pktInfo->packetSize = pktSize;
+	pktInfo->fileSize = fileLen - pktStartIdx;
+	pktInfo->fileKbSize = (uint16)((pktInfo->fileSize + 1023) / 1024);
+	pktInfo->packetCnt = (pktInfo->fileSize + pktInfo->packetSize - 1) / pktInfo->packetSize;
+	if(pktInfo->fileSize % packetSize != 0){
+		pktInfo->lastPktSize = pktInfo->fileSize % packetSize;
+	}else{
+		pktInfo->lastPktSize = packetSize;
+	}
+
+
+
+	return 0;
+}
+
+/*
+* 描  述：拷贝数据包到缓存
+* 参  数：
+*		pktInfo	- 数据包信息结构 （get）
+*		pktIdx - 要拷贝的数据包序号
+*		buf - 目的缓存
+* 返回值：void
+*/
+extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf)
+{
+
+}
+
+/*
+* 描  述：清除缺包标记
+* 参  数：
+*		pktInfo	- 数据包信息结构 （set pktInfo.bitFlags）
+* 返回值：void
+*/
+extern void ClearMissPktFlags(PacketInfo *pktInfo)
+{
+
+}
+
+/*
+* 描  述：添加缺包标记
+* 参  数：
+*		pktInfo	- 数据包信息结构 （set pktInfo.bitFlags）
+*		bitflags - 当前缺包标记数据缓存，添加/合并到总标记中
+*		byteCnt - 当前缺包标记字节数
+* 返回值：void
+*/
+extern void AddMissPktFlags(PacketInfo *pktInfo, uint8 *bitflags, uint16 byteCnt)
+{
+
+}
+
+/*
+* 描  述：获取缺包列表
+* 参  数：
+*		pktInfo	- 数据包信息结构 （set pktInfo.missCnt，set pktInfo.missList）
+* 返回值：void
+*/
+extern void GetMissPktList(PacketInfo *pktInfo)
+{
+
+}
+
