@@ -14,7 +14,6 @@ DistrictListSt Districts;
 BuildingListSt Buildings;
 MeterListSt Meters;
 DbQuerySt DbQuery;
-bool LcdOpened;
 
 //----------------------	数据库信息-操作函数		-------------------------------------
 
@@ -269,18 +268,6 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	query->dbCurrIdx = i;
 }
 
-/*
-* 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
-* 参 数：currKey	- 命令收发时定周期检测的按键值
-* 返 回：void
-*/
-static void OnHook_OpenLcdLight_WhenKeyPress(uint8 currKey)
-{
-	if(currKey != 0){	// 其他键，打开背景灯
-		_OpenLcdBackLight();
-		LcdOpened = true;
-	}
-}
 
 /*
 * 描 述：显示 xx小区-xx楼栋- 自动抄表
@@ -316,9 +303,6 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 
 	// 防止自动抄表时关机，重置自动关机时间
 	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
-
-	// 自动轮抄时 有按键则打开屏幕背景灯
-	TranceiverCycleHook = OnHook_OpenLcdLight_WhenKeyPress;
 
 	// 自动抄表
 	while(cnt < meters->cnt){
@@ -420,7 +404,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	_OpenLcdBackLight();
 
 	// 轮抄结束后 取消收发时回调函数
-	TranceiverCycleHook = NULL;
+	//TranceiverCycleHook = NULL;
 
 	if(cmdResult == CmdResult_Cancel){
 		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);

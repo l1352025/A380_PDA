@@ -37,27 +37,35 @@ typedef struct
     uint16  fileCrc16;
     char *  version;
     uint16  verCrc16;
+    uint32  pktStartIdx;
     uint16  packetSize;
     uint16  lastPktSize;
     uint16  packetCnt;      
     uint8   bitFlags[Upgrd_PacketCntMax / 8];   
-    uint16  missCnt;
-    uint16  missList[Upgrd_PacketCntMax];  
+    uint16  bitFlagsCnt;
+    uint16  missPkts[Upgrd_PacketCntMax];  
+    uint16  missPktsCnt;
     
 }PacketInfo;
 
+typedef enum {
+    UpgrdState_NotStart = 0,     // not
+    UpgrdState_PktWait,          // wait
+    UpgrdState_Finish            // ok
+}UpgradeState;
+
 typedef struct{
     uint16 cnt;
-    uint16 idx;
     uint8 mtrNos[Upgrd_MeterMax][20];
-    uint8 states[Upgrd_MeterMax];
+    uint8 states[Upgrd_MeterMax];   // UpgradeState
 }UpgradeDocs;
 
-extern void Func_Upgrade(void);    // 程序升级-入口
-extern void InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize);
-extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf, int bufIdx);
+extern void UpgradeFunc(void);    // 程序升级-入口
+extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint32 pktStartIdx, void *header);
+extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf);
 extern void ClearMissPktFlags(PacketInfo *pktInfo);
 extern void AddMissPktFlags(PacketInfo *pktInfo, uint8 *bitflags, uint16 byteCnt);
 extern void GetMissPktList(PacketInfo *pktInfo);
+extern void GetMissPktList_CurrPkt(uint8 *bitfalgs, uint16 byteCnt, uint16 pktCnt, uint16 *missPkts, uint16 *missCnt);
 
 #endif

@@ -1508,7 +1508,7 @@ void WaterCmdFunc_TestCmd(void)
 // 3	程序升级
 void WaterCmdFunc_Upgrade(void)
 {
-	Func_Upgrade();
+	UpgradeFunc();
 }
 
 // 4	预缴用量

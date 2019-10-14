@@ -8,6 +8,7 @@
 #include "MeterDocDBF.h"
 #endif
 
+extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 extern uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
 extern uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
@@ -29,7 +30,8 @@ char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
-FuncCmdCycleHandler TranceiverCycleHook = NULL;
+bool LcdOpened;
+FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
 FuncCmdFramePack FramePack = PackWater6009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater6009ResponseFrame;
 
@@ -659,6 +661,18 @@ uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
 
 //-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
 
+/*
+* 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
+* 参 数：currKey	- 命令收发时定周期检测的按键值
+* 返 回：void
+*/
+void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey)
+{
+	if(currKey != 0){	// 其他键，打开背景灯
+		_OpenLcdBackLight();
+		LcdOpened = true;
+	}
+}
 
 /*
 * 函数名：PackWater6009RequestFrame

@@ -223,6 +223,7 @@ extern char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
+extern bool LcdOpened;
 extern FuncCmdCycleHandler TranceiverCycleHook;
 extern FuncCmdFramePack FramePack;
 extern FuncCmdFrameExplain FrameExplain;
