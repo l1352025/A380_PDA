@@ -31,6 +31,7 @@ char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
 bool LcdOpened;
+bool IsNoAckCmd;
 FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
 FuncCmdFramePack FramePack = PackWater6009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater6009ResponseFrame;
@@ -658,6 +659,77 @@ uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
 	return len;
 }
 
+/*
+* 描  述：获取无法升级原因
+* 参  数：
+* 		code - 无法升级原因代码
+* 返回值：char * - 解析后的字符串
+*/
+char * Water6009_GetStrDisUpgradeReason(uint8 code)
+{
+	char * str = NULL;
+	uint8 mask = 1, i;
+
+	for(i = 0; i < 6; i++){
+
+		mask = (1 << i);
+		
+		switch(code & mask){
+		case 0x01:	str = "5.0v VBat";	break;
+		case 0x02:	str = "3.4v VBat";	break;
+		case 0x04:	str = "SNR";	break;
+		case 0x08:	str = "RSSI";	break;
+		case 0x10:	str = "VerSame";	break;
+		case 0x20:	str = "VerCrcErr";	break;
+		default:
+			break;
+		}
+
+		if(str != NULL){
+			break;
+		}
+	}
+
+	if(str == NULL){
+		str = "NoLimit";
+	}
+
+	return str;
+}
+
+/*
+* 描  述：获取升级状态
+* 参  数：
+* 		code - 升级状态代码
+* 返回值：char * - 解析后的字符串
+*/
+char * Water6009_GetStrUpgradeStatus(uint8 code)
+{
+	char * str = NULL;
+	uint8 mask = 1, i;
+
+	for(i = 0; i < 6; i++){
+
+		mask = (1 << i);
+		
+		switch(code & mask){
+		case 0x01:	str = "未开始";	break;
+		case 0x02:	str = "缺包等待";	break;
+		case 0x04:	str = "升级完成";	break;
+		case 0x08:	str = "AppCrcErr";	break;
+		case 0x10:	str = "VerCrcErr";	break;
+		case 0x20:	str = "总包数错误";	break;
+		default:
+			break;
+		}
+
+		if(str != NULL){
+			break;
+		}
+	}
+
+	return str;
+}
 
 //-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
 
@@ -1828,43 +1900,34 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		程序升级		---------------------
 	case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = CmdResult_Ok;
-
-		break;
-
 	case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 41 && cmd != 0x70 && cmd != 0x71){
 			break;
 		}
 		ret = CmdResult_Ok;
-		
+		// 保存数据域起始位置，稍后自解析
+		dispBuf[0] = (uint8)(index & 0xFF);		
+		dispBuf[1] = (uint8)(index >> 8);
+		dispIdx += 20;
 		break;
 
 	case WaterCmd_SendUpgradePacket:			// 发送升级数据
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 12 && cmd != 0x72){
 			break;
 		}
 		ret = CmdResult_Ok;
-		
 		break;
 
 	case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
-		if(rxlen < index + 12 && cmd != 0x15){
-			break;
-		}
-		ret = CmdResult_Ok;
-		
-		break;
-
 	case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 12 && cmd != 0x73 && cmd != 0x74){
 			break;
 		}
 		ret = CmdResult_Ok;
-		
+		// 保存数据域起始位置，稍后自解析
+		dispBuf[0] = (uint8)(index & 0xFF);		
+		dispBuf[1] = (uint8)(index >> 8);
+		dispIdx += 20;
 		break;
 
 

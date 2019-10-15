@@ -11,10 +11,390 @@ AppFileInfo AppInfo;
 PacketInfo PktInfo;
 UpgradeDocs UpgrdDocs;
 
-//------------------------		内部函数声明	--------------
-static void UpgradeFunc_UpgradeDocSet(void);
-static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode);
-static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode);
+//-----------------------		内部函数	------------------
+
+static uint8 * GetVersionNo(uint8 *buf)
+{
+	uint8 i, *ptr;
+
+	for(i = 0; i < 40; i++){
+		if(buf[i] == (uint8)'.'){
+			ptr = &buf[i - 1];
+		}
+		if(buf[i] == (uint8)' '){
+			buf[i] = 0x00;
+			break;
+		}
+	}
+
+	return ptr;
+}
+
+// 升级档案设置
+static void UpgradeFunc_UpgradeDocMgmt(void)
+{
+
+}
+
+// 开始升级
+static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
+{
+	UpgradeState state = UpgrdState_NotStart;
+	AppFileInfo *app = &AppInfo;
+	PacketInfo *pkt = &PktInfo;
+	UpgradeDocs *docs = &UpgrdDocs;
+	uint16 docIdx, sendIdx, pktIdx, crc16, i, u16Tmp;
+	uint8 *mtrNo, *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 cmdState = Cmd_send;
+	uint16 ackLen, timeout, dispIdx, index;
+	uint8 tryCnt, lcdCtrl, key;
+	CmdResult cmdResult = CmdResult_Ok;
+	char strTmp[20];
+	uint8 *pData, *ptr;
+
+	_ClearScreen();
+
+	_Printfxy(0, 0, "<<开始升级", Color_White);
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	PrintfXyMultiLine_VaList(0, 2*16, "版本：%s  CRC：%4X", pkt->version, pkt->verCrc16);
+	// to show meter no
+	// to show cmd name
+	// to show cmd msg
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+	_Printfxy(0, 9*16, "返回   <升级中>   ", Color_White);
+
+
+	// 中继清空
+	for(i = 0; i < RELAY_MAX; i++){				
+		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+			StrRelayAddr[i][0] = 0x00;
+		}
+	}
+
+	CurrCmd = WaterCmd_NoticeUpgrade_OnApp;
+	docIdx = 0;
+
+	while(1){
+	
+		// LCD背景灯控制
+		if(lcdCtrl == 0){
+			_OpenLcdBackLight();
+			lcdCtrl++;
+			LcdOpened = true;
+		}
+		else if(lcdCtrl < 4){
+			lcdCtrl++;
+		}
+		else if(lcdCtrl == 4){
+			_CloseLcdBackLight();
+			lcdCtrl++;
+			LcdOpened = false;
+		}
+
+		if(cmdState == Cmd_Send){
+			// 当前表号
+			mtrNo = &UpgrdDocs.mtrNos[docIdx][0];
+			strcpy(StrDstAddr, mtrNo);
+		
+			// 命令参数处理
+			i = 0;	
+			Args.itemCnt = 2;
+			Args.items[0] = &Args.buf[0];   // 命令字
+			Args.items[1] = &Args.buf[1];	// 数据域
+		}
+
+		switch(CurrCmd){
+		case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
+		case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
+			/*---------------------------------------------*/
+			if(cmdState == Cmd_Finish){
+				if(CurrCmd == WaterCmd_NoticeUpgrade_OnBoot){
+					GetMissPktList(pkt);
+					sendIdx = 0;
+				}
+				CurrCmd++;
+				cmdState = Cmd_Send;
+				docIdx = 0;
+				break;
+			}
+			if(cmdState == Cmd_RecvOk){
+				dispIdx = 0;
+				index = 0;
+				ptr = Water6009_GetStrDisUpgradeReason(pData[index]);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "限制条件: %s\n", ptr);
+				index += 1;
+				ptr = GetVersionNo(&pData[index], 40);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
+
+				if(docIdx == docs->cnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+			docIdx++;
+			
+			if(CurrCmd == WaterCmd_NoticeUpgrade_OnApp){
+				sprintf(cmdName, "通知开始升级-A");
+				sprintf(cmdMsg, "");
+				Args.buf[i++] = 0x70;		// 命令字	70
+			}
+			else{
+				sprintf(cmdName, "通知开始升级-B");
+				sprintf(cmdMsg, "");
+				Args.buf[i++] = 0x71;		// 命令字	71
+			}
+			
+			ackLen = 41;				// 应答长度 41	
+			// 数据域
+			Args.buf[i++] = app->waterMeterVbat;		// 水表电压
+			Args.buf[i++] = app->gasMeterVbat;		// 气表电压
+			Args.buf[i++] = app->rssi;				// RSSI门限
+			Args.buf[i++] = app->snr;				// SNR门限
+			memcpy(&Args.buf[i], app->appVer, 40);	// 程序版本 40 byte	
+			i += 40;	
+			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
+			Args.buf[i++] = app->crc16_appVer[1];	
+			Args.buf[i++] = app->packetCnt[0];		// 总包数
+			Args.buf[i++] = app->packetCnt[1];
+			Args.buf[i++] = app->crc16_1st26K[0];	// 前26K CRC16
+			Args.buf[i++] = app->crc16_1st26K[1];	
+			Args.buf[i++] = app->crc16_2nd26K[0];	// 后26K CRC16
+			Args.buf[i++] = app->crc16_2nd26K[1];	
+			Args.buf[i++] = app->crc16_all52K[0];	// 总52K CRC16
+			Args.buf[i++] = app->crc16_all52K[1];	
+			Args.buf[i++] = 0x00;						// RXD信道 0/1
+			memset(&Args.buf[i], 0x00, 7);				// 预留 7 byte	
+			i += 7;
+			Args.lastItemLen = i - 1;
+			break;
+
+		case WaterCmd_SendUpgradePacket:			// 发送升级数据
+			/*---------------------------------------------*/
+			if(cmdState == Cmd_Finish){
+				ClearMissPktFlags(pkt);
+				IsNoAckCmd = false;
+				CurrCmd++;
+				cmdState = Cmd_Send;
+				docIdx = 0;
+				break;
+			}
+			if(cmdState == Cmd_RecvOk){
+				if(sendIdx == pkt->missPktsCnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+
+			IsNoAckCmd = true;
+			pktIdx = pkt->missPkts[sendIdx];
+			sprintf(cmdName, "发送升级数据");
+			sprintf(cmdMsg, "当前发包：%d/%d", sendIdx, pkt->missPktsCnt);
+			sendIdx++;
+
+			Args.buf[i++] = 0x72;		// 命令字	72
+			ackLen = 0;					// 应答长度 0	
+			// 数据域
+			Args.buf[i++] = (uint8)(pktIdx & 0xFF);	// 包序号
+			Args.buf[i++] = (uint8)(pktIdx >> 8);
+			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
+			Args.buf[i++] = app->crc16_appVer[1];	
+			u16Tmp = CopyPktToBuf(pkt, pktIdx, &Args.buf[i]); 	// 程序体
+			crc16 = GetCrc16(&Args.buf[i], u16Tmp, 0x8408);
+			i += u16Tmp;
+			Args.buf[i++] = (uint8)(crc16 & 0xFF);	// 程序体CRC16
+			Args.buf[i++] = (uint8)(crc16 >> 8);
+			Args.lastItemLen = i - 1;
+			break;
+		
+		case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
+			/*---------------------------------------------*/
+			if(cmdState == Cmd_Finish){
+				GetMissPktList(pkt);
+				if(pkt->missPktsCnt > 0){
+					CurrCmd = WaterCmd_SendUpgradePacket;
+					sendIdx = 0;
+				}
+				CurrCmd++;
+				cmdState = Cmd_Send;
+				docIdx = 0;
+				break;
+			}
+			if(cmdState == Cmd_RecvOk){
+				dispIdx = 0;
+				index = 0;
+				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
+				index += 1;
+				index += 40;	// skip ver 40 byte
+				AddMissPktFlags(pkt, &pData[index], 52);
+				GetMissPktList_CurrPkt(&pData[index], 52, pkt->packetCnt, NULL, &u16Tmp);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前缺包: %d\n", u16Tmp);
+
+				if(docIdx == docs->cnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+			if(cmdState == Cmd_RecvNg){
+				if(docIdx == docs->cnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+
+			docIdx++;
+			sprintf(cmdName, "查询升级状态-B");
+			sprintf(cmdMsg, "");
+			Args.buf[i++] = 0x73;		// 命令字	73
+			ackLen = 93;				// 应答长度 93	
+
+			// 数据域
+			Args.buf[i++] = app->packetCnt[0];		// 总包数
+			Args.buf[i++] = app->packetCnt[1];	
+			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
+			Args.buf[i++] = app->crc16_appVer[1];	
+			Args.lastItemLen = i - 1;
+			break;
+
+		case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
+			/*---------------------------------------------*/
+			if(cmdState == Cmd_Finish){
+				cmdState = Cmd_Exit;
+				break;
+			}
+			if(cmdState == Cmd_RecvOk){
+				dispIdx = 0;
+				index = 0;
+				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
+				index += 1;
+				ptr = GetVersionNo(&pData[index], 40);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
+
+				if(docIdx == docs->cnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+			if(cmdState == Cmd_RecvNg){
+				if(docIdx == docs->cnt){
+					cmdState == Cmd_Finish;
+				}
+				break;
+			}
+			
+			docIdx++;
+			sprintf(cmdName, "查询升级状态-A");
+			sprintf(cmdMsg, "");
+			Args.buf[i++] = 0x74;		// 命令字	74
+			ackLen = 41;				// 应答长度 41	
+
+			// 数据域
+			Args.buf[i++] = app->packetCnt[0];		// 总包数
+			Args.buf[i++] = app->packetCnt[1];	
+			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
+			Args.buf[i++] = app->crc16_appVer[1];	
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+
+		_GUIRectangleFill(0, 3*16, 160, 7*16, Color_White);
+		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s", mtrNo);
+		PrintfXyMultiLine_VaList(0, 5*16, "--> %s", cmdName);	
+		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdMsg);		
+
+		if(cmdState == Cmd_Exit){
+			break;
+		}
+		if(cmdState == Cmd_RecvOk || mdState == Cmd_RecvNg){
+			_Sleep(500);
+			cmdState = Cmd_Send;
+			continue;
+		}
+		if(cmdState == Cmd_Finish){
+			_Sleep(500);
+			continue;
+		}
+
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+
+		// 应答长度、超时时间、重发次数
+		ackLen += 14 + Addrs.itemCnt * AddrLen;
+		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+		tryCnt = 3;
+
+		if(IsNoAckCmd){
+			ackLen = 0;
+			timeout = 0;
+			tryCnt = 1;
+		}
+
+		// 发送、接收、结果显示
+		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+
+		if(LcdOpened && lcdCtrl > 4){	
+			lcdCtrl = 0;
+		}
+
+		if(cmdResult == CmdResult_Cancel){	// 取消
+			break;
+		}
+		else if(cmdResult == CmdResult_Ok){
+			cmdState = Cmd_RecvOk;
+			u16Tmp = DispBuf[0] + DispBuf[1] * 256;
+			pData = &RxBuf[u16Tmp];
+		}
+		else if(cmdResult == CmdResult_CrcError){
+			cmdState = Cmd_RecvNg;
+			sprintf(cmdMsg, "命令失败: CRC错误");
+		}
+		else{
+			cmdState = Cmd_RecvNg;
+			sprintf(cmdMsg, "命令失败: 等待超时");
+		}
+	}
+
+	if(cmdResult == CmdResult_Cancel){
+		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
+		#if RxBeep_On
+		_SoundOn();
+		_Sleep(100);
+		_SoundOff();
+		#endif
+	}
+	else{
+		_Printfxy(0, 9*16, "返回  <已完成>  确定", Color_White);
+		#if RxBeep_On
+		_SoundOn();
+		_Sleep(200);
+		_SoundOff();
+		#endif
+	}
+	
+
+	//sprintf(strTmp, "成功:%d", meters->readOkCnt);
+	//_Printfxy(6*16, 7*16 + 8 + 3, strTmp, Color_White);
+	
+	while(1){
+		key = _ReadKey();
+		if(key == KEY_CANCEL || KEY_ENTER){
+			break;
+		}
+		_Sleep(100);
+	}
+}
+
+// 查询升级状态
+static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
+{
+
+}
 
 //------------------------		界面		-----------------
 void UpgradeFunc(void)
@@ -61,7 +441,7 @@ void UpgradeFunc(void)
 		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  > ", StrBuf[0], 1, 2*8, true);
 	}
 	else{
-		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 批量升级设置");	
+		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 升级档案管理");	
 	}
 	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "3. 开始升级");	
 	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "4. 查询升级状态");				
@@ -99,7 +479,7 @@ void UpgradeFunc(void)
 			}
 			break;
 
-		case 2:	// 输入表号 / 升级档案设置
+		case 2:	// 输入表号 / 升级档案管理
 			{
 				if(upgradeMode == 1){
 					// 输入表号 
@@ -110,8 +490,8 @@ void UpgradeFunc(void)
 					}
 				}
 				else{
-					// 升级档案设置
-					UpgradeFunc_UpgradeDocSet();
+					// 升级档案管理
+					UpgradeFunc_UpgradeDocMgmt();
 				}
 				currUi++;
 				continue;
@@ -136,257 +516,6 @@ void UpgradeFunc(void)
 
 
 	}
-
-}
-
-// 升级档案设置
-static void UpgradeFunc_UpgradeDocSet(void)
-{
-
-}
-
-// 开始升级
-static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
-{
-	AppFileInfo *app = &AppInfo;
-	PacketInfo *pkt = &PktInfo;
-	UpgradeDocs *docs = &UpgrdDocs;
-	uint16 docIdx, i;
-	uint8 *mtrNo, cmdName[20], cmdResp[20];
-	UpgradeState state = UpgrdState_NotStart;
-	uint8 isCurrStepFinish = false;
-	uint16 ackLen, timeout, dispIdx;
-	uint8 tryCnt, lcdCtrl, key;
-	CmdResult cmdResult = CmdResult_Ok;
-	char *dispBuf = &DispBuf;
-	char strTmp[20];
-
-	// 中继清空
-	for(i = 0; i < RELAY_MAX; i++){				
-		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-			StrRelayAddr[i][0] = 0x00;
-		}
-	}
-
-	CurrCmd = WaterCmd_NoticeUpgrade_OnApp;
-	sprintf(cmdName, "通知开始升级-A");
-	sprintf(cmdResp, "");
-	docIdx = 0;
-
-	while(1){
-	
-		_ClearScreen();
-
-		// LCD背景灯控制
-		if(lcdCtrl == 0){
-			_OpenLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = true;
-		}
-		else if(lcdCtrl < 4){
-			lcdCtrl++;
-		}
-		else if(lcdCtrl == 4){
-			_CloseLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = false;
-		}
-
-		// 当前表号
-		mtrNo = &UpgrdDocs.mtrNos[docIdx][0];
-
-		// 命令参数处理
-		i = 0;	
-		Args.itemCnt = 2;
-		Args.items[0] = &Args.buf[0];   // 命令字
-		Args.items[1] = &Args.buf[1];	// 数据域
-
-		switch(CurrCmd){
-		case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
-			/*---------------------------------------------*/
-			if(isCurrStepFinish && docIdx == docs->cnt){
-				CurrCmd++;
-				isCurrStepFinish = false;
-				docIdx = 0;
-				continue;
-			}
-			docIdx++;
-
-			sprintf(cmdName, "通知开始升级-A");
-			Args.buf[i++] = 0x70;		// 命令字	70
-			ackLen = 41;				// 应答长度 41	
-			// 数据域
-			Args.buf[i++] = app->waterMeterVbat;	// 水表电压
-			Args.buf[i++] = app->gasMeterVbat;		// 气表电压
-			Args.buf[i++] = app->rssi;				// RSSI门限
-			Args.buf[i++] = app->snr;				// SNR门限
-			memcpy(&Args.buf[i], app->appVer, 40);	// 程序版本 40 byte	
-			i += 40;	
-			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
-			Args.buf[i++] = app->crc16_appVer[1];	
-			Args.buf[i++] = app->packetCnt[0];		// 总包数
-			Args.buf[i++] = app->packetCnt[1];
-			Args.buf[i++] = app->crc16_1st26K[0];	// 前26K CRC16
-			Args.buf[i++] = app->crc16_1st26K[1];	
-			Args.buf[i++] = app->crc16_2nd26K[0];	// 后26K CRC16
-			Args.buf[i++] = app->crc16_2nd26K[1];	
-			Args.buf[i++] = app->crc16_all52K[0];	// 总52K CRC16
-			Args.buf[i++] = app->crc16_all52K[1];	
-			Args.buf[i++] = 0x00;					// RXD信道 0/1
-			memset(&Args.buf[i], 0x00, 7);				// 预留 7 byte	
-			i += 7;
-			Args.lastItemLen = i - 1;
-			break;
-
-		case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
-			/*---------------------------------------------*/
-			if(isCurrStepFinish && docIdx == docs->cnt){
-				CurrCmd++;
-				isCurrStepFinish = false;
-				docIdx = 0;
-				continue;
-			}
-			docIdx++;
-			
-			sprintf(cmdName, "通知开始升级-B");
-			Args.buf[i++] = 0x71;		// 命令字	71
-			ackLen = 41;				// 应答长度 41	
-			// 数据域
-			Args.buf[i++] = app->waterMeterVbat;		// 水表电压
-			Args.buf[i++] = app->gasMeterVbat;		// 气表电压
-			Args.buf[i++] = app->rssi;				// RSSI门限
-			Args.buf[i++] = app->snr;				// SNR门限
-			memcpy(&Args.buf[i], app->appVer, 40);	// 程序版本 40 byte	
-			i += 40;	
-			Args.buf[i++] = app->crc16_appVer[0];	// 版本CRC16
-			Args.buf[i++] = app->crc16_appVer[1];	
-			Args.buf[i++] = app->packetCnt[0];		// 总包数
-			Args.buf[i++] = app->packetCnt[1];
-			Args.buf[i++] = app->crc16_1st26K[0];	// 前26K CRC16
-			Args.buf[i++] = app->crc16_1st26K[1];	
-			Args.buf[i++] = app->crc16_2nd26K[0];	// 后26K CRC16
-			Args.buf[i++] = app->crc16_2nd26K[1];	
-			Args.buf[i++] = app->crc16_all52K[0];	// 总52K CRC16
-			Args.buf[i++] = app->crc16_all52K[1];	
-			Args.buf[i++] = 0x00;						// RXD信道 0/1
-			memset(&Args.buf[i], 0x00, 7);				// 预留 7 byte	
-			i += 7;
-			Args.lastItemLen = i - 1;
-			break;
-
-		case WaterCmd_SendUpgradePacket:			// 发送升级数据
-			/*---------------------------------------------*/
-			if(isCurrStepFinish){
-				CurrCmd++;
-				isCurrStepFinish = false;
-				docIdx = 0;
-				continue;
-			}
-			docIdx++;
-			
-			sprintf(cmdName, "发送升级数据");
-			Args.buf[i++] = 0x72;		// 命令字	72
-			ackLen = 0;					// 应答长度 0	
-			// 数据域
-			Args.buf[i++] = 0x00;	
-			Args.lastItemLen = i - 1;
-			break;
-		
-		case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
-			/*---------------------------------------------*/
-			sprintf(cmdName, "查询升级状态-B");
-			Args.buf[i++] = 0x73;		// 命令字	73
-			ackLen = 93;				// 应答长度 93	
-			// 数据域
-			Args.buf[i++] = 0x00;	
-			Args.lastItemLen = i - 1;
-			break;
-
-		case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
-			/*---------------------------------------------*/
-			sprintf(cmdName, "查询升级状态-A");
-			Args.buf[i++] = 0x74;		// 命令字	74
-			ackLen = 41;				// 应答长度 41	
-			// 数据域
-			Args.buf[i++] = 0x00;	
-			Args.lastItemLen = i - 1;
-			break;
-
-		default: 
-			break;
-		}
-
-		_Printfxy(0, 0, "<<开始升级", Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-		/*---------------------------------------------*/
-		PrintfXyMultiLine_VaList(0, 2*16, "版本：%s  CRC：%4X", pkt->version, pkt->verCrc16);
-		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s", mtrNo);
-		PrintfXyMultiLine_VaList(0, 5*16, "--> %s", cmdName);	// cmd name
-		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdResp);		// cmd reponse
-		//----------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回   <升级中>   ", Color_White);
-
-		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-
-		// 应答长度、超时时间、重发次数
-		ackLen += 14 + Addrs.itemCnt * AddrLen;
-		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-		tryCnt = 3;
-
-		// 发送、接收、结果显示
-		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-
-		if(LcdOpened && lcdCtrl > 4){	
-			lcdCtrl = 0;
-		}
-
-		if(cmdResult == CmdResult_Cancel){	// 取消
-			break;
-		}
-		else if(cmdResult == CmdResult_Ok){
-			isCurrStepFinish = true;
-		}
-		else{
-			// 失败，不作处理
-		}
-		_Sleep(1000);
-	}
-
-	if(cmdResult == CmdResult_Cancel){
-		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
-		#if RxBeep_On
-		_SoundOn();
-		_Sleep(100);
-		_SoundOff();
-		#endif
-	}
-	else{
-		_Printfxy(0, 9*16, "返回  <已完成>  确定", Color_White);
-		#if RxBeep_On
-		_SoundOn();
-		_Sleep(200);
-		_SoundOff();
-		#endif
-	}
-	
-
-	//sprintf(strTmp, "成功:%d", meters->readOkCnt);
-	//_Printfxy(6*16, 7*16 + 8 + 3, strTmp, Color_White);
-	
-	while(1){
-		key = _ReadKey();
-		if(key == KEY_CANCEL || KEY_ENTER){
-			break;
-		}
-		_Sleep(100);
-	}
-}
-
-// 查询升级状态
-static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
-{
 
 }
 
@@ -537,7 +666,7 @@ extern void GetMissPktList(PacketInfo *pktInfo)
 *		bitfalgs	- 缺包标记缓存
 *		byteCnt		- 缺包标记缓存字节数
 *		pktCnt		- 总包数
-*		missPkts	- 缺包列表缓存
+*		missPkts	- 缺包列表缓存, 若为NULL，则只返回缺包数
 *		missCnt		- 缺包数
 * 返回值：void
 */
@@ -558,12 +687,14 @@ extern void GetMissPktList_CurrPkt(uint8 *bitfalgs, uint16 byteCnt, uint16 pktCn
 				break;
 			}
 			if ((b & 0x01) == 0){
-				missPkts[(*missCnt)++] = pktIdx;
+				if(missPkts != NULL){
+					missPkts[*missCnt] = pktIdx;
+				}
+				(*missCnt)++;
 			}
 			b = (uint8)(b >> 1);
 			pktIdx++;
 		}
 	}
 }
-
 

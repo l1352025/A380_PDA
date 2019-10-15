@@ -164,6 +164,14 @@ typedef enum{
     CmdResult_Cancel
 }CmdResult;
 
+typedef	enum{
+    Cmd_Send,
+    Cmd_RecvOk,
+    Cmd_RecvNg,
+    Cmd_Finish,
+    Cmd_Exit
+}CmdState;
+
 typedef void (*FuncCmdCycleHandler)(uint8 currKey);
 typedef uint8 (*FuncCmdFramePack)(uint8 *txBuf, ParamsBuf *addrs, uint16 cmdid, ParamsBuf *args, uint8 sendCnt);
 typedef uint8 (*FuncCmdFrameExplain)(uint8 *rxBuf, uint16 rxlen, const uint8 *dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
@@ -224,6 +232,7 @@ extern char StrDstAddr[TXTBUF_LEN];
 extern char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 extern UI_ItemList UiList;
 extern bool LcdOpened;
+extern bool IsNoAckCmd;
 extern FuncCmdCycleHandler TranceiverCycleHook;
 extern FuncCmdFramePack FramePack;
 extern FuncCmdFrameExplain FrameExplain;

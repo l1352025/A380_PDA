@@ -1713,8 +1713,12 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 			LogPrintBytes("Rx: ", RxBuf, RxLen);
 		#endif
 
-		cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
-
+		if(IsNoAckCmd == true){
+			cmdResult = CmdResult_Ok;
+		}
+		else{
+			cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
+		}
 	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
 
 	_CloseCom();
