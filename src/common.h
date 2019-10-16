@@ -200,6 +200,7 @@ uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...);
 void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt);
 uint8 ShowListBox(ListBox *lbx);
+void ShowMsg(uint8 x, uint8 y, char *str, uint16 waitMs);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
 void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines);
 void PrintXyTriangle(uint8 x, uint8 y, uint8 direction);

@@ -13,7 +13,7 @@ UpgradeDocs UpgrdDocs;
 
 //-----------------------		内部函数	------------------
 
-static uint8 * GetVersionNo(uint8 *buf)
+static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
 {
 	uint8 i, *ptr;
 
@@ -45,7 +45,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	UpgradeDocs *docs = &UpgrdDocs;
 	uint16 docIdx, sendIdx, pktIdx, crc16, i, u16Tmp;
 	uint8 *mtrNo, *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
-	uint8 cmdState = Cmd_send;
+	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
 	CmdResult cmdResult = CmdResult_Ok;
@@ -129,7 +129,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
 
 				if(docIdx == docs->cnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
@@ -182,7 +182,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 			if(cmdState == Cmd_RecvOk){
 				if(sendIdx == pkt->missPktsCnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
@@ -190,7 +190,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			IsNoAckCmd = true;
 			pktIdx = pkt->missPkts[sendIdx];
 			sprintf(cmdName, "发送升级数据");
-			sprintf(cmdMsg, "当前发包：%d/%d", sendIdx, pkt->missPktsCnt);
+			sprintf(cmdMsg, "当前发包：%d/%d", sendIdx + 1, pkt->missPktsCnt);
 			sendIdx++;
 
 			Args.buf[i++] = 0x72;		// 命令字	72
@@ -233,13 +233,13 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前缺包: %d\n", u16Tmp);
 
 				if(docIdx == docs->cnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
 			if(cmdState == Cmd_RecvNg){
 				if(docIdx == docs->cnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
@@ -274,13 +274,13 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
 
 				if(docIdx == docs->cnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
 			if(cmdState == Cmd_RecvNg){
 				if(docIdx == docs->cnt){
-					cmdState == Cmd_Finish;
+					cmdState = Cmd_Finish;
 				}
 				break;
 			}
@@ -311,7 +311,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		if(cmdState == Cmd_Exit){
 			break;
 		}
-		if(cmdState == Cmd_RecvOk || mdState == Cmd_RecvNg){
+		if(cmdState == Cmd_RecvOk || cmdState == Cmd_RecvNg){
 			_Sleep(500);
 			cmdState = Cmd_Send;
 			continue;
@@ -403,15 +403,17 @@ void UpgradeFunc(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	//uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint8 * fileName, *ptr;
+	uint8 version[20];
+	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
 
 	_ClearScreen();
+	version[0] = 0x00;
 
 #ifdef Project_6009_RF
-	ListBoxCreate(&menuList, 0, 4*16, 20, 2, 2, NULL,
-		"<< 升级方式", 
+	ListBoxCreate(&menuList, 16, 3*16, 16, 2, 2, NULL,
+		"升级方式", 
 		2,
 		"1. 单表升级",
 		"2. 批量升级"
@@ -426,7 +428,7 @@ void UpgradeFunc(void)
 
 	// 菜单
 	(*pUiCnt) = 0;
-	uiRowIdx = 2;
+	uiRowIdx = 1;
 	if(upgradeMode == 1){
 		_Printfxy(0, 0, "<<单表升级", Color_White);
 	}
@@ -435,47 +437,90 @@ void UpgradeFunc(void)
 	}
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 	/*---------------------------------------------*/
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "1. 选择升级文件");	
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "1. 选择升级文件");	
 	if(upgradeMode == 1){
-		LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 输入表号");	
-		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "  > ", StrBuf[0], 1, 2*8, true);
+		LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 输入表号");	
+		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "  > ", StrBuf[0], (AddrLen * 2), (AddrLen * 8 + 8), true);
 	}
 	else{
-		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "2. 升级档案管理");	
+		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 升级档案管理");	
 	}
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "3. 开始升级");	
-	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "4. 查询升级状态");				
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "3. 开始升级");	
+	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "4. 查询升级状态");				
 	//----------------------------------------------
 	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 	_Printfxy(0, 9*16, "返回            确定", Color_White);
 
 	while(1){
+		_ClearScreen();
 
 		_Printfxy(0, 0, "<<程序升级", Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		// ui ctrl
+		_Printfxy(0, 7*16 + 8, version, Color_White);
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
 		key = ShowUI(UiList, &currUi);
 		//------------------------------------------------------------
 		if (key == KEY_CANCEL){	// 返回
 			break;
 		}
-
 		menuItemNo = (upgradeMode == 1 && currUi > 0) ? currUi : currUi + 1;
-
-		// test code -->
-		_MessageBoxEx("", "unavailable now", MSG_OK);
-		_Sleep(1000);
-		return;
-		// --> end 
 
 		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 		isUiFinish = false;
+
+		if(upgradeMode == 1){
+			// 输入表号 
+			if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
+				memcpy(UpgrdDocs.mtrNos[0], StrDstAddr, 20);
+				UpgrdDocs.cnt = 1;
+				UpgrdDocs.states[0] = UpgrdState_NotStart;
+			}
+		}
+
+		if(menuItemNo > 2){
+			if(fileName == NULL){
+				ShowMsg(16, 4*16, "请先选择升级文件！", 2000);
+				continue;
+			}
+			if(UpgrdDocs.cnt == 0){
+				ShowMsg(16, 4*16, "升级表号不能为空！", 2000);
+				continue;
+			}
+		}
 
 		switch (menuItemNo)
 		{
 		case 1:	// 选择升级文件
 			{
-
-
+				_ClearScreen();
+				fileName = _GetFileList("选|\n择|\n升|\n级|\n文|\n件|\n  |\n  |\n  |\n  |\n", "BIN", "");
+				if(fileName == NULL){
+					continue;
+				}
+				_ClearScreen();
+				_Printfxy(0, 5*16, "  文件校验中... ", Color_White);
+				u8Tmp = InitPktInfo(&PktInfo, fileName, 128, 128, &AppInfo);
+				if( u8Tmp != 0){
+					if(u8Tmp == 2){
+						ShowMsg(16, 4*16, "请选择正确的升级文件！", 2000);
+					}
+					else if(u8Tmp == 3){
+						ShowMsg(16, 4*16, "程序体总CRC16错误！", 2000);
+					}
+					else if(u8Tmp == 4){
+						ShowMsg(16, 4*16, "版本号CRC16错误！", 2000);
+					}
+					fileName = NULL;
+					version[0] = 0x00;
+				}
+				else{
+					ptr = GetVersionNo(PktInfo.version, 40);
+					sprintf(version, "v%s  CRC:%4X", ptr, PktInfo.verCrc16);
+				}
 			}
 			break;
 
@@ -483,10 +528,10 @@ void UpgradeFunc(void)
 			{
 				if(upgradeMode == 1){
 					// 输入表号 
-					if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
-						sprintf(StrDstAddr, " 请输入");
-						currUi = 2;
-						continue;
+					if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
+						memcpy(UpgrdDocs.mtrNos[0], StrDstAddr, 20);
+						UpgrdDocs.cnt = 1;
+						UpgrdDocs.states[0] = UpgrdState_NotStart;
 					}
 				}
 				else{
@@ -494,7 +539,6 @@ void UpgradeFunc(void)
 					UpgradeFunc_UpgradeDocMgmt();
 				}
 				currUi++;
-				continue;
 			}
 			break;
 
@@ -514,9 +558,7 @@ void UpgradeFunc(void)
 			break;
 		}
 
-
 	}
-
 }
 
 //------------------------- 	接口函数		-----------------------
@@ -529,18 +571,25 @@ void UpgradeFunc(void)
 *		pktSize - 分包大小
 *		pktStartIdx - 数据包在文件中的起始位置
 *		header - 头部信息，长度 0 -- pktStartIdx
-* 返回值：int  - 数据包初始化结果 0 - 成功， 1 - 文件不存在， 2 - 其他错误
+* 返回值：int  - 数据包初始化结果 0 - 成功， 1 - 文件不存在， 
+*				2 - app文件错误， 3 - 程序CRC16错误， 4 - 版本CRC16错误
 */
 extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint32 pktStartIdx, void *header)
 {
 	int fp;
 	uint32 fileLen, readLen;
 	uint16 crc16, crc16Keep = 0xFFFF;
-	uint8 *tmpBuf = &TmpBuf[0];
+	uint8 *tmpBuf = &DispBuf[0];
+	AppFileInfo *app;
+	volatile uint32 timeTick, idx = 0;
 
 	if(_Access(fileName, 0) < 0){
 		return 1;
 	}
+
+	// test -->
+	timeTick = _GetTickCount();
+	// -->end
 
 	fp = _Fopen(fileName, "R");
 	fileLen = _Filelenth(fp);
@@ -549,14 +598,39 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	}
 	_Lseek(fp, pktStartIdx, 0);
 	while(0 == _Feof(fp)){
-		_Fread(tmpBuf, 1024, fp);
+		readLen = _Fread(tmpBuf, 2048, fp);
 		crc16 = GetCrc16_Continue(tmpBuf, readLen, 0x8408, &crc16Keep);
 	}
 	_Fclose(fp);
 
-	if(fileLen <= pktStartIdx){
+	app = (AppFileInfo *)header;
+
+	// test -->
+	timeTick = _GetTickCount() - timeTick;
+	_DoubleToStr(&DispBuf[200], (double)timeTick / 32768, 3);
+	sprintf(DispBuf, "Tick: %d, time: %s, app-crc16: %4X,  crc16: %4X", 
+		timeTick, &DispBuf[200], (app->crc16_all52K[0] + app->crc16_all52K[1] * 256),  crc16);
+	ShowMsg(16, 32, DispBuf, 10000);
+	// -->end
+
+	if(fileLen <= pktStartIdx 
+		|| app->appVer[0] != 'S' || app->appVer[1] != 'R' || app->appVer[2] != 'W' || app->appVer[3] != 'F'){
 		return 2;
 	}
+
+	if((app->crc16_all52K[0] + app->crc16_all52K[1] * 256) != crc16){
+		return 3;
+	}
+
+	crc16 = GetCrc16(app->appVer, 40, 0x8408);
+	if((app->crc16_appVer[0] + app->crc16_appVer[1] * 256) != crc16){
+		return 4;
+	}
+
+	pktInfo->fileCrc16 = (app->crc16_all52K[0] + app->crc16_all52K[1] * 256);
+	pktInfo->verCrc16 = (app->crc16_appVer[0] + app->crc16_appVer[1] * 256);
+	pktInfo->version = app->appVer;
+	app->crc16_1st26K[0] = 0x00;	// appver str end
 
 	pktInfo->fileName = fileName;
 	pktInfo->packetSize = pktSize;

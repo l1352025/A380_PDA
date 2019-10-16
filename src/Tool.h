@@ -781,6 +781,42 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 }
 
 /*
+* 描  述：显示提示消息框，等待 n ms后返回
+* 参  数：
+*		x ，y - 消息框在屏幕中的坐标 x, y
+*		str - 显示的字符串
+*		waitMs - 等待的毫秒数
+* 返回值：void
+*/
+void ShowMsg(uint8 x, uint8 y, char *str, uint16 waitMs)
+{
+	uint8 strTmp[20], i, j, rowCnt, colCnt;
+	uint16 len = strlen(str);	
+
+	if(x < 8) x = 8;
+	if(y < 8) y = 8;
+	
+	colCnt = ((160 - x - x) / 16) * 2;
+	rowCnt = (len + colCnt - 1) / colCnt;
+
+	if(y + rowCnt * 16 > 160){
+		rowCnt = (160 - y) / 16;
+	}
+	
+	_GUIRectangleFill(x - 8, y - 8, x + colCnt * 8 + 8, y + rowCnt * 16 + 8, Color_White);
+	_GUIRectangle(x - 8, y - 8, x + colCnt * 8 + 8, y + rowCnt * 16 + 8, Color_Black);
+	
+	for(i = 0, j = 0; i < rowCnt; i++){
+		memcpy(strTmp, &str[j], colCnt);
+		strTmp[colCnt] = 0x00;
+		j += colCnt;
+		_Printfxy(x, y + i * 16, strTmp, Color_White);
+	}
+
+	_Sleep(waitMs);
+}
+
+/*
 * 描  述：获取在屏幕x坐标开始显示多行字符串的行数
 * 参  数：x			- 屏幕中显示的x坐标
 *		  buf		- 字符串起始地址
@@ -1405,28 +1441,31 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 * 参  数：Buf - 数据缓存起始地址
 *		  Len - 计算的总长度
 *		  Seed - 如电力/水力固定使用 0x8408
-*		  CrcKeep	- crc16持续计算的累计值，第一次计算前必须初始化为 *CrcKeep = 0xFFFF
-*					若要持续计算，不可对 *CrcKeep 重新赋值 ！
+*		  CrcKeep	- crc16持续计算的累计值，第一次计算前必须初始化为 CrcKeep = 0xFFFF
+*					若要持续计算，不可对 CrcKeep 重新赋值 ！
 * 返回值：当前的CRC16值： 即 （*CrcKeep ^ 0xFFFF）
 */
 uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep)
 {
     uint8 i;
+	uint16 crc16 = *CrcKeep;
 
 	while (Len--){
-        *CrcKeep ^= * Buf++;
+        crc16 ^= *Buf++;
         for(i = 0; i < 8; i++){
-            if (*CrcKeep & 0x0001){
-                *CrcKeep >>= 1;
-                *CrcKeep ^= Seed;
+            if (crc16 & 0x0001){
+                crc16 >>= 1;
+                crc16 ^= Seed;
             }
             else{
-                *CrcKeep >>= 1;
+                crc16 >>= 1;
             }
         }
     }
+	
+	*CrcKeep = crc16;
 
-    return (*CrcKeep ^ 0xFFFF);
+    return (crc16 ^ 0xFFFF);
 }
 
 /*

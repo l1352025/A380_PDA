@@ -27,6 +27,7 @@ typedef struct
     uint8   rssi;
     uint8   upgradeStatus;
     uint8   crc16_appVer[2];
+    uint8   reserved[59];   // ±£¡Ù
 }AppFileInfo;
 
 typedef struct
