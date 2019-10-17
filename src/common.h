@@ -34,7 +34,7 @@ typedef unsigned char bool;
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
     #define VerInfo_RevNo   (char *)"2.7-预览1"	        // 版本号
-    #define VerInfo_RevDate (char *)"2019-09-12"        // 版本日期
+    #define VerInfo_RevDate (char *)"2019-10-17"        // 版本日期
     #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
@@ -154,7 +154,6 @@ typedef struct{
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
-
 
 typedef enum{
 	CmdResult_Ok,

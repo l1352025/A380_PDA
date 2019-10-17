@@ -16,11 +16,13 @@
 #include "MeterDocDBF.c"
 #include "Upgrade.h"
 #include "Upgrade.c"
+#include "List.h"
+#include "List.c"
 
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
 	int i = strsIdx;
-
+	
 	for(i = strsIdx; i < strsIdx + cnt; i++){
 		sprintf(strs[i], "ÁÐ±íÏî %d", i);
 	}

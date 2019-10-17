@@ -599,7 +599,7 @@ void WaterCmdFunc_TestCmd(void)
 // 3	程序升级
 void WaterCmdFunc_Upgrade(void)
 {
-	Func_Upgrade();
+	UpgradeFunc();
 }
 
 // 4	预缴用量
@@ -2222,7 +2222,7 @@ void MainFuncReadRealTimeData(void)
 	while(1){
 		
 		_ClearScreen();
-
+		_free
 		// 公共部分 :  界面显示
 		_Printfxy(0, 0, "<<读取用户用量", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	

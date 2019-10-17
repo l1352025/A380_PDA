@@ -3,7 +3,7 @@
 
 #include "Common.h"
 
-#define Upgrd_FileMaxSize   (52 * 1024)
+#define Upgrd_FileMaxSize   (128 * 1024)    // 目前实际最大116K
 #define Upgrd_PacketSize    128
 #define Upgrd_PacketCntMax  (Upgrd_FileMaxSize / Upgrd_PacketSize)
 #define Upgrd_MeterMax      256
@@ -55,11 +55,19 @@ typedef enum {
     UpgrdState_Finish            // ok
 }UpgradeState;
 
+typedef struct docNode{
+    void *prev;
+    void *next;
+    uint8 mtrNo[20];
+    uint8 state;
+}DocInfo;
+
 typedef struct{
     uint16 cnt;
     uint8 mtrNos[Upgrd_MeterMax][20];
     uint8 states[Upgrd_MeterMax];   // UpgradeState
 }UpgradeDocs;
+
 
 extern void UpgradeFunc(void);    // 程序升级-入口
 extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint32 pktStartIdx, void *header);

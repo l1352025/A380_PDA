@@ -6,13 +6,23 @@
 #include "Common.h"
 #include "WaterMeter.h"
 
+#include "List.h"
+
+//#include "MeterDocDBF.h"
+//extern MeterListSt Meters;
+#ifndef Meter_Max
+#define Meter_Max	300	// 一栋楼-最大表数
+#endif
+
 //-------------------------		全局变量	-----------------
 AppFileInfo AppInfo;
 PacketInfo PktInfo;
 UpgradeDocs UpgrdDocs;
+TList DocList;
 
 //-----------------------		内部函数	------------------
 
+// 从版本信息中截取版本号
 static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
 {
 	uint8 i, *ptr;
@@ -30,10 +40,154 @@ static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
 	return ptr;
 }
 
-// 升级档案设置
+/*
+* 描述：显示升级档案列表, 最大100个
+* 参数：docs - 档案信息列表
+* 返回：uint8 - 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
+*/
+static uint8 ShowDocList(TList *docs)
+{
+	uint8 i, key;
+	uint8 **strs = &DispBuf; //= Meters.strs;
+	uint8 strSize = 20, *ptr, *pList = (uint8 *)strs;
+	ListBox docList;
+	DocInfo *docItem = docs->head;
+
+	if(docs->cnt > Meter_Max) return KEY_CANCEL;
+	
+	while(docItem != NULL){
+		switch (docItem->state){
+		case UpgrdState_NotStart: ptr = "not"; break;
+		case UpgrdState_PktWait: ptr = "wait"; break;
+		case UpgrdState_Finish: ptr = "ok"; break;
+		default: break;
+		}
+
+		sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
+		pList += strSize;
+	}
+
+	ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
+			"档案列表", strs, strSize, docs->cnt);
+	_Printfxy(0, 9*16, "返回            确定", Color_White);
+	key = ShowListBox(&docList);
+	return key;
+}
+
+/*
+* 描述：删除档案
+* 参数：docs - 档案信息列表
+* 返回：uint8 - 界面退出时的按键值： KEY_CANCEL - 返回键 ， KEY_ENTER - 确认键
+*/
+static uint8 ShowDocList_ForDelete(TList *docs)
+{
+	uint8 i, key;
+	uint8 **strs = &DispBuf;  // = Meters.strs;
+	uint8 strSize = 21, *ptr, *pList = (uint8 *)strs;
+	ListBox docList;
+	DocInfo *docItem = docs->head;
+
+	if(docs->cnt > Meter_Max) return KEY_CANCEL;
+
+	while(docItem != NULL){
+		switch (docItem->state){
+		case UpgrdState_NotStart: ptr = "not"; break;
+		case UpgrdState_PktWait: ptr = "wait"; break;
+		case UpgrdState_Finish: ptr = "ok"; break;
+		default: break;
+		}
+
+		sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
+		pList += strSize;
+	}
+
+	ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
+			"档案列表", strs, strSize, docs->cnt);
+	_Printfxy(0, 9*16, "返回            确定", Color_White);
+	key = ShowListBox(&docList);
+	return key;
+}
+
+// 升级档案管理
 static void UpgradeFunc_UpgradeDocMgmt(void)
 {
+	uint8 key, menuItemNo;
+	ListBox menuList;
+	DocInfo docItem;
 
+	if(DocList.cnt == 0){
+		List_Init(&DocList);
+		_Printfxy(0, 9*16, "   < init list >  ", Color_White);
+	}
+
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 4, NULL,
+		"<<升级档案管理", 
+		4,
+		"1. 添加档案",
+		"2. 删除档案",
+		"3. 清空档案",
+		"4. 查看档案"
+	);
+
+
+	while(1){
+		_ClearScreen();
+
+		key = ShowListBox(&menuList);
+
+		if (key == KEY_CANCEL){	// 返回
+			return;
+		}
+		menuItemNo = menuList.strIdx + 1;
+
+		_Printfxy(0, 9*16, "   < sel munu >  ", Color_White);
+
+		switch (menuItemNo)
+		{
+		case 1:	// 添加档案
+			{
+				sprintf(docItem.mtrNo, "112233445566");
+				docItem.state = 0;
+				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+
+				sprintf(docItem.mtrNo, "113343453643");
+				docItem.state = 1;
+				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+
+				sprintf(docItem.mtrNo, "123456789012");
+				docItem.state = 2;
+				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+
+				_Printfxy(0, 9*16, "   < add doc >  ", Color_White);
+			}
+			break;
+
+		case 2:	// 删除档案
+			{
+				
+				_Printfxy(0, 9*16, "   < del doc >  ", Color_White);
+			}
+			break;
+
+		case 3:	// 清空档案
+			{
+				
+			}
+			break;
+
+		case 4:	// 查看档案
+			{
+				key = ShowDocList(&DocList);
+
+				_Printfxy(0, 9*16, "   < show docs >  ", Color_White);
+			}
+			break;
+
+		default:
+			break;
+		}
+
+	}
 }
 
 // 开始升级
@@ -399,13 +553,13 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 //------------------------		界面		-----------------
 void UpgradeFunc(void)
 {
-	uint8 key, menuItemNo, i;
+	uint8 key, menuItemNo, i, u8Tmp;
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * fileName, *ptr;
 	uint8 version[20];
-	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
+	uint8 currUi = 0, uiRowIdx;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
 
 	_ClearScreen();
@@ -440,7 +594,7 @@ void UpgradeFunc(void)
 	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "1. 选择升级文件");	
 	if(upgradeMode == 1){
 		LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 输入表号");	
-		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "  > ", StrBuf[0], (AddrLen * 2), (AddrLen * 8 + 8), true);
+		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "  > ", StrDstAddr, (AddrLen * 2), (AddrLen * 8 + 8), true);
 	}
 	else{
 		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 升级档案管理");	
@@ -468,9 +622,6 @@ void UpgradeFunc(void)
 			break;
 		}
 		menuItemNo = (upgradeMode == 1 && currUi > 0) ? currUi : currUi + 1;
-
-		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-		isUiFinish = false;
 
 		if(upgradeMode == 1){
 			// 输入表号 
@@ -504,7 +655,7 @@ void UpgradeFunc(void)
 				_ClearScreen();
 				_Printfxy(0, 5*16, "  文件校验中... ", Color_White);
 				u8Tmp = InitPktInfo(&PktInfo, fileName, 128, 128, &AppInfo);
-				if( u8Tmp != 0){
+				if(u8Tmp != 0){
 					if(u8Tmp == 2){
 						ShowMsg(16, 4*16, "请选择正确的升级文件！", 2000);
 					}
@@ -524,18 +675,9 @@ void UpgradeFunc(void)
 			}
 			break;
 
-		case 2:	// 输入表号 / 升级档案管理
+		case 2:	// 升级档案管理
 			{
-				if(upgradeMode == 1){
-					// 输入表号 
-					if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
-						memcpy(UpgrdDocs.mtrNos[0], StrDstAddr, 20);
-						UpgrdDocs.cnt = 1;
-						UpgrdDocs.states[0] = UpgrdState_NotStart;
-					}
-				}
-				else{
-					// 升级档案管理
+				if(upgradeMode == 2){
 					UpgradeFunc_UpgradeDocMgmt();
 				}
 				currUi++;
@@ -579,7 +721,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	int fp;
 	uint32 fileLen, readLen;
 	uint16 crc16, crc16Keep = 0xFFFF;
-	uint8 *tmpBuf = &DispBuf[0];
+	uint8 *tmpBuf = &DispBuf[0], cnt = 0;
 	AppFileInfo *app;
 	volatile uint32 timeTick, idx = 0;
 
@@ -597,9 +739,10 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 		_Fread(header, pktStartIdx, fp);
 	}
 	_Lseek(fp, pktStartIdx, 0);
-	while(0 == _Feof(fp)){
+	while(0 == _Feof(fp) && cnt < 26){
 		readLen = _Fread(tmpBuf, 2048, fp);
 		crc16 = GetCrc16_Continue(tmpBuf, readLen, 0x8408, &crc16Keep);
+		cnt++;
 	}
 	_Fclose(fp);
 
@@ -619,12 +762,12 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	}
 
 	if((app->crc16_all52K[0] + app->crc16_all52K[1] * 256) != crc16){
-		return 3;
+		//return 3;
 	}
 
 	crc16 = GetCrc16(app->appVer, 40, 0x8408);
 	if((app->crc16_appVer[0] + app->crc16_appVer[1] * 256) != crc16){
-		return 4;
+		//return 4;
 	}
 
 	pktInfo->fileCrc16 = (app->crc16_all52K[0] + app->crc16_all52K[1] * 256);
