@@ -8,7 +8,7 @@
 
 #include "List.h"
 
-//#include "MeterDocDBF.h"
+#include "MeterDocDBF.h"
 //extern MeterListSt Meters;
 #ifndef Meter_Max
 #define Meter_Max	300	// 一栋楼-最大表数
@@ -47,15 +47,17 @@ static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
 */
 static uint8 ShowDocList(TList *docs)
 {
-	uint8 i, key;
-	uint8 **strs = &DispBuf; //= Meters.strs;
+	uint8 key;
+	//uint8 **strs = &DispBuf;
+	uint8 **strs = Meters.strs;
 	uint8 strSize = 20, *ptr, *pList = (uint8 *)strs;
 	ListBox docList;
-	DocInfo *docItem = docs->head;
+	DocInfo *docItem = (DocInfo *)docs->head;
 
 	if(docs->cnt > Meter_Max) return KEY_CANCEL;
 	
 	while(docItem != NULL){
+
 		switch (docItem->state){
 		case UpgrdState_NotStart: ptr = "not"; break;
 		case UpgrdState_PktWait: ptr = "wait"; break;
@@ -65,10 +67,12 @@ static uint8 ShowDocList(TList *docs)
 
 		sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
 		pList += strSize;
+
+		docItem = (DocInfo *)docItem->next;
 	}
 
 	ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
-			"档案列表", strs, strSize, docs->cnt);
+			"<<档案列表", strs, strSize, docs->cnt);
 	_Printfxy(0, 9*16, "返回            确定", Color_White);
 	key = ShowListBox(&docList);
 	return key;
@@ -81,30 +85,49 @@ static uint8 ShowDocList(TList *docs)
 */
 static uint8 ShowDocList_ForDelete(TList *docs)
 {
-	uint8 i, key;
-	uint8 **strs = &DispBuf;  // = Meters.strs;
-	uint8 strSize = 21, *ptr, *pList = (uint8 *)strs;
+	uint8 key;
+	//uint8 **strs = &DispBuf;
+	uint8 **strs = Meters.strs;
+	uint8 strSize = 20, *ptr, *pList = (uint8 *)strs;
 	ListBox docList;
-	DocInfo *docItem = docs->head;
+	DocInfo *docItem;
 
 	if(docs->cnt > Meter_Max) return KEY_CANCEL;
 
-	while(docItem != NULL){
-		switch (docItem->state){
-		case UpgrdState_NotStart: ptr = "not"; break;
-		case UpgrdState_PktWait: ptr = "wait"; break;
-		case UpgrdState_Finish: ptr = "ok"; break;
-		default: break;
+	while(true){
+
+		docItem = (DocInfo *)docs->head;
+		
+		while(docItem != NULL){
+			switch (docItem->state){
+			case UpgrdState_NotStart: ptr = "not"; break;
+			case UpgrdState_PktWait: ptr = "wait"; break;
+			case UpgrdState_Finish: ptr = "ok"; break;
+			default: break;
+			}
+			sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
+			pList += strSize;
+			docItem = (DocInfo *)docItem->next;
+
+			LogPrint("docItem ptr：%p\r\n", docItem);
 		}
 
-		sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
-		pList += strSize;
+		ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
+				"<<档案列表", strs, strSize, docs->cnt);
+		_Printfxy(0, 9*16, "返回            删除", Color_White);
+		
+		key = ShowListBox(&docList);
+
+		if(key == KEY_ENTER){
+			docs->removeAt(docs, docList.currIdx);
+
+			LogPrint("del idx：%d\r\n", docList.currIdx);
+		}
+		else{
+			break;
+		}
 	}
 
-	ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
-			"档案列表", strs, strSize, docs->cnt);
-	_Printfxy(0, 9*16, "返回            确定", Color_White);
-	key = ShowListBox(&docList);
 	return key;
 }
 
@@ -117,7 +140,6 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 
 	if(DocList.cnt == 0){
 		List_Init(&DocList);
-		_Printfxy(0, 9*16, "   < init list >  ", Color_White);
 	}
 
 	ListBoxCreate(&menuList, 0, 0, 20, 7, 4, NULL,
@@ -134,13 +156,10 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 		_ClearScreen();
 
 		key = ShowListBox(&menuList);
-
 		if (key == KEY_CANCEL){	// 返回
 			return;
 		}
 		menuItemNo = menuList.strIdx + 1;
-
-		_Printfxy(0, 9*16, "   < sel munu >  ", Color_White);
 
 		switch (menuItemNo)
 		{
@@ -158,28 +177,27 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 				docItem.state = 2;
 				DocList.add(&DocList, &docItem, sizeof(DocInfo));
 
-				_Printfxy(0, 9*16, "   < add doc >  ", Color_White);
+				LogPrint("docItem size：%d\r\n", sizeof(DocInfo));
 			}
 			break;
 
 		case 2:	// 删除档案
 			{
-				
-				_Printfxy(0, 9*16, "   < del doc >  ", Color_White);
+				key = ShowDocList_ForDelete(&DocList);
 			}
 			break;
 
 		case 3:	// 清空档案
 			{
-				
+				ShowMsg(16, 4 * 16, "  档案清空中... ", 50);
+				DocList.clear(&DocList);
+				ShowMsg(16, 4 * 16, "  档案清空完成！ ", 1000);
 			}
 			break;
 
 		case 4:	// 查看档案
 			{
 				key = ShowDocList(&DocList);
-
-				_Printfxy(0, 9*16, "   < show docs >  ", Color_White);
 			}
 			break;
 
@@ -203,7 +221,7 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
 	CmdResult cmdResult = CmdResult_Ok;
-	char strTmp[20];
+	//char strTmp[20];
 	uint8 *pData, *ptr;
 
 	_ClearScreen();
@@ -542,6 +560,8 @@ static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		}
 		_Sleep(100);
 	}
+
+	return state;
 }
 
 // 查询升级状态
@@ -553,7 +573,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 //------------------------		界面		-----------------
 void UpgradeFunc(void)
 {
-	uint8 key, menuItemNo, i, u8Tmp;
+	uint8 key, menuItemNo, u8Tmp;
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
@@ -723,7 +743,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	uint16 crc16, crc16Keep = 0xFFFF;
 	uint8 *tmpBuf = &DispBuf[0], cnt = 0;
 	AppFileInfo *app;
-	volatile uint32 timeTick, idx = 0;
+	volatile uint32 timeTick;
 
 	if(_Access(fileName, 0) < 0){
 		return 1;

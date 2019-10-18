@@ -63,7 +63,7 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Previwer    (char *)"预览版2"    // 预览版时,定义该宏
-#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关

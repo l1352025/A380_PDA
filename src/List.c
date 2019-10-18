@@ -1,32 +1,27 @@
 #include "List.h"
-
-
 #include "Common.h"
 
-static void * List_newItem(uint16 size)
+static void * List_add(void *this, void *node, uint16 size)
 {
-    return memAlloc(size);
-}
-
-static void List_add(void *this, void *node, uint16 size)
-{
-    TList *list = (TList *)this;
-    TNode *pp, *p;
     uint8 *src, *dst;
+    TList *list;
+    TNode *pp, *p;
 
-    LogPrint(" list add in...");
+    if(this == NULL) return NULL;
 
-    src = (uint8 *)node;
+    list = (TList *)this;
+    
     dst = (uint8 *)memAlloc(size);
     p = (TNode *)dst;
     
-    while(size > 0){
-        *dst++ = *src++;
-        size--;
+    if(node != NULL){
+        src = (uint8 *)node;
+        while(size > 0){
+            *dst++ = *src++;
+            size--;
+        }
     }
 
-    LogPrint(" malloc ok ...");
-    
     if(list->tail == NULL){
         p->next = NULL;
         p->prev = NULL;
@@ -43,16 +38,19 @@ static void List_add(void *this, void *node, uint16 size)
         list->cnt++;
     }
 
-    LogPrint(" add ok ...");
+    return dst;
 }
 
 static void List_remove(void *this, void *node)
 {
     uint16 idx = 0;
-    TList *list = (TList *)this;
-    TNode *pp, *p = list->head;
+    TList *list;
+    TNode *pp, *p;
 
-    if(p == NULL) return;
+    if(this == NULL || node == NULL) return;
+
+    list = (TList *)this;
+    p = list->head;
 
     while(p){
         p = p->next;
@@ -64,38 +62,34 @@ static void List_remove(void *this, void *node)
 
     if(p != NULL){
         if(p->prev != NULL){
-            pp = p->prev;
+            pp = (TNode *)p->prev;
             pp->next = p->next;
         }
         if(p->next != NULL){
-            pp = p->next;
+            pp = (TNode *)p->next;
             pp->prev = p->prev;
-
-            list->curr = p->next;
-            list->currIdx = idx;
-        }
-        else{
-            list->curr = list->head;
-            list->currIdx = 0;
         }
 
         list->cnt--;
         memFree(p);
+        
+        if(list->cnt == 0){
+            list->head = NULL;
+            list->tail = NULL;
+        }
     }
 }
 
 static void List_removeAt(void *this, uint16 index)
 {
     uint16 idx = 0;
-    TList *list = (TList *)this;
-    TNode *pp, *p = list->head;
+    TList *list;
+    TNode *pp, *p;
 
-    if(p == NULL) return;
+    if(this == NULL) return;
 
-    if(index >= list->currIdx){
-        idx = list->currIdx;
-        p = list->curr;
-    }
+    list = (TList *)this;
+    p = list->head;
 
     while(p && idx < index){
         p = p->next;
@@ -104,51 +98,39 @@ static void List_removeAt(void *this, uint16 index)
 
     if(p != NULL){
         if(p->prev != NULL){
-            pp = p->prev;
+            pp = (TNode *)p->prev;
             pp->next = p->next;
         }
 
         if(p->next != NULL){
-            pp = p->next;
+            pp = (TNode *)p->next;
             pp->prev = p->prev;
-
-            list->curr = p->next;
-            list->currIdx = idx;
-        }
-        else{
-            list->curr = list->head;
-            list->currIdx = 0;
         }
 
         list->cnt--;
         memFree(p);
+
+        if(list->cnt == 0){
+            list->head = NULL;
+            list->tail = NULL;
+        }
     }
 }
 
 static void * List_ElementAt(void *this, uint16 index)
 {
     uint16 idx = 0;
-    TList *list = (TList *)this;
-    TNode *p = list->head;
+    TList *list;
+    TNode *p;
 
-    if(p == NULL) return NULL;
+    if(this == NULL) return NULL;
 
-    if(index >= list->currIdx){
-        idx = list->currIdx;
-        p = list->curr;
-    }
+    list = (TList *)this;
+    p = list->head;
 
     while(p && idx < index){
         p = p->next;
         idx++;
-    }
-
-    if(p != NULL){
-        list->curr = p;
-        list->currIdx = idx;
-    }
-    else{
-        p = NULL;
     }
     
     return p;
@@ -156,16 +138,19 @@ static void * List_ElementAt(void *this, uint16 index)
 
 static void * List_find(void *this, bool (*cmpFunc)(void *node))
 {
-    TList *list = (TList *)this;
-    TNode *p = list->head;
+    TList *list;
+    TNode *p;
 
-    if(p == NULL) return NULL;
+    if(this == NULL || cmpFunc == NULL) return NULL;
+
+    list = (TList *)this;
+    p = list->head;
 
     while(p){
         if(true == cmpFunc(p)){
             return p;
         }
-        p = p->next;
+        p = (TNode *)p->next;
     }
 
     return NULL;
@@ -173,33 +158,33 @@ static void * List_find(void *this, bool (*cmpFunc)(void *node))
 
 static void List_clear(void *this)
 {
-    TList *list = (TList *)this;
-    TNode *pp, *p = list->head;
+    TList *list;
+    TNode *pp, *p;
 
-    if(list->head == NULL) return;
+    if(this == NULL) return;
+
+    list = (TList *)this;
+    p = list->head;
 
     while(p){
-        pp = p->next;
+        pp = (TNode *)p->next;
         memFree(p);
         p = pp;
     }
 
     list->head = NULL;
     list->tail = NULL;
-    list->curr = NULL;
-    list->currIdx = 0;
     list->cnt = 0;
 }
 
 extern void List_Init(TList *this)
 {
+    if(this == NULL) return;
+
     this->head = NULL;
     this->tail = NULL;
-    this->curr = NULL;
-    this->currIdx = 0;
     this->cnt = 0;
 
-    this->newItem = List_newItem;
     this->add = List_add;
     this->remove = List_remove;
     this->removeAt = List_removeAt;
