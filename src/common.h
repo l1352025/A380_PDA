@@ -14,6 +14,9 @@ typedef unsigned char bool;
 #ifndef false
 #define false   0
 #endif
+#ifndef NULL
+#define NULL   0
+#endif
 
 // --------------------------------		类型定义	-----------------------------------------
 /*  串口物理端口： NO.1 / NO.2 / NO.3

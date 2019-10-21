@@ -15,7 +15,8 @@
 #include "WaterMeter.h"
 #include "Upgrade.h"
 #include "Upgrade.c"
-
+#include "List.h"
+#include "List.c"
 
 
 // 输入参数备份类型： 保存在备份缓存的第一个字节 BackupBuf[0]
@@ -2222,7 +2223,7 @@ void MainFuncReadRealTimeData(void)
 	while(1){
 		
 		_ClearScreen();
-		_free
+
 		// 公共部分 :  界面显示
 		_Printfxy(0, 0, "<<读取用户用量", Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	

@@ -56,8 +56,8 @@ typedef enum {
 }UpgradeState;
 
 typedef struct docNode{
-    void *prev;
-    void *next;
+    struct docNode *prev;
+    struct docNode *next;
     uint8 mtrNo[20];
     uint8 state;
 }DocInfo;

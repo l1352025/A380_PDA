@@ -434,7 +434,7 @@ uint8 ShowListBox(ListBox *lbx)
 	uint16 fillCnt = 0;
 	char title[21], temp[15];
 
-	lbx->currIdx = (lbx->currIdx > 0 ? lbx->currIdx : 0);
+	lbx->currIdx = (lbx->currIdx >= lbx->totalCnt ? 0 : lbx->currIdx);
 	lbx->strCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
 	lbx->strIdx = (lbx->currIdx % fillMax);
 	lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->maxRow);
@@ -667,6 +667,7 @@ void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char *title, uint8 *cu
 uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 {
 	const char * ZeroAddr = "0000000000000000";
+	uint8 keyBuf[TXTBUF_LEN];
 	uint8 key, x, y;
 	uint8 i;
 	UI_Item *ptr;
@@ -701,12 +702,13 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 			do{
 				//接收输入
 				if(ptr->ui.txtbox.isInputAny){
+					memcpy(keyBuf, ptr->text, TXTBUF_LEN);
 					inputSt.left = ptr->x1;
 					inputSt.top = ptr->y1;
 					inputSt.width = ptr->width;
 					inputSt.hight = ptr->height;
 					inputSt.caption = "";
-					inputSt.context = ptr->text;
+					inputSt.context = keyBuf;
 					inputSt.datelen = ptr->ui.txtbox.dataLen;
 					inputSt.IsClear = ptr->ui.txtbox.isClear;
 					inputSt.keyUpDown = true;
@@ -715,6 +717,10 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 					_DisInputMode(1);	// 允许输入法切换
 
 					key = _GetStr(&inputSt);
+
+					if(key != KEY_CANCEL && keyBuf[0] != 0x00){
+						memcpy(ptr->text, keyBuf, TXTBUF_LEN);
+					}
 				}
 				else{
 					key = GetInputNumStr(ptr);

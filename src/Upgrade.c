@@ -40,6 +40,25 @@ static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
 	return ptr;
 }
 
+bool IsMtrNoEqual(void *node, void *mtrNo)
+{
+    uint8 *src = ((DocInfo *)node)->mtrNo;
+    uint8 *dst = (uint8 *)mtrNo;
+    uint16 i;
+
+    if(node == NULL || mtrNo == NULL) return false;
+
+    for(i = 0; i < 20 && *src != 0x00; i++)
+    {
+        if(*src != *dst) break;
+
+		src++;
+		dst++;
+    }
+    
+    return (*src == *dst);
+}
+
 /*
 * 描述：显示升级档案列表, 最大100个
 * 参数：docs - 档案信息列表
@@ -50,11 +69,14 @@ static uint8 ShowDocList(TList *docs)
 	uint8 key;
 	//uint8 **strs = &DispBuf;
 	uint8 **strs = Meters.strs;
-	uint8 strSize = 20, *ptr, *pList = (uint8 *)strs;
+	uint8 strSize = 20, *ptr, *pList;
 	ListBox docList;
-	DocInfo *docItem = (DocInfo *)docs->head;
+	DocInfo *docItem;
 
 	if(docs->cnt > Meter_Max) return KEY_CANCEL;
+
+	pList = (uint8 *)strs;
+	docItem = (DocInfo *)docs->head;
 	
 	while(docItem != NULL){
 
@@ -88,7 +110,8 @@ static uint8 ShowDocList_ForDelete(TList *docs)
 	uint8 key;
 	//uint8 **strs = &DispBuf;
 	uint8 **strs = Meters.strs;
-	uint8 strSize = 20, *ptr, *pList = (uint8 *)strs;
+	uint8 strSize = 20, *ptr, *pList;
+	uint16 currIdx = 0;
 	ListBox docList;
 	DocInfo *docItem;
 
@@ -96,6 +119,7 @@ static uint8 ShowDocList_ForDelete(TList *docs)
 
 	while(true){
 
+		pList = (uint8 *)strs;
 		docItem = (DocInfo *)docs->head;
 		
 		while(docItem != NULL){
@@ -108,20 +132,19 @@ static uint8 ShowDocList_ForDelete(TList *docs)
 			sprintf(pList, "%s  %s", docItem->mtrNo, ptr);
 			pList += strSize;
 			docItem = (DocInfo *)docItem->next;
-
-			LogPrint("docItem ptr：%p\r\n", docItem);
 		}
 
 		ListBoxCreateEx(&docList, 0, 0, 20, 7, docs->cnt, NULL,
 				"<<档案列表", strs, strSize, docs->cnt);
 		_Printfxy(0, 9*16, "返回            删除", Color_White);
 		
+		docList.currIdx = currIdx;
 		key = ShowListBox(&docList);
+		currIdx = docList.currIdx;
 
 		if(key == KEY_ENTER){
-			docs->removeAt(docs, docList.currIdx);
-
-			LogPrint("del idx：%d\r\n", docList.currIdx);
+			docs->removeAt(docs, currIdx);
+			LogPrint("del currIdx : %d \n", currIdx);
 		}
 		else{
 			break;
@@ -135,8 +158,9 @@ static uint8 ShowDocList_ForDelete(TList *docs)
 static void UpgradeFunc_UpgradeDocMgmt(void)
 {
 	uint8 key, menuItemNo;
+	UI_Item uiTxtbox;
 	ListBox menuList;
-	DocInfo docItem;
+	DocInfo *pDocInfo;
 
 	if(DocList.cnt == 0){
 		List_Init(&DocList);
@@ -146,11 +170,10 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 		"<<升级档案管理", 
 		4,
 		"1. 添加档案",
-		"2. 删除档案",
-		"3. 清空档案",
-		"4. 查看档案"
+		"2. 查看档案",
+		"3. 删除档案",
+		"4. 清空档案"
 	);
-
 
 	while(1){
 		_ClearScreen();
@@ -165,29 +188,60 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 		{
 		case 1:	// 添加档案
 			{
-				sprintf(docItem.mtrNo, "112233445566");
-				docItem.state = 0;
-				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+				_ClearScreen();
+				TextBoxCreate(&uiTxtbox, 0, 2*16 + 8, "  > ", StrDstAddr, (AddrLen * 2), (AddrLen * 8 + 8), true);
 
-				sprintf(docItem.mtrNo, "113343453643");
-				docItem.state = 1;
-				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+				while(2){
+					//_GUIRectangleFill(0, 0, );
 
-				sprintf(docItem.mtrNo, "123456789012");
-				docItem.state = 2;
-				DocList.add(&DocList, &docItem, sizeof(DocInfo));
+					_Printfxy(0, 0, "<<添加档案", Color_White);
+					_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+					/*---------------------------------------------*/
+					_Printfxy(0, 1*16 + 8, "表号：", Color_White);
+					_Printfxy(uiTxtbox.x, uiTxtbox.y, uiTxtbox.title, Color_White);
+					//----------------------------------------------
+					_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+					_Printfxy(0, 9*16, "返回            确定", Color_White);
+					key = GetInputNumStr(&uiTxtbox);
+					//------------------------------------------------------------
+					if (key == KEY_CANCEL){	// 返回
+						break;
+					}
 
-				LogPrint("docItem size：%d\r\n", sizeof(DocInfo));
+					_leftspace(StrDstAddr, AddrLen * 2, '0');
+
+					if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
+						if(NULL != DocList.find(&DocList, IsMtrNoEqual, StrDstAddr)){
+							_Printfxy(0, 5*16 + 8, "    表号重复！  ", Color_White);
+							_Sleep(500);
+							continue;
+						}
+						pDocInfo = (DocInfo *)DocList.add(&DocList, NULL, sizeof(DocInfo));
+						memcpy(pDocInfo->mtrNo, StrDstAddr, 20);
+						pDocInfo->state = UpgrdState_NotStart;
+					}
+
+					_Printfxy(0, 5*16 + 8, "    添加成功！  ", Color_White);
+					PrintfXyMultiLine_VaList(0, 6*16 + 8, "当前档案总数：%d", DocList.cnt);
+					_Sleep(500);
+					_Printfxy(0, 5*16 + 8, "                    ", Color_White);
+				}
+			}
+			break;
+		
+		case 2:	// 查看档案列表
+			{
+				key = ShowDocList(&DocList);
 			}
 			break;
 
-		case 2:	// 删除档案
+		case 3:	// 删除档案
 			{
 				key = ShowDocList_ForDelete(&DocList);
 			}
 			break;
 
-		case 3:	// 清空档案
+		case 4:	// 清空档案
 			{
 				ShowMsg(16, 4 * 16, "  档案清空中... ", 50);
 				DocList.clear(&DocList);
@@ -195,18 +249,12 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 			}
 			break;
 
-		case 4:	// 查看档案
-			{
-				key = ShowDocList(&DocList);
-			}
-			break;
-
 		default:
 			break;
 		}
-
 	}
 }
+
 
 // 开始升级
 static UpgradeState UpgradeFunc_UpgradeStart(uint8 upgradeMode)
@@ -574,18 +622,18 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 void UpgradeFunc(void)
 {
 	uint8 key, menuItemNo, u8Tmp;
-	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * fileName, *ptr;
 	uint8 version[20];
 	uint8 currUi = 0, uiRowIdx;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
-
-	_ClearScreen();
-	version[0] = 0x00;
+	DocInfo *pDocInfo;
 
 #ifdef Project_6009_RF
+	ListBox menuList;
+	_ClearScreen();
+
 	ListBoxCreate(&menuList, 16, 3*16, 16, 2, 2, NULL,
 		"升级方式", 
 		2,
@@ -599,6 +647,8 @@ void UpgradeFunc(void)
 	}
 	upgradeMode = menuList.strIdx + 1;
 #endif
+
+	version[0] = 0x00;
 
 	// 菜单
 	(*pUiCnt) = 0;
@@ -643,12 +693,12 @@ void UpgradeFunc(void)
 		}
 		menuItemNo = (upgradeMode == 1 && currUi > 0) ? currUi : currUi + 1;
 
-		if(upgradeMode == 1){
-			// 输入表号 
+		if(upgradeMode == 1){	// 单表升级 表号 
 			if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
-				memcpy(UpgrdDocs.mtrNos[0], StrDstAddr, 20);
-				UpgrdDocs.cnt = 1;
-				UpgrdDocs.states[0] = UpgrdState_NotStart;
+				DocList.clear(&DocList);
+				pDocInfo = (DocInfo *)DocList.add(&DocList, NULL, sizeof(DocInfo));
+				memcpy(pDocInfo->mtrNo, StrDstAddr, 20);
+				pDocInfo->state = UpgrdState_NotStart;
 			}
 		}
 
