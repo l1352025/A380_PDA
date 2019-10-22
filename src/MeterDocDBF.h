@@ -246,6 +246,7 @@ extern DistrictListSt Districts;
 extern BuildingListSt Buildings;
 extern MeterListSt Meters;
 extern DbQuerySt DbQuery;
+extern uint8 **MetersStrs;
 
 extern void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query);
 extern void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query);

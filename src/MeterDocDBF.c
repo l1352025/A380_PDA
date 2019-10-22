@@ -14,6 +14,7 @@ DistrictListSt Districts;
 BuildingListSt Buildings;
 MeterListSt Meters;
 DbQuerySt DbQuery;
+uint8 **MetersStrs = Meters.strs;
 
 //----------------------	数据库信息-操作函数		-------------------------------------
 

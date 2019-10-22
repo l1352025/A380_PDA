@@ -7,6 +7,7 @@
 #define Upgrd_PacketSize    128
 #define Upgrd_PacketCntMax  (Upgrd_FileMaxSize / Upgrd_PacketSize)
 #define Upgrd_MeterMax      256
+#define Upgrd_DocFileName   "UpgradeDoc.csv"
 
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 
@@ -50,9 +51,11 @@ typedef struct
 }PacketInfo;
 
 typedef enum {
-    UpgrdState_NotStart = 0,     // not
-    UpgrdState_PktWait,          // wait
-    UpgrdState_Finish            // ok
+    UpgrdState_NotStart = 0,    // not
+    UpgrdState_PktWait,         // wait
+    UpgrdState_Finish,          // ok
+    UpgrdState_Error,           // error
+    UpgrdState_Unknown          // unknw
 }UpgradeState;
 
 typedef struct docNode{

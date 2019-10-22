@@ -104,6 +104,11 @@ static void List_removeAt(void *this, uint16 index)
     idx = list->currIdx;
     p = list->curr;
 
+    if(index == 0){
+        idx = 0;
+        p = list->head;
+    }
+
     if(idx <= index){
         while(p && idx != index){
             p = p->next;
@@ -160,6 +165,11 @@ static void * List_ElementAt(void *this, uint16 index)
     list = (TList *)this;
     idx = list->currIdx;
     p = list->curr;
+
+    if(index == 0){
+        idx = 0;
+        p = list->head;
+    }
 
     if(idx <= index){
         while(p && idx != index){
