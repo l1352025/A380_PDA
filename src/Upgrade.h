@@ -5,7 +5,7 @@
 
 #define Upgrd_FileMaxSize   (128 * 1024)    // 目前实际最大116K
 #define Upgrd_PacketSize    128
-#define Upgrd_PacketCntMax  (Upgrd_FileMaxSize / Upgrd_PacketSize)
+#define Upgrd_PacketCntMax  ( Upgrd_FileMaxSize / Upgrd_PacketSize )
 #define Upgrd_MeterMax      256
 #define Upgrd_DocFileName   "UpgradeDoc.csv"
 
@@ -64,12 +64,6 @@ typedef struct docNode{
     uint8 mtrNo[20];
     uint8 state;
 }DocInfo;
-
-typedef struct{
-    uint16 cnt;
-    uint8 mtrNos[Upgrd_MeterMax][20];
-    uint8 states[Upgrd_MeterMax];   // UpgradeState
-}UpgradeDocs;
 
 
 extern void UpgradeFunc(void);    // 程序升级-入口

@@ -72,8 +72,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 void LogPrint(const char * format, ...)
 {
 #if LOG_ON
-	static uint8 LogBuf[1024] = {0};	// 1.使用静态内存
-	
+
 #if !(LogScom_On)
 	int fp;
 #endif
@@ -82,8 +81,8 @@ void LogPrint(const char * format, ...)
 	uint8 *buf;
 	char time[24];
 
-	//buf = (uint8 *) _malloc(2048);	// 2.使用动态内存时
-	buf = &LogBuf[0];					// 静态内存
+	//buf = (uint8 *) _malloc(2048);	// 1.使用动态内存时
+	buf = &LogBuf[0];					// 2.静态内存
 
 	_GetDateTime(time, '-', ':');
 	len += sprintf(&buf[len], "[ %s ] ", time);
@@ -713,16 +712,18 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 					inputSt.IsClear = ptr->ui.txtbox.isClear;
 					inputSt.keyUpDown = true;
 					inputSt.type = 3;	
-					_SetInputMode(3);	// 默认大写字母
+					_SetInputMode(3);	// 3 - 大写字母
 					_DisInputMode(1);	// 允许输入法切换
 
 					key = _GetStr(&inputSt);
+					_HideCur();
 
 					if(key != KEY_CANCEL && keyBuf[0] != 0x00){
 						memcpy(ptr->text, keyBuf, TXTBUF_LEN);
 					}
 				}
 				else{
+					_SetInputMode(1);	// 1 - 数字
 					key = GetInputNumStr(ptr);
 				}
 
@@ -735,8 +736,9 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 							key = 0xFF;
 						}
 					}
-					_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
 				}
+				_Printfxy(ptr->x1, ptr->y1, ptr->text, Color_White);
+
 			}while(key == 0xFF);
 		}
 		else if(ptr->type == UI_CombBox){
@@ -1019,9 +1021,10 @@ void PrintXyTriangle(uint8 x, uint8 y, uint8 direction)
 * 描  述：显示可滚动的字符串	- 可自动换行：遇到 \n 或 到达屏幕边界时
 * 参  数：strBuf	- 字符串缓冲区，最大显示150行
 *		 lineStep	- 按上下键时滚动的行数，最大7行
+*		 otherKeyExit - 是否其他键也退出：0 - 不退出， 1 - 左右键也退出
 * 返回值：uint8  - 界面退出时的按键值：确认键，取消键
 */
-uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
+uint8 ShowScrollStr_(char *strBuf, uint8 lineStep, uint8 otherKeyExit)
 {
 	const uint8 lineMax = 7;
 	int8 lineCnt = 0, currLine = 0;
@@ -1062,6 +1065,10 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
+		else if( otherKeyExit == 1 
+			&& (key == KEY_LEFT || key == KEY_RIGHT)){
+			break;
+		}
 		else if(key == KEY_UP && lineCnt > lineMax){
 			currLine -= lineStep;
 			if(currLine < 0){
@@ -1086,73 +1093,25 @@ uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
 }
 
 /*
-* 描  述：显示可滚动的字符串(扩展了左右键也返回)	- 可自动换行：遇到 \n 或 到达屏幕边界时
+* 描  述：显示可滚动的字符串	- 可自动换行：遇到 \n 或 到达屏幕边界时
+* 参  数：strBuf	- 字符串缓冲区，最大显示150行
+*		 lineStep	- 按上下键时滚动的行数，最大7行
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
+*/
+uint8 ShowScrollStr(char *strBuf, uint8 lineStep)
+{
+	return ShowScrollStr_(strBuf, lineStep, 0);
+}
+
+/*
+* 描  述：显示可滚动的字符串 (扩展了左右键也返回)	- 可自动换行：遇到 \n 或 到达屏幕边界时
 * 参  数：strBuf	- 字符串缓冲区，最大显示150行
 *		 lineStep	- 按上下键时滚动的行数，最大7行
 * 返回值：uint8  - 界面退出时的按键值：确认键，取消键, 左/右键
 */
 uint8 ShowScrollStrEx(char *strBuf, uint8 lineStep)
 {
-	const uint8 lineMax = 7;
-	int8 lineCnt = 0, currLine = 0;
-	uint8 *lines[150], key;
-
-	// lineStep check
-	if(lineStep > lineMax){
-		lineStep = lineMax;
-	}
-
-	lineCnt = GetPrintLines(0, strBuf, lines);
-
-	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-	/*---------------------------------------------*/
-	PrintfXyMultiLine(0, 1*16 + 8, lines[0], lineMax);	
-	//----------------------------------------------
-	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-	
-	// 上/下滚动显示   ▲ ▼  △ ▽
-	while(1){
-
-		if(lineCnt > lineMax){
-			if(currLine < lineCnt - lineMax){
-				PrintXyTriangle(9*16 + 8, 8*16 + 8, 1);		// ▼
-			}else{
-				_GUIRectangleFill(9*16 + 8, 8*16 + 8, 160, 8*16 + 12, Color_White);
-			}
-
-			if(currLine > 0){
-				PrintXyTriangle(9*16 + 8, 1*16 + 4, 0);		// ▲
-			}else{
-				_GUIRectangleFill(9*16 + 8, 1*16 + 5, 160, 1*16 + 8, Color_White);
-			}
-		}
-
-		key = _ReadKey();
-
-		if(key == KEY_CANCEL || key == KEY_ENTER || key == KEY_LEFT || key == KEY_RIGHT){
-			break;
-		}
-		else if(key == KEY_UP && lineCnt > lineMax){
-			currLine -= lineStep;
-			if(currLine < 0){
-				currLine = 0;
-			}
-		}
-		else if(key == KEY_DOWN && lineCnt > lineMax){
-			currLine += lineStep;
-			if(currLine > lineCnt - lineMax){
-				currLine = lineCnt - lineMax;
-			}
-		}
-		else{
-			continue;
-		}
-
-		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-		PrintfXyMultiLine(0, 1*16 + 8, lines[currLine], lineMax);
-	}
-
-	return key;
+	return ShowScrollStr_(strBuf, lineStep, 1);
 }
 
 /*
@@ -1717,6 +1676,10 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		}
 		else{
 			sprintf(strTmp, "重发..%d", sendCnt);
+		}
+
+		if(IsNoAckCmd == true){
+			timeout = 0;
 		}
 
 		// 接收

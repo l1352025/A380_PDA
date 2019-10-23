@@ -218,11 +218,12 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 
-extern uint8 TmpBuf[1080];
-extern uint8 TxBuf[1080];
-extern uint8 RxBuf[1080];
-extern uint8 DispBuf[2048];
-extern uint8 BackupBuf[1024];
+extern uint8 DispBuf[6144];                         // 2k ~ 6K
+extern uint8 * const LogBuf; // = &DispBuf[2048];       // 2k ~ 4k
+extern uint8 * const TmpBuf; // = &DispBuf[4096];       // 1K ~ 2k
+extern uint8 * const BackupBuf; // = &DispBuf[5120];    // 1k
+extern uint8 TxBuf[1024];
+extern uint8 RxBuf[1024];
 extern uint32 RxLen, TxLen;
 extern const uint8 LocalAddr[10];	// 地址 201900002019/0000，12/16字符
 extern uint8 DstAddr[10];
