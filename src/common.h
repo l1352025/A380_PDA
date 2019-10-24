@@ -36,13 +36,13 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.7-预览1"	        // 版本号
-    #define VerInfo_RevDate (char *)"2019-10-17"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.7-预览2"	        // 版本号
+    #define VerInfo_RevDate (char *)"2019-10-24"        // 版本日期
     #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define AddrLen     8
-    #define LogPort     Trans_IR_Quick      // 日志输出串口
+    #define LogPort     CurrPort      // 日志输出串口
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"2.5"               // 版本号
@@ -51,7 +51,7 @@ typedef unsigned char bool;
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     6
-    #define LogPort     Trans_IR_Quick      // 日志输出串口
+    #define LogPort     CurrPort      // 日志输出串口
     #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
@@ -61,7 +61,7 @@ typedef unsigned char bool;
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     5
-    #define LogPort     Trans_IR_Quick      // 日志输出串口
+    #define LogPort     CurrPort      // 日志输出串口
     #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
 #endif
 
@@ -71,7 +71,7 @@ typedef unsigned char bool;
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
-#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
 #define LOG_ON      0 
@@ -215,6 +215,8 @@ void DatetimeToTimeStrs(const char *datetime, char *year, char *month, char *day
 uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, char *hour, char *min, char *sec);
 uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
 CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
+void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
+void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 

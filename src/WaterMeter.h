@@ -735,19 +735,6 @@ char * Water6009_GetStrUpgradeStatus(uint8 code)
 //-----------------------------------		6009水表协议 打包 / 解包	-----------------------------
 
 /*
-* 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
-* 参 数：currKey	- 命令收发时定周期检测的按键值
-* 返 回：void
-*/
-void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey)
-{
-	if(currKey != 0){	// 其他键，打开背景灯
-		_OpenLcdBackLight();
-		LcdOpened = true;
-	}
-}
-
-/*
 * 函数名：PackWater6009RequestFrame
 * 描  述：打包6009水表命令请求帧
 * 参  数：buf	- 数据缓存起始地址
@@ -2623,8 +2610,9 @@ void VersionInfoFunc(void)
 		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
 		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
 		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+		PrintfXyMultiLine_VaList(0, 6*16, "通信速率：%s", CurrBaud);
 		#ifdef VerInfo_Previwer
-		PrintfXyMultiLine_VaList(0, 7*16, "      %s   ", VerInfo_Previwer);
+		PrintfXyMultiLine_VaList(0, 7*16 + 8, "      %s   ", VerInfo_Previwer);
 		#endif
 		//--------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -2745,7 +2733,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	key = ShowScrollStr(&DispBuf, 7);
 
 	#if LOG_ON
-			LogPrint("解析结果: \r\n %s", DispBuf);
+		LogPrint("解析结果: \r\n %s", DispBuf);
 	#endif
 
 	return key;

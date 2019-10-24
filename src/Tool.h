@@ -62,37 +62,20 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 }
 
 /*
-* 描  述：打印日志到文件或串口No.3 , 通信串口在收发时不可打印到串口
-*		  	默认日志文件名定义为 #define LogName "debug.txt" ， 
-*			如需修改则在调用前重新定义 LogName 
-* 参  数：format	- 字符串格式
-*		  ... 		- 可变参数
+* 描  述：打印日志到文件或串口, 通信串口在收发时不可打印到串口
+*   1. LOG_ON && LogScom_On = 0  输出到日志文件 LogName "debug.txt" 
+*	2. LOG_ON && LogScom_On = 1  输出到串口 LogPort 波特率为 "115200,E,8,1"
+*	3. LOG_ON == 0 				 不输出日志
+* 参  数：buf - 数据缓冲区
+*		  len - 字节数
 * 返回值：void
 */
-void LogPrint(const char * format, ...)
+void LogWrite(uint8 *buf, uint32 len)
 {
 #if LOG_ON
-
 #if !(LogScom_On)
 	int fp;
 #endif
-	uint32 len = 0; 
-	va_list ap;
-	uint8 *buf;
-	char time[24];
-
-	//buf = (uint8 *) _malloc(2048);	// 1.使用动态内存时
-	buf = &LogBuf[0];					// 2.静态内存
-
-	_GetDateTime(time, '-', ':');
-	len += sprintf(&buf[len], "[ %s ] ", time);
-
-	va_start(ap, format);
-	len += vsprintf(&buf[len], format, ap);
-	buf[len++] = '\n';
-	buf[len++] = '\0';
-	va_end(ap);
-	
 
 #if LogScom_On
 	_CloseCom();
@@ -101,9 +84,6 @@ void LogPrint(const char * format, ...)
 	_SendComStr(buf, len);
 	_CloseCom();
 #else
-	#ifndef LogName
-		#define LogName "debug.txt"
-	#endif
 	if(_Access(LogName, 0) < 0){
 		fp = _Fopen(LogName, "W");
 	}else{
@@ -117,15 +97,42 @@ void LogPrint(const char * format, ...)
 	_Lseek(fp, 0, 2);
 	_Fwrite(buf, len, fp);
 	_Fclose(fp);
-#endif
+#endif	// LogScom_On
+#endif	// LOG_ON
+}
 
-	//_free(buf);					// 使用动态内存时
+/*
+* 描  述：打印日志到文件或串口, 通信串口在收发时不可打印到串口
+* 参  数：format - 字符串格式
+*		  ...  - 可变参数
+* 返回值：void
+*/
+void LogPrint(const char * format, ...)
+{
+#if LOG_ON
+	uint32 len = 0; 
+	va_list ap;
+	uint8 *buf;
+	char time[24];
 
+	// buf = (uint8 *) _malloc(2048);	// 1.使用动态内存时
+	buf = &LogBuf[0];					// 2.静态内存
+
+	_GetDateTime(time, '-', ':');
+	len += sprintf(&buf[len], "[%s] ", time);
+	va_start(ap, format);
+	len += vsprintf(&buf[len], format, ap);
+	buf[len++] = '\n';
+	va_end(ap);
+	
+	LogWrite(buf, len);
+
+	//_free(buf);						// 使用动态内存时
 #endif
 }
 
 /*
-* 描  述：打印日志到文件或串口No.2 , 通信串口在收发时不可打印到串口
+* 描  述：打印日志到文件或串口, 通信串口在收发时不可打印到串口
 * 参  数：title	 - 标题
 *		  buf	- 字节数组起始地址
 *		  size	- 打印的字节数， 最大1024
@@ -137,19 +144,24 @@ void LogPrintBytes(const char *title, uint8 *buf, uint16 size)
 	const char decHex[16] = {'0', '1', '2', '3','4', '5', '6', '7','8', '9', 'A', 'B','C', 'D', 'E', 'F'};
 	uint16 i = 0;
 	uint8 *tmp;
+	char time[24];
 
-	tmp = (uint8 *) _malloc(1024);
+	// tmp = (uint8 *) _malloc(2048);	// 1.使用动态内存时
+	tmp = &LogBuf[0];					// 2.静态内存
+	
+	_GetDateTime(time, '-', ':');
+	i += sprintf(&tmp[i], "[%s] %s [%d]\t", time, title, size);
 	while(size--){
 		tmp[i++] = decHex[*buf >> 4];
 		tmp[i++] = decHex[*buf & 0x0F];
 		tmp[i++] = ' ';
 		buf++;
 	}
-	tmp[i++] = '\0';
+	tmp[i++] = '\n';
 
-	LogPrint("%s%s", title, tmp);
-	_free(tmp);
+	LogWrite(tmp, i);
 
+	//_free(tmp);					// 使用动态内存时
 #endif
 }
 
@@ -977,7 +989,7 @@ void PrintfXyMultiLine(uint8 x, uint8 y, const char * buf, uint8 maxLines)
 */
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...)
 {
-	static uint8 buf[1024] = {0};
+	uint8 *buf = DispBuf;
 	int len;
 	va_list ap;
 
@@ -1679,7 +1691,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		}
 
 		if(IsNoAckCmd == true){
-			timeout = 0;
+			timeout = 500;
 		}
 
 		// 接收
@@ -1692,7 +1704,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		
 		do{
 
-			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 9);	// N x10 ms 检测接收, 时间校准为 N x90% x10
 			RxLen += currRxLen;
 			key = _GetKeyExt();
 			if(KEY_CANCEL == key){
@@ -1700,20 +1712,24 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 				DispBuf[0] = 0x00;
 				return CmdResult_Cancel;
 			}
-			waitTime += 200;
+			waitTime += 100;
 
 			if(TranceiverCycleHook != NULL){
 				TranceiverCycleHook(key); 
 			}
-			
-			if(waitTime % 1000 == 0){
-				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 0);
-				PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
+
+			if(IsNoAckCmd == false){
+				
+				if(waitTime % 1000 == 0){
+					_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 0);
+					PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
+				}
+
+				if(RxLen > 0 && currRxLen == 0){
+					break;
+				}
 			}
 
-			if(RxLen > 0 && currRxLen == 0){
-				break;
-			}
 		}while(waitTime <= timeout || currRxLen > 0);
 
 		#if LOG_ON
@@ -1732,6 +1748,67 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 	_CloseCom();
 
 	return cmdResult;
+}
+
+/*
+* 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
+* 参 数：currKey	- 命令收发时定周期检测的按键值
+* 返 回：void
+*/
+void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey)
+{
+	if(currKey != 0){	// 其他键，打开背景灯
+		_OpenLcdBackLight();
+		LcdOpened = true;
+	}
+}
+
+/*
+* 描 述：LCD背景灯周期控制
+* 		命令收发过程中有按键时打开lcd背景灯，调用该函数N次后关闭Lcd背景灯
+* 参 数：lcdCtrl  - 调用该函数时+1，初始为0 ， 0 - 打开， N - 关闭
+* 		 closeCnt - 关闭LCD时的调用次数 N
+* 返 回：void
+*/
+void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt)
+{
+	if( *lcdCtrl == 0){
+		_OpenLcdBackLight();
+		(*lcdCtrl)++;
+		LcdOpened = true;
+	}
+	else if(*lcdCtrl < closeCnt){
+		(*lcdCtrl)++;
+	}
+	else if(*lcdCtrl == closeCnt){
+		_CloseLcdBackLight();
+		(*lcdCtrl)++;
+		LcdOpened = false;
+	}
+
+	if(LcdOpened && *lcdCtrl > closeCnt){	
+		*lcdCtrl = 0;
+	}
+}
+
+/**
+ * 检测可用内存，单位K
+*/
+uint16 CheckAvalibleMemory()
+{
+	uint8 **mem[512];
+	uint16 i, kSize;
+	for(i = 0; i < 512; i++){
+		mem[i] = (uint8 *) _malloc(1024);
+		if(mem[i] == NULL) break;
+	}
+	kSize = i + 2;
+	for(i = 0; i < 512; i++){
+		if(mem[i] == NULL) break;
+		_free(mem[i]);
+	}
+
+	return kSize;
 }
 
 #endif

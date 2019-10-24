@@ -7,7 +7,6 @@
 
 #include "HJLIB.H"
 #include "string.h"
-#include "dbf.h"
 #include "stdio.h"
 
 #include "Common.h"

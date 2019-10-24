@@ -337,12 +337,16 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	uint8 *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
-	uint8 tryCnt, lcdCtrl, key;
+	uint8 tryCnt, lcdCtrl, key, reSendPktCnt;
 	CmdResult cmdResult = CmdResult_Ok;
-	//char strTmp[20];
+	uint32 shutdownTime;
 	uint8 *pData, *ptr;
 
 	_ClearScreen();
+
+	// 防止自动抄表时关机，重置自动关机时间
+	shutdownTime = _GetShutDonwTime();
+	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
 	_Printfxy(0, 0, "<<开始升级", Color_White);
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -366,25 +370,18 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 
 	CurrCmd = WaterCmd_NoticeUpgrade_OnApp;
 	docIdx = 0;
+	reSendPktCnt = 0;
+	lcdCtrl = 0;
 
 	while(1){
 	
-		// LCD背景灯控制
-		if(lcdCtrl == 0){
-			_OpenLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = true;
-		}
-		else if(lcdCtrl < 4){
-			lcdCtrl++;
-		}
-		else if(lcdCtrl == 4){
-			_CloseLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = false;
-		}
-
 		if(cmdState == Cmd_Send){
+
+			IsNoAckCmd = false;
+
+			// LCD背景灯控制
+			LcdLightCycleCtrl(&lcdCtrl, 4);
+
 			// 当前表号
 			docItem = (DocInfo *)docs->itemAt(docs, docIdx);
 			strcpy(StrDstAddr, docItem->mtrNo);
@@ -406,7 +403,15 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 					sendIdx = 0;
 					_Sleep(500);
 				}
-				else{
+				else{ // WaterCmd_NoticeUpgrade_OnApp
+					if(state == UpgrdState_Unknown && upgradeMode == 1){
+						CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
+						cmdState = Cmd_Send;
+						ClearMissPktFlags(pkt);
+						docIdx = 0;
+						_Sleep(3000);
+						continue;
+					}
 					_Sleep(5000);
 				}
 				CurrCmd++;
@@ -422,6 +427,15 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				index += 1;
 				ptr = GetVersionNo(&pData[index], 40);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
+				if(pData[index] == 0x00) {
+					docItem->state = UpgrdState_NotStart;
+				}
+				else if(pData[index] & 0x10 > 0) {	// same ver
+					docItem->state = UpgrdState_Finish;
+				}
+				else if(pData[index] != 0x00) {
+					docItem->state = UpgrdState_Error;
+				}
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -444,12 +458,12 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 
 			if(CurrCmd == WaterCmd_NoticeUpgrade_OnApp){
 				sprintf(cmdName, "通知开始升级-A");
-				sprintf(cmdMsg, "");
+				sprintf(cmdMsg, "      执行中...  ");
 				Args.buf[i++] = 0x70;		// 命令字	70
 			}
 			else{
 				sprintf(cmdName, "通知开始升级-B");
-				sprintf(cmdMsg, "");
+				sprintf(cmdMsg, "      执行中...  ");
 				Args.buf[i++] = 0x71;		// 命令字	71
 			}
 			
@@ -480,10 +494,9 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		case WaterCmd_SendUpgradePacket:			// 发送升级数据
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
-				ClearMissPktFlags(pkt);
-				IsNoAckCmd = false;
-				CurrCmd++;
+				CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
 				cmdState = Cmd_Send;
+				ClearMissPktFlags(pkt);
 				docIdx = 0;
 				_Sleep(5000);
 				continue;
@@ -499,7 +512,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			tryCnt = 1;
 			pktIdx = pkt->missPkts[sendIdx];
 			sprintf(cmdName, "发送升级数据");
-			sprintf(cmdMsg, "当前发包：%d/%d", sendIdx + 1, pkt->missPktsCnt);
+			sprintf(cmdMsg, "      执行中...  \n当前发包：%d/%d", sendIdx + 1, pkt->missPktsCnt);
 			sendIdx++;
 
 			Args.buf[i++] = 0x72;		// 命令字	72
@@ -521,11 +534,14 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
 				GetMissPktList(pkt);
-				if(pkt->missPktsCnt > 0){
+				if(pkt->missPktsCnt > 0 && reSendPktCnt < 5){
 					CurrCmd = WaterCmd_SendUpgradePacket;
 					sendIdx = 0;
+					reSendPktCnt++;
 				}
-				CurrCmd++;
+				else{
+					CurrCmd = WaterCmd_QueryUpgradeStatus_OnApp;
+				}
 				cmdState = Cmd_Send;
 				docIdx = 0;
 				_Sleep(1000);
@@ -571,7 +587,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			docIdx++;
 			tryCnt = 3;
 			sprintf(cmdName, "查询升级状态-B");
-			sprintf(cmdMsg, "");
+			sprintf(cmdMsg, "      执行中...  ");
 			Args.buf[i++] = 0x73;		// 命令字	73
 			ackLen = 93;				// 应答长度 93	
 
@@ -625,7 +641,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			docIdx++;
 			tryCnt = 3;
 			sprintf(cmdName, "查询升级状态-A");
-			sprintf(cmdMsg, "");
+			sprintf(cmdMsg, "      执行中...  ");
 			Args.buf[i++] = 0x74;		// 命令字	74
 			ackLen = 41;				// 应答长度 41	
 
@@ -642,9 +658,10 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		}
 
 		_GUIRectangleFill(0, 3*16, 160, 7*16, Color_White);
-		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s", docItem->mtrNo);
+		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  > %s", docItem->mtrNo);
 		PrintfXyMultiLine_VaList(0, 5*16, "--> %s", cmdName);	
-		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdMsg);		
+		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdMsg);
+		_Printfxy(0, 9*16, "返回  <执行中>      ", Color_White);		
 
 		
 		if(cmdState == Cmd_RecvOk || cmdState == Cmd_RecvNg){
@@ -668,7 +685,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
 		#ifdef Project_6009_IR
-		timeout = 3000;
+		timeout = 2000;
 		#else
 		//timeout = 8000;
 		timeout = 1000;		// test
@@ -682,10 +699,6 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 
 		// 发送、接收
 		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-
-		if(LcdOpened && lcdCtrl > 4){	
-			lcdCtrl = 0;
-		}
 
 		if(cmdResult == CmdResult_Cancel){	// 取消
 			break;
@@ -704,6 +717,8 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			sprintf(cmdMsg, "命令失败: 等待超时");
 		}
 	}
+
+	_OpenLcdBackLight();
 
 	if(cmdResult == CmdResult_Cancel){
 		_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
@@ -733,6 +748,8 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		}
 		_Sleep(100);
 	}
+
+	_SetShutDonwTime(shutdownTime);
 }
 
 // 查询升级状态
@@ -749,10 +766,14 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
 	CmdResult cmdResult = CmdResult_Ok;
-	//char strTmp[20];
+	uint32 shutdownTime;
 	uint8 *pData, *ptr;
 
 	_ClearScreen();
+
+	// 防止自动抄表时关机，重置自动关机时间
+	shutdownTime = _GetShutDonwTime();
+	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
 	_Printfxy(0, 0, "<<查询升级状态", Color_White);
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -779,22 +800,11 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 
 	while(1){
 	
-		// LCD背景灯控制
-		if(lcdCtrl == 0){
-			_OpenLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = true;
-		}
-		else if(lcdCtrl < 4){
-			lcdCtrl++;
-		}
-		else if(lcdCtrl == 4){
-			_CloseLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = false;
-		}
-
 		if(cmdState == Cmd_Send){
+
+			// LCD背景灯控制
+			LcdLightCycleCtrl(&lcdCtrl, 4);
+
 			// 当前表号
 			docItem = (DocInfo *)docs->itemAt(docs, docIdx);
 			strcpy(StrDstAddr, docItem->mtrNo);
@@ -852,7 +862,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 
 			docIdx++;
 			sprintf(cmdName, "查询升级状态-B");
-			sprintf(cmdMsg, "");
+			sprintf(cmdMsg, "      执行中...  ");
 			Args.buf[i++] = 0x73;		// 命令字	73
 			ackLen = 93;				// 应答长度 93	
 
@@ -915,7 +925,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			
 			docIdx++;
 			sprintf(cmdName, "查询升级状态-A");
-			sprintf(cmdMsg, "");
+			sprintf(cmdMsg, "      执行中...  ");
 			Args.buf[i++] = 0x74;		// 命令字	74
 			ackLen = 41;				// 应答长度 41	
 
@@ -932,9 +942,10 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 		}
 
 		_GUIRectangleFill(0, 3*16, 160, 7*16, Color_White);
-		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  %s", docItem->mtrNo);
+		PrintfXyMultiLine_VaList(0, 3*16, "表号：\r\n  > %s", docItem->mtrNo);
 		PrintfXyMultiLine_VaList(0, 5*16, "--> %s", cmdName);	
-		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdMsg);		
+		PrintfXyMultiLine_VaList(0, 6*16, "%s", cmdMsg);
+		_Printfxy(0, 9*16, "返回  <执行中>      ", Color_White);			
 
 		if(cmdState == Cmd_RecvOk || cmdState == Cmd_RecvNg){
 			_Sleep(500);
@@ -957,18 +968,12 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
 		#ifdef Project_6009_IR
-		timeout = 3000;
+		timeout = 2000;
 		#else
 		//timeout = 8000;
 		timeout = 1000;		// test
 		#endif
 		tryCnt = 3;
-
-		if(IsNoAckCmd){
-			ackLen = 0;
-			timeout = 0;
-			tryCnt = 1;
-		}
 
 		// 发送、接收
 		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -1023,6 +1028,8 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 		}
 		_Sleep(100);
 	}
+
+	_SetShutDonwTime(shutdownTime);
 }
 
 //------------------------		界面		-----------------
@@ -1036,6 +1043,10 @@ void UpgradeFunc(void)
 	uint8 currUi = 0, uiRowIdx;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
 	DocInfo *pDocInfo;
+
+	// test -->
+	// ShowMsg(16, 4 *16, "暂不可用", 1000);  return;
+	// end <--
 
 #ifdef Project_6009_RF
 	ListBox menuList;
@@ -1265,7 +1276,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	// test -->
 	timeTick = _GetTickCount() - timeTick;
 	_DoubleToStr(&DispBuf[200], (double)timeTick / 32768, 3);
-	PrintfXyMultiLine_VaList(0, 16, " Time Used: %s s\n read-appcrc: %4X \n calc-appcrc: %4X \n \
+	PrintfXyMultiLine_VaList(0, 16 + 8, " Time Used: %s s\n read-appcrc: %4X \n calc-appcrc: %4X \n \
 	read-vercrc: %4X \n calc-vercrc: %4X \n file size: %d k \n total pkt: %d \n", 
 		&DispBuf[200],
 		(app->crc16_all52K[0] + app->crc16_all52K[1] * 256),  crc16, 
@@ -1340,6 +1351,14 @@ extern void GetMissPktList(PacketInfo *pktInfo)
 {
 	uint16 i, k, pktIdx = 0;
 	uint8 b;
+
+	if(pktInfo->missPktsCnt == pktInfo->packetCnt){
+		for(i = 0; i < pktInfo->packetCnt; i++){
+			pktInfo->missPkts[i] = i;
+		}
+		return;
+	}
+
 	pktInfo->missPktsCnt = 0;
 
 	for(i = 0; i < pktInfo->bitFlagsCnt; i++){

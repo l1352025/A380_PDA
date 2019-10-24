@@ -284,6 +284,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	char *dispBuf = &DispBuf;
 	MeterInfoSt *meterInfo = &MeterInfo;
 	char strTmp[20];
+	uint32 shutdownTime;
 
 	if(meters->cnt == 0){
 		return KEY_CANCEL;
@@ -303,25 +304,14 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	lcdCtrl = 0;
 
 	// 防止自动抄表时关机，重置自动关机时间
+	shutdownTime = _GetShutDonwTime();
 	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
 	// 自动抄表
 	while(cnt < meters->cnt){
 
 		// LCD背景灯控制
-		if(lcdCtrl == 0){
-			_OpenLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = true;
-		}
-		else if(lcdCtrl < 4){
-			lcdCtrl++;
-		}
-		else if(lcdCtrl == 4){
-			_CloseLcdBackLight();
-			lcdCtrl++;
-			LcdOpened = false;
-		}
+		LcdLightCycleCtrl(&lcdCtrl, 4);
 		
 		// 读取当前户表信息
 		meterInfo->dbIdx = meters->dbIdx[cnt];
@@ -373,10 +363,6 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 
 		// 发送、接收、结果显示
 		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-
-		if(LcdOpened && lcdCtrl > 4){	
-			lcdCtrl = 0;
-		}
 
 		if(cmdResult == CmdResult_Cancel){	// 取消轮抄
 			break;
@@ -436,7 +422,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		_Sleep(100);
 	}
 
-	_SetShutDonwTime(60);	
+	_SetShutDonwTime(shutdownTime);	
 	
 	return key;
 }
