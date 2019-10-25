@@ -3,11 +3,12 @@
 
 #include "Common.h"
 
-#define Upgrd_FileMaxSize   (128 * 1024)    // 目前实际最大116K
-#define Upgrd_PacketSize    128
+#define Upgrd_FileMaxSize   (128 * 1024)        // 目前实际最大116K
+#define Upgrd_PacketSize    128                 // 包大小
 #define Upgrd_PacketCntMax  ( Upgrd_FileMaxSize / Upgrd_PacketSize )
-#define Upgrd_MeterMax      256
-#define Upgrd_DocFileName   "UpgradeDoc.csv"
+#define Upgrd_MeterMax      256                 // 批量升级 最大档案数
+#define Upgrd_DocFileName   "UpgradeDoc.csv"    // 批量升级 档案文件名
+#define Upgrd_ReSendPktMax  5                   // 1轮最大补包次数
 
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 
@@ -34,6 +35,7 @@ typedef struct
 typedef struct
 {
     char *  fileName;
+    int     filePtr;
     uint32  fileSize;
     uint16  fileKbSize;
     uint16  fileCrc16;
@@ -47,21 +49,21 @@ typedef struct
     uint16  bitFlagsCnt;
     uint16  missPkts[Upgrd_PacketCntMax];  
     uint16  missPktsCnt;
-    
 }PacketInfo;
 
 typedef enum {
-    UpgrdState_NotStart = 0,    // not
-    UpgrdState_PktWait,         // wait
-    UpgrdState_Finish,          // ok
-    UpgrdState_Error,           // error
-    UpgrdState_Unknown          // unknw
+    UpgrdState_NotStart = 0x01,     // not
+    UpgrdState_PktWait  = 0x02,     // wait
+    UpgrdState_Finish   = 0x04,     // ok
+    UpgrdState_Error    = 0x38,     // error (0x08/0x10/0x20)
+    UpgrdState_Unknown  = 0xFF      // unknw
 }UpgradeState;
 
 typedef struct docNode{
     struct docNode *prev;
     struct docNode *next;
     uint8 mtrNo[20];
+    uint8 ver[7];
     uint8 state;
 }DocInfo;
 

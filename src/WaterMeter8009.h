@@ -13,10 +13,12 @@
 
 // --------------------------------  全局变量  -----------------------------------------
 //char Screenbuff[160*(160/3+1)*2]; 
-uint8 TmpBuf[1080];
-uint8 TxBuf[1080];
-uint8 RxBuf[1080];
-uint8 DispBuf[2048];
+uint8 DispBuf[6144];						// 2k ~ 6K
+uint8 * const LogBuf = &DispBuf[2048];     	// 2k ~ 4k
+uint8 * const TmpBuf = &DispBuf[4096];     	// 1K ~ 2k
+uint8 * const BackupBuf = &DispBuf[5120];  	// 1k
+uint8 TxBuf[1024];
+uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
 const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
 uint8 DstAddr[10];
@@ -28,7 +30,11 @@ char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
 char StrDstAddr[TXTBUF_LEN];
 char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
 UI_ItemList UiList;
-FuncCallback Func_TranceiverCycleHook = NULL;
+bool LcdOpened;
+bool IsNoAckCmd;
+FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
+FuncCmdFramePack FramePack = PackWater8009RequestFrame;
+FuncCmdFrameExplain FrameExplain = ExplainWater8009ResponseFrame;
 
 //----------------------------------------  表端命令  ------------------------
 /*

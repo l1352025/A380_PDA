@@ -71,7 +71,8 @@ typedef unsigned char bool;
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogName     "debug.txt" // 日志文件名
-#define LogScom_On  1           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogTxRx     1           // 日志输出Tx/Rx数据：0 - 不输出， 1 - 输出
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
 #define LOG_ON      0 

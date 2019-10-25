@@ -1702,9 +1702,9 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 0);
 		PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
 		
-		do{
 
-			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 9);	// N x10 ms 检测接收, 时间校准为 N x90% x10
+		do{
+			currRxLen = _GetComStr(&RxBuf[RxLen], 80, 8);	// 时间校准为 N x12 ms : 8x12 = 96 ~= 100ms
 			RxLen += currRxLen;
 			key = _GetKeyExt();
 			if(KEY_CANCEL == key){
@@ -1732,7 +1732,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 
 		}while(waitTime <= timeout || currRxLen > 0);
 
-		#if LOG_ON
+		#if LOG_ON && LogTxRx
 			LogPrintBytes("Tx: ", TxBuf, TxLen);
 			LogPrintBytes("Rx: ", RxBuf, RxLen);
 		#endif

@@ -720,6 +720,8 @@ char * Water6009_GetStrUpgradeStatus(uint8 code)
 		case 0x08:	str = "AppCrcErr";	break;
 		case 0x10:	str = "VerCrcErr";	break;
 		case 0x20:	str = "总包数错误";	break;
+		case 0x38:	str = "升级错误";	break;	// 包括 0x08, 0x10, 0x20 错误
+		case 0xFF:	str = "未知状态";	break;
 		default:
 			break;
 		}
