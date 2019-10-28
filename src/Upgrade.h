@@ -52,11 +52,13 @@ typedef struct
 }PacketInfo;
 
 typedef enum {
-    UpgrdState_NotStart = 0x01,     // not
-    UpgrdState_PktWait  = 0x02,     // wait
-    UpgrdState_Finish   = 0x04,     // ok
-    UpgrdState_Error    = 0x38,     // error (0x08/0x10/0x20)
-    UpgrdState_Unknown  = 0xFF      // unknw
+    UpgrdState_Unknow  = 0,         // unknow (init / no response)
+    UpgrdState_Forbid,              // forbid (can't upgrade reason)
+    UpgrdState_NotStart,            // not   (not start)
+    UpgrdState_PktWait,             // wait  (packet wait)
+    UpgrdState_Finish,              // ok    (finish)
+    UpgrdState_Error,                // error (upgrade error 0x08/0x10/0x20)
+    UpgrdState_Max
 }UpgradeState;
 
 typedef struct docNode{
@@ -73,7 +75,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf);
 extern void ClearMissPktFlags(PacketInfo *pktInfo);
 extern void AddMissPktFlags(PacketInfo *pktInfo, uint8 *bitflags, uint16 byteCnt);
-extern void GetMissPktList(PacketInfo *pktInfo);
+extern uint16 GetMissPktList(PacketInfo *pktInfo);
 extern void GetMissPktList_CurrPkt(uint8 *bitfalgs, uint16 byteCnt, uint16 pktCnt, uint16 *missPkts, uint16 *missCnt);
 
 #endif

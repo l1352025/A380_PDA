@@ -666,7 +666,7 @@ uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
 * 		code - 无法升级原因代码
 * 返回值：char * - 解析后的字符串
 */
-char * Water6009_GetStrDisUpgradeReason(uint8 code)
+char * Water6009_GetStrUpgradeForbidReason(uint8 code)
 {
 	char * str = NULL;
 	uint8 mask = 1, i;
@@ -720,8 +720,6 @@ char * Water6009_GetStrUpgradeStatus(uint8 code)
 		case 0x08:	str = "AppCrcErr";	break;
 		case 0x10:	str = "VerCrcErr";	break;
 		case 0x20:	str = "总包数错误";	break;
-		case 0x38:	str = "升级错误";	break;	// 包括 0x08, 0x10, 0x20 错误
-		case 0xFF:	str = "未知状态";	break;
 		default:
 			break;
 		}
