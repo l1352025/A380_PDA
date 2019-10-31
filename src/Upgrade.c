@@ -17,25 +17,36 @@ uint8 **MetersStrs = &DispBuf;
 AppFileInfo AppInfo;
 PacketInfo PktInfo;
 TList DocList;
+uint8 IsInBoot;
 
 //-----------------------		内部函数	------------------
 
-// 从版本信息中截取版本号
-static uint8 * GetVersionNo(uint8 *buf, uint8 verSize)
+// 从版本信息中截取版本号: 如 1.20
+static void GetVersionNo(uint8 *buf, uint8 *verNo)
 {
-	uint8 i, *ptr;
+	uint8 i, *ptr = NULL;
 
 	for(i = 0; i < 40; i++){
+
 		if(buf[i] == (uint8)'.'){
-			ptr = &buf[i - 1];
+			ptr = verNo;
+			*ptr++ = buf[i - 1];
 		}
 		if(buf[i] == (uint8)' '){
-			buf[i] = 0x00;
 			break;
+		}
+
+		if(ptr){
+			*ptr++ = buf[i];
 		}
 	}
 
-	return ptr;
+	if(ptr){
+		*ptr = 0x00;
+	}
+	else{
+		verNo[0] = 0x00;
+	}
 }
 
 static bool IsMtrNoEqual(void *node, void *mtrNo)
@@ -66,11 +77,17 @@ char * GetUpgradeStatus(uint8 code)
 	
 	switch (code){
 	case UpgrdState_Unknow: str = "未知"; break;
-	case UpgrdState_Forbid: str = "禁止"; break;
+	case UpgrdState_Err_5_0v: str = "E-5.0v"; break;
+	case UpgrdState_Err_3_4v: str = "E-3.4v"; break;
+	case UpgrdState_Err_SNR: str = "E-SNR"; break;
+	case UpgrdState_Err_RSSI: str = "E-RSSI"; break;
+	case UpgrdState_Err_VerNo: str = "E-VerNo"; break;
+	case UpgrdState_Err_VerCrc: str = "E-CrcV"; break;
+	case UpgrdState_Err_AppCrc: str = "E-CrcA"; break;
+	case UpgrdState_Err_PktCnt: str = "E-Cnt"; break;
 	case UpgrdState_NotStart: str = "未开始"; break;
 	case UpgrdState_PktWait: str = "等待"; break;
 	case UpgrdState_Finish: str = "完成"; break;
-	case UpgrdState_Error: str = "错误"; break;
 	default: break;
 	}
 
@@ -147,26 +164,30 @@ static void DocListImport(TList *docs)
 		return;
 	}
 
-	lastCnt = docs->cnt;
+	lastCnt = docs->cnt;   
 
 	fp = _Fopen(Upgrd_DocFileName, "R");
 	_Lseek(fp, 0, 0);
+
+	len = 0;
+	startIdx = 0;
+
 	while(!_Feof(fp)){
-		len = _Fread(buf, 1024, fp);
-		str = &DispBuf[0];
+		len = _Fread(buf, 1024, fp) + (len - startIdx);
 		dstIdx = 0;
 		startIdx = 0;
-		while(dstIdx >= 0 && startIdx < len){
-			dstIdx = IndexOf(DispBuf, len, "\r\n", 2, startIdx, 25);
 
+		while(dstIdx >= 0){
+			dstIdx = IndexOf(DispBuf, len, "\r\n", 2, startIdx, 25);
+			str = &DispBuf[startIdx];
 			if(dstIdx >=0){
-				DispBuf[dstIdx - 2] = '\0';
+				DispBuf[startIdx + 12] = '\0';
 				if(NULL == docs->find(docs, IsMtrNoEqual, str)){
 					docItem = docs->add(docs, NULL, sizeof(DocInfo));
 					sprintf(docItem->mtrNo, "%s", str);
-					docItem->state = UpgrdState_NotStart;
+					docItem->state = UpgrdState_Unknow;
 				}
-				str = &DispBuf[dstIdx + 2];
+
 				startIdx = dstIdx + 2;
 			}
 		}
@@ -204,7 +225,7 @@ static void DocListExport(TList *docs)
 	fp = _Fopen(Upgrd_DocFileName, "W");
 	_Lseek(fp, 0, 0);
 	while(docItem != NULL){
-		len = sprintf(buf, "%s,%d\r\n", docItem->mtrNo, docItem->state);
+		len = sprintf(buf, "%s,%s\r\n", docItem->mtrNo, GetUpgradeStatus(docItem->state));
 		_Fwrite(buf, len, fp);
 		docItem = docItem->next;
 	}
@@ -281,7 +302,7 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 						}
 						docItem = (DocInfo *)docs->add(docs, NULL, sizeof(DocInfo));
 						memcpy(docItem->mtrNo, StrDstAddr, 20);
-						docItem->state = UpgrdState_NotStart;
+						docItem->state = UpgrdState_Unknow;
 
 						_Printfxy(0, 5*16 + 8, "    添加成功！  ", Color_White);
 						PrintfXyMultiLine_VaList(0, 6*16 + 8, "当前档案总数：%d", docs->cnt);
@@ -342,19 +363,20 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 // 开始升级
 static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 {
-	uint8 flags[UpgrdState_Max];
+	uint8 flags[FLG_Max];
+	uint16 cnts[FLG_Max];
 	AppFileInfo *app = &AppInfo;
 	PacketInfo *pkt = &PktInfo;
 	TList *docs = &DocList;
 	DocInfo *docItem;
 	uint16 docIdx, sendIdx, pktIdx, crc16, i, u16Tmp;
-	uint8 *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 *verNo = &DispBuf[1000], *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key, reSendPktCnt;
 	CmdResult cmdResult = CmdResult_Ok;
 	uint32 shutdownTime;
-	uint8 *pData, *ptr;
+	uint8 *pData, *ptr, u8Tmp;
 
 	#if LOG_ON
 	LogPrint("[  upgrade enter  ]\n");
@@ -369,8 +391,8 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	_Printfxy(0, 0, "<<开始升级", Color_White);
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 	/*---------------------------------------------*/
-	ptr = GetVersionNo(pkt->version, 40);
-	PrintfXyMultiLine_VaList(0, 2*16, "版本:%s  CRC:%4X", ptr, pkt->verCrc16);
+	GetVersionNo(pkt->version, verNo);
+	PrintfXyMultiLine_VaList(0, 2*16, "版本:%s  CRC:%4X", verNo, pkt->verCrc16);
 	// to show meter no
 	// to show cmd name
 	// to show cmd msg
@@ -387,10 +409,26 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	}
 
 	CurrCmd = WaterCmd_NoticeUpgrade_OnApp;
+
+	docItem = (DocInfo *)docs->head;
+	if(upgradeMode == 1 && IsInBoot){
+		if(docItem->state == UpgrdState_PktWait){
+			CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
+			ClearMissPktFlags(pkt);
+		}else if(docItem->state == UpgrdState_Err_VerCrc
+			|| docItem->state == UpgrdState_Err_PktCnt
+			|| docItem->state == UpgrdState_Err_AppCrc
+			){
+			CurrCmd = WaterCmd_NoticeUpgrade_OnBoot;
+		}
+		else{
+			// pass
+		}
+	}
 	docIdx = 0;
 	reSendPktCnt = 0;
 	lcdCtrl = 0;
-	memset(flags, 0x00, UpgrdState_Max);
+	memset(flags, 0x00, FLG_Max);
 
 	while(1){
 	
@@ -423,7 +461,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
 				if(CurrCmd == WaterCmd_NoticeUpgrade_OnBoot){
-					if(flags[UpgrdState_NotStart] == 1){
+					if(flags[FLG_NotStart] == 1){
 						CurrCmd = WaterCmd_SendUpgradePacket;
 						GetMissPktList(pkt);
 						_Sleep(500);
@@ -434,12 +472,12 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 					}
 				}
 				else{ // WaterCmd_NoticeUpgrade_OnApp
-					if(flags[UpgrdState_NotStart] == 1){
+					if(flags[FLG_NotStart] == 1){
 						CurrCmd = WaterCmd_NoticeUpgrade_OnBoot;
 						cmdState = Cmd_Send;
 						_Sleep(3000);
 					}
-					else if(flags[UpgrdState_Unknow] == 1){
+					else if(flags[FLG_Unknow] == 1){
 						CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
 						cmdState = Cmd_Send;
 						ClearMissPktFlags(pkt);
@@ -452,29 +490,36 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				}
 				sendIdx = 0;
 				docIdx = 0;
-				memset(flags, 0x00, UpgrdState_Max);
+				memset(flags, 0x00, FLG_Max);
 				continue;
 			}
 			if(cmdState == Cmd_RecvOk){
 				dispIdx = 0;
 				index = 0;
-				ptr = Water6009_GetStrUpgradeForbidReason(pData[index]);
+				ptr = Water6009_GetStrUpgradeForbidReason(pData[index], &u8Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "限制条件: %s\n", ptr);
 				index += 1;
-				ptr = GetVersionNo(&pData[index], 40);
-				sprintf(docItem->ver, ptr);
-				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
-				if(pData[index] == 0x00) {
+				GetVersionNo(&pData[index], docItem->ver);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", docItem->ver);
+				if(u8Tmp == 0x00) {
 					docItem->state = UpgrdState_NotStart;
-				}
-				else if(pData[index] & 0x10 > 0) {	// same ver
-					docItem->state = UpgrdState_Finish;
+					flags[FLG_NotStart] = 1;
 				}
 				else{
-					docItem->state = UpgrdState_Forbid;
+					switch(u8Tmp){
+					case 0x01:	docItem->state = UpgrdState_Err_5_0v;	break;
+					case 0x02:	docItem->state = UpgrdState_Err_3_4v;	break;
+					case 0x04:	docItem->state = UpgrdState_Err_SNR;	break;
+					case 0x08:	docItem->state = UpgrdState_Err_RSSI;	break;
+					case 0x10:	docItem->state = UpgrdState_Err_VerNo;	break;
+					case 0x20:	docItem->state = UpgrdState_Err_VerCrc;	break;
+					default: break;
+					}
+
+					flags[FLG_Forbid] = 1;
 				}
 
-				flags[docItem->state] = 1;
+				IsInBoot = (CurrCmd == WaterCmd_NoticeUpgrade_OnBoot ? true : false);
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -486,7 +531,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 					docItem->state = UpgrdState_Unknow;
 				}
 
-				flags[docItem->state] = 1;
+				flags[FLG_Unknow] = 1;
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -512,7 +557,14 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 			else{
 
-				if(docItem->state != UpgrdState_NotStart){
+				if(docItem->state == UpgrdState_NotStart
+					|| docItem->state == UpgrdState_Err_VerCrc
+					|| docItem->state == UpgrdState_Err_PktCnt
+					|| docItem->state == UpgrdState_Err_AppCrc
+					){
+					// pass
+				}
+				else{
 					continue;
 				}
 				sprintf(cmdName, "通知开始升级-B");
@@ -559,6 +611,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				continue;
 			}
 			if(cmdState == Cmd_RecvOk){		// no ack , default is ok
+				IsInBoot = true;
 				if(sendIdx == pkt->missPktsCnt){
 					cmdState = Cmd_Finish;
 				}
@@ -595,16 +648,16 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
-				if(flags[UpgrdState_NotStart] == 1){
+				if(flags[FLG_NotStart] == 1 || flags[FLG_Error] == 1){
 					CurrCmd = WaterCmd_NoticeUpgrade_OnBoot;
 				}
-				else if(flags[UpgrdState_PktWait] == 1
+				else if(flags[FLG_PktWait] == 1
 					&& GetMissPktList(pkt) > 0
 					&& (++reSendPktCnt) < Upgrd_ReSendPktMax
 				){
 					CurrCmd = WaterCmd_SendUpgradePacket;
 				}
-				else if(flags[UpgrdState_Finish] == 1 || flags[UpgrdState_Unknow] == 1){
+				else if(flags[FLG_Finish] == 1 || flags[FLG_Unknow] == 1){
 					CurrCmd = WaterCmd_QueryUpgradeStatus_OnApp;
 				}
 				else{
@@ -612,7 +665,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 					break;
 				}
 
-				memset(flags, 0x00, UpgrdState_Max);
+				memset(flags, 0x00, FLG_Max);
 				cmdState = Cmd_Send;
 				sendIdx = 0;
 				docIdx = 0;
@@ -622,29 +675,26 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			if(cmdState == Cmd_RecvOk){
 				dispIdx = 0;
 				index = 0;
-				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				ptr = Water6009_GetStrUpgradeStatus(pData[index], &u8Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
 				index += 1;
-				ptr = GetVersionNo(&pData[index], 40);
-				sprintf(docItem->ver, ptr);
+				GetVersionNo(&pData[index], docItem->ver);
 				index += 40;	
-				AddMissPktFlags(pkt, &pData[index], 52);
-				GetMissPktList_CurrPkt(&pData[index], 52, pkt->packetCnt, NULL, &u16Tmp);
+				AddMissPktFlags(pkt, &pData[index], pkt->bitFlagsCnt);
+				GetMissPktList_CurrPkt(&pData[index], pkt->bitFlagsCnt, pkt->packetCnt, NULL, &u16Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前缺包: %d\n", u16Tmp);
-				if(pData[index] & 0x01) {
-					docItem->state = UpgrdState_NotStart;
-				}
-				else if(pData[index] & 0x02) {
-					docItem->state = UpgrdState_PktWait;
-				}
-				else if(pData[index] & 0x04) {
-					docItem->state = UpgrdState_Finish;
-				}
-				else{
-					docItem->state = UpgrdState_Error;
+				switch (u8Tmp)
+				{
+				case 0x01: docItem->state = UpgrdState_NotStart; flags[FLG_NotStart] = 1; break;
+				case 0x02: docItem->state = UpgrdState_PktWait; flags[FLG_PktWait] = 1; break;
+				case 0x04: docItem->state = UpgrdState_Finish; flags[FLG_Finish] = 1; break;
+				case 0x08: docItem->state = UpgrdState_Err_AppCrc; flags[FLG_Error] = 1; break;
+				case 0x10: docItem->state = UpgrdState_Err_VerCrc; flags[FLG_Error] = 1; break;
+				case 0x20: docItem->state = UpgrdState_Err_PktCnt; flags[FLG_Error] = 1; break;
+				default: break;
 				}
 
-				flags[docItem->state] = 1;
+				IsInBoot = true;
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -653,7 +703,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 			if(cmdState == Cmd_RecvNg){
 				docItem->state = UpgrdState_Unknow;
-				flags[docItem->state] = 1;
+				flags[FLG_Unknow] = 1; 
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -668,9 +718,12 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			docIdx++;
 			tryCnt = 3;
 
-			if(docItem->state == UpgrdState_Finish 
-				|| docItem->state == UpgrdState_Error
-				|| docItem->state == UpgrdState_Forbid){
+			if(docItem->state == UpgrdState_Unknow 
+				|| docItem->state == UpgrdState_NotStart
+				|| docItem->state == UpgrdState_PktWait){
+				// pass
+			}
+			else{
 				continue;
 			}
 
@@ -694,33 +747,30 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
-				memset(flags, 0x00, UpgrdState_Max);
+				memset(flags, 0x00, FLG_Max);
 				cmdState = Cmd_Exit;
 				break;
 			}
 			if(cmdState == Cmd_RecvOk){
 				dispIdx = 0;
 				index = 0;
-				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				ptr = Water6009_GetStrUpgradeStatus(pData[index], &u8Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
 				index += 1;
-				ptr = GetVersionNo(&pData[index], 40);
-				sprintf(docItem->ver, ptr);
-				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
-				if(pData[index] & 0x01) {
-					docItem->state = UpgrdState_NotStart;
-				}
-				else if(pData[index] & 0x02) {
-					docItem->state = UpgrdState_PktWait;
-				}
-				else if(pData[index] & 0x04) {
-					docItem->state = UpgrdState_Finish;
-				}
-				else{
-					docItem->state = UpgrdState_Error;
+				GetVersionNo(&pData[index], docItem->ver);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", docItem->ver);
+				switch (u8Tmp)
+				{
+				case 0x01: docItem->state = UpgrdState_NotStart; flags[FLG_NotStart] = 1; break;
+				case 0x02: docItem->state = UpgrdState_PktWait; flags[FLG_PktWait] = 1; break;
+				case 0x04: docItem->state = UpgrdState_Finish; flags[FLG_Finish] = 1; break;
+				case 0x08: docItem->state = UpgrdState_Err_AppCrc; flags[FLG_Error] = 1; break;
+				case 0x10: docItem->state = UpgrdState_Err_VerCrc; flags[FLG_Error] = 1; break;
+				case 0x20: docItem->state = UpgrdState_Err_PktCnt; flags[FLG_Error] = 1; break;
+				default: break;
 				}
 
-				flags[docItem->state] = 1;
+				IsInBoot = false;
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -741,10 +791,12 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			
 			docIdx++;
 			tryCnt = 3;
-			if(docItem->state == UpgrdState_NotStart 
-				|| docItem->state == UpgrdState_Error
-				|| docItem->state == UpgrdState_Forbid
-				|| docItem->state == UpgrdState_PktWait){
+			if(docItem->state == UpgrdState_Unknow 
+				|| docItem->state == UpgrdState_NotStart
+				|| docItem->state == UpgrdState_Finish){
+				// pass
+			}
+			else{
 				continue;
 			}
 
@@ -798,13 +850,13 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		#ifdef Project_6009_IR
 		timeout = 2000;
 		#else
-		//timeout = 8000;
-		timeout = 1000;		// test
+		timeout = 8000;
+		//timeout = 1000;		// test
 		#endif
 		
 		if(IsNoAckCmd){
 			ackLen = 0;
-			timeout = 0;
+			timeout = 1000;
 			tryCnt = 1;
 		}
 
@@ -849,12 +901,50 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 		#endif
 	}
 	
-	while(1){
-		key = _ReadKey();
-		if(key == KEY_CANCEL || KEY_ENTER){
-			break;
+	// show result count
+	if(upgradeMode == 1 && cmdResult != CmdResult_Cancel){
+		ptr = GetUpgradeStatus(docItem->state);
+		PrintfXyMultiLine_VaList(0, 5*16, " 升级状态: %s\n 当前版本: %s\n 当前缺包: %d\n", 
+				ptr, docItem->ver, pkt->missPktsCnt);
+		do{
+			key = _ReadKey();
+			_Sleep(100);
+		}while(key != KEY_CANCEL && key != KEY_ENTER);
+	}
+	else if(upgradeMode == 2 && cmdResult != CmdResult_Cancel){
+		memset(cnts, 0x00, FLG_Max * 2);
+		docItem = (DocInfo *)docs->head;
+		while(docItem != NULL){
+			switch (docItem->state){
+			case UpgrdState_Unknow: cnts[UpgrdState_Unknow]++; break;
+			case UpgrdState_Err_5_0v: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_3_4v: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_SNR: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_RSSI: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_VerNo: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_VerCrc: cnts[FLG_Forbid]++; break;
+			case UpgrdState_Err_AppCrc: cnts[FLG_Error]++; break;
+			case UpgrdState_Err_PktCnt: cnts[FLG_Error]++; break;
+			case UpgrdState_NotStart: cnts[FLG_NotStart]++; break;
+			case UpgrdState_PktWait: cnts[FLG_PktWait]++; break;
+			case UpgrdState_Finish: cnts[FLG_Finish]++; break;
+			default: cnts[UpgrdState_Unknow]++; break;
+			}
+			docItem = docItem->next;
 		}
-		_Sleep(100);
+
+		PrintfXyMultiLine_VaList(0, 1*16 + 8, " 档案总数: %d\n 升级成功: %d\n 缺包等待: %d\n 未开始  : %d\n 升级错误: %d\n 禁止升级: %d\n 未知状态: %d\n", 
+				docs->cnt, cnts[FLG_Finish], cnts[FLG_PktWait], cnts[FLG_NotStart]
+				, cnts[FLG_Error], cnts[FLG_Forbid], cnts[FLG_Unknow]);
+		_Printfxy(0, 9*16, "返回  < 完成 >  详情", Color_White);
+		do{
+			key = _ReadKey();
+			_Sleep(100);
+		}while(key != KEY_CANCEL && key != KEY_ENTER);
+
+		if(key == KEY_ENTER){
+			key = ShowDocList(docs, 0);
+		}
 	}
 
 	_SetShutDonwTime(shutdownTime);
@@ -867,19 +957,19 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 // 查询升级状态
 static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 {
-	UpgradeState state = UpgrdState_NotStart;
+	uint8 flagUnknow = 0;
 	AppFileInfo *app = &AppInfo;
 	PacketInfo *pkt = &PktInfo;
 	TList *docs = &DocList;
 	DocInfo *docItem;
 	uint16 docIdx, i, u16Tmp;
-	uint8 *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 *verNo = &DispBuf[1000], *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
 	CmdResult cmdResult = CmdResult_Ok;
 	uint32 shutdownTime;
-	uint8 *pData, *ptr;
+	uint8 *pData, *ptr, u8Tmp;
 
 	#if LOG_ON
 	LogPrint("[  query enter  ]\n IsNoAckCmd: %d \n", IsNoAckCmd);
@@ -894,8 +984,8 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	_Printfxy(0, 0, "<<查询升级状态", Color_White);
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 	/*---------------------------------------------*/
-	ptr = GetVersionNo(pkt->version, 40);
-	PrintfXyMultiLine_VaList(0, 2*16, "版本:%s  CRC:%4X", ptr, pkt->verCrc16);
+	GetVersionNo(pkt->version, verNo);
+	PrintfXyMultiLine_VaList(0, 2*16, "版本:%s  CRC:%4X", verNo, pkt->verCrc16);
 	// to show meter no
 	// to show cmd name
 	// to show cmd msg
@@ -911,7 +1001,13 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 		}
 	}
 
-	CurrCmd = WaterCmd_QueryUpgradeStatus_OnApp;
+	if(upgradeMode == 1 && ((DocInfo *)docs->head)->state == UpgrdState_PktWait){
+		CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
+		ClearMissPktFlags(pkt);
+	}
+	else{
+		CurrCmd = WaterCmd_QueryUpgradeStatus_OnApp;
+	}
 	docIdx = 0;
 	lcdCtrl = 0;
 
@@ -938,7 +1034,6 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
 				GetMissPktList(pkt);
-				state = (pkt->missPktsCnt > 0 ? UpgrdState_PktWait : UpgrdState_Finish);
 				cmdState = Cmd_Exit;
 				docIdx = 0;
 				break;
@@ -946,27 +1041,26 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			if(cmdState == Cmd_RecvOk){
 				dispIdx = 0;
 				index = 0;
-				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				ptr = Water6009_GetStrUpgradeStatus(pData[index], &u8Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
 				index += 1;
-				ptr = GetVersionNo(&pData[index], 40);
-				sprintf(docItem->ver, ptr);
+				GetVersionNo(&pData[index], docItem->ver);
 				index += 40;
-				AddMissPktFlags(pkt, &pData[index], 52);
-				GetMissPktList_CurrPkt(&pData[index], 52, pkt->packetCnt, NULL, &u16Tmp);
+				AddMissPktFlags(pkt, &pData[index], pkt->bitFlagsCnt);
+				GetMissPktList_CurrPkt(&pData[index], pkt->bitFlagsCnt, pkt->packetCnt, NULL, &u16Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "当前缺包: %d\n", u16Tmp);
-				if(pData[index] & 0x01) {
-					docItem->state = UpgrdState_NotStart;
+				switch (u8Tmp)
+				{
+				case 0x01: docItem->state = UpgrdState_NotStart; break;
+				case 0x02: docItem->state = UpgrdState_PktWait; break;
+				case 0x04: docItem->state = UpgrdState_Finish; break;
+				case 0x08: docItem->state = UpgrdState_Err_AppCrc; break;
+				case 0x10: docItem->state = UpgrdState_Err_VerCrc; break;
+				case 0x20: docItem->state = UpgrdState_Err_PktCnt; break;
+				default: break;
 				}
-				else if(pData[index] & 0x02) {
-					docItem->state = UpgrdState_PktWait;
-				}
-				else if(pData[index] & 0x04) {
-					docItem->state = UpgrdState_Finish;
-				}
-				else{
-					docItem->state = UpgrdState_Error;
-				}
+
+				IsInBoot = true;
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -985,7 +1079,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			#endif
 
 			docIdx++;
-			if(docItem->state != UpgrdState_Unknow){
+			if(docItem->state != UpgrdState_Unknow && docItem->state != UpgrdState_PktWait){
 				continue;
 			}
 			sprintf(cmdName, "查询升级状态-B");
@@ -1008,7 +1102,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 		case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
 			/*---------------------------------------------*/
 			if(cmdState == Cmd_Finish){
-				if(state == UpgrdState_Unknow){
+				if(flagUnknow){
 					CurrCmd = WaterCmd_QueryUpgradeStatus_OnBoot;
 					cmdState = Cmd_Send;
 					docIdx = 0;
@@ -1022,24 +1116,23 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			if(cmdState == Cmd_RecvOk){
 				dispIdx = 0;
 				index = 0;
-				ptr = Water6009_GetStrUpgradeStatus(pData[index]);
+				ptr = Water6009_GetStrUpgradeStatus(pData[index], &u8Tmp);
 				dispIdx += sprintf(&cmdMsg[dispIdx], "升级状态: %s\n", ptr);
 				index += 1;
-				ptr = GetVersionNo(&pData[index], 40);
-				sprintf(docItem->ver, ptr);
-				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", ptr);
-				if(pData[index] & 0x01) {
-					docItem->state = UpgrdState_NotStart;
+				GetVersionNo(&pData[index], docItem->ver);
+				dispIdx += sprintf(&cmdMsg[dispIdx], "当前版本: %s\n", docItem->ver);
+				switch (u8Tmp)
+				{
+				case 0x01: docItem->state = UpgrdState_NotStart; break;
+				case 0x02: docItem->state = UpgrdState_PktWait; break;
+				case 0x04: docItem->state = UpgrdState_Finish; break;
+				case 0x08: docItem->state = UpgrdState_Err_AppCrc; break;
+				case 0x10: docItem->state = UpgrdState_Err_VerCrc; break;
+				case 0x20: docItem->state = UpgrdState_Err_PktCnt; break;
+				default: break;
 				}
-				else if(pData[index] & 0x02) {
-					docItem->state = UpgrdState_PktWait;
-				}
-				else if(pData[index] & 0x04) {
-					docItem->state = UpgrdState_Finish;
-				}
-				else{
-					docItem->state = UpgrdState_Error;
-				}
+				flagUnknow = 0;
+				IsInBoot = false;
 
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
@@ -1048,7 +1141,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			}
 			if(cmdState == Cmd_RecvNg){
 				docItem->state = UpgrdState_Unknow;
-				state = UpgrdState_Unknow;
+				flagUnknow = 1;
 				if(docIdx == docs->cnt){
 					cmdState = Cmd_Finish;
 				}
@@ -1155,18 +1248,22 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	
 	if(upgradeMode == 1){
 		ptr = GetUpgradeStatus(docItem->state);
-		PrintfXyMultiLine_VaList(0, 5*16, " 升级状态: %s\n 当前版本: %s\n 当前缺包: %d\n", 
+		if(CurrCmd == WaterCmd_QueryUpgradeStatus_OnBoot && ! flagUnknow){
+			PrintfXyMultiLine_VaList(0, 5*16, " 升级状态: %s\n 当前版本: %s\n 当前缺包: %d\n   ", 
 				ptr, docItem->ver, pkt->missPktsCnt);
-		while(1){
-			key = _ReadKey();
-			if(key == KEY_CANCEL || key == KEY_ENTER){
-				break;
-			}
-			_Sleep(100);
 		}
+		else{
+			PrintfXyMultiLine_VaList(0, 5*16, " 升级状态: %s\n 当前版本: %s\n                  ", 
+				ptr, docItem->ver);
+		}
+		
+		do{
+			key = _ReadKey();
+			_Sleep(100);
+		}while(key != KEY_CANCEL && key != KEY_ENTER);
 	}
 	else{
-		ShowDocList(&docs, 0);
+		key = ShowDocList(docs, 0);
 	}
 	
 
@@ -1183,8 +1280,8 @@ void UpgradeFunc(void)
 	uint8 key, menuItemNo, u8Tmp;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * fileName = NULL, *ptr;
-	uint8 version[20];
+	uint8 * fileName = NULL;
+	uint8 version[20], *verNo = &DispBuf[1000];
 	uint8 currUi = 0, uiRowIdx;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
 	DocInfo *docItem;
@@ -1214,6 +1311,10 @@ void UpgradeFunc(void)
 	version[0] = 0x00;
 	if(DocList.cnt == 0 || DocList.add == NULL){
 		List_Init(&DocList);
+	}
+	if(upgradeMode == 1 && DocList.cnt > 0){	// 单表升级 表号初始化 
+		docItem = (DocInfo *)DocList.head;
+		memcpy(StrDstAddr, docItem->mtrNo, 20);
 	}
 
 	// 菜单
@@ -1249,6 +1350,10 @@ void UpgradeFunc(void)
 		/*---------------------------------------------*/
 		// ui ctrl
 		_Printfxy(0, 7*16 + 8, version, Color_White);
+
+		#if LOG_ON
+		LogPrint("version:%s\n", version);
+		#endif
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -1261,10 +1366,20 @@ void UpgradeFunc(void)
 
 		if(upgradeMode == 1){	// 单表升级 表号 
 			if(StrDstAddr[0] >= '0' && StrDstAddr[0] <= '9' ){
-				DocList.clear(&DocList);
-				docItem = (DocInfo *)DocList.add(&DocList, NULL, sizeof(DocInfo));
-				memcpy(docItem->mtrNo, StrDstAddr, 20);
-				docItem->state = UpgrdState_NotStart;
+				if(docItem == NULL || strcmp(docItem->mtrNo, StrDstAddr) != 0){
+					DocList.clear(&DocList);
+					docItem = (DocInfo *)DocList.add(&DocList, NULL, sizeof(DocInfo));
+					memcpy(docItem->mtrNo, StrDstAddr, 20);
+					docItem->state = UpgrdState_Unknow;
+
+					#ifdef Project_6009_RF
+					MeterNoSave(StrDstAddr, 0);
+					#elif defined Project_6009_IR
+					MeterNoSave(StrDstAddr, 1);
+					#else // Project_8009_RF
+					MeterNoSave(StrDstAddr, 2);
+					#endif
+				}
 			}
 		}
 
@@ -1305,9 +1420,16 @@ void UpgradeFunc(void)
 					version[0] = 0x00;
 				}
 				else{
-					ptr = GetVersionNo(PktInfo.version, 40);
-					sprintf(version, "v%s  CRC:%4X", ptr, PktInfo.verCrc16);
+					GetVersionNo(PktInfo.version, verNo);
+					sprintf(version, "Ver:%s  CRC:%4X", verNo, PktInfo.verCrc16);
+					docItem = (DocInfo *)DocList.head;
+					while(docItem != NULL){
+						docItem->state = UpgrdState_Unknow;
+						docItem->ver[0] = 0x00;
+						docItem = docItem->next;
+					}
 				}
+				ShowMsg(16, 5 * 16, "升级信息已初始化！", 1000);
 			}
 			break;
 
@@ -1432,7 +1554,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 		(app->crc16_all52K[0] + app->crc16_all52K[1] * 256),  crc16, 
 		(app->crc16_appVer[0] + app->crc16_appVer[1] * 256),  crc16_tmp,
 		pktInfo->fileKbSize, pktInfo->packetCnt);
-	_Sleep(4000);
+	_Sleep(3000);
 	// -->end
 
 	return 0;

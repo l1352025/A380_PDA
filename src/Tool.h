@@ -63,7 +63,7 @@ int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstL
 
 /*
 * 描  述：打印日志到文件或串口, 通信串口在收发时不可打印到串口
-*   1. LOG_ON && LogScom_On = 0  输出到日志文件 LogName "debug.txt" 
+*   1. LOG_ON && LogScom_On = 0  输出到日志文件 LogFileName "debug.txt" 
 *	2. LOG_ON && LogScom_On = 1  输出到串口 LogPort 波特率为 "115200,E,8,1"
 *	3. LOG_ON == 0 				 不输出日志
 * 参  数：buf - 数据缓冲区
@@ -84,15 +84,15 @@ void LogWrite(uint8 *buf, uint32 len)
 	_SendComStr(buf, len);
 	_CloseCom();
 #else
-	if(_Access(LogName, 0) < 0){
-		fp = _Fopen(LogName, "W");
+	if(_Access(LogFileName, 0) < 0){
+		fp = _Fopen(LogFileName, "W");
 	}else{
-		fp = _Fopen(LogName, "RW");
+		fp = _Fopen(LogFileName, "RW");
 	}
 	
-	if(_Filelenth(fp) > 1024*1024){		// 大于 1MB 时，重建日志文件
-		_Remove(LogName);
-		fp = _Fopen(LogName, "W");
+	if(_Filelenth(fp) > LogFileSize){		// 大于最大字节数时，重建日志文件
+		_Remove(LogFileName);
+		fp = _Fopen(LogFileName, "W");
 	}
 	_Lseek(fp, 0, 2);
 	_Fwrite(buf, len, fp);
@@ -1690,10 +1690,6 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 			sprintf(strTmp, "重发..%d", sendCnt);
 		}
 
-		if(IsNoAckCmd == true){
-			timeout = 500;
-		}
-
 		// 接收
 		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
 		RxLen = 0;
@@ -1809,6 +1805,71 @@ uint16 CheckAvalibleMemory()
 	}
 
 	return kSize;
+}
+
+/**
+ * 表号保存
+ * @param mtrNo - 表号: 12/16位字符
+ * @param type  - 类型: 0 - SR6009_RF表号, 1 - SR6009_IR表号, 2 - SR8009表号， 3+ - 其他
+ * @return void
+*/
+void MeterNoSave(uint8 *mtrNo, uint8 type)
+{
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		fp = _Fopen("system.cfg", "W");
+	}else{
+		fp = _Fopen("system.cfg", "RW");
+	}
+	
+	switch (type)
+	{
+	case 0: _Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+		break;
+	case 1: _Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		break;
+	case 2: _Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+		break;
+	default:
+		_Lseek(fp, 20, 0);		// 其他
+		break;
+	}
+	_Fwrite(mtrNo, TXTBUF_LEN, fp);
+	_Fclose(fp);
+}
+
+/**
+ * 表号载入
+ * @param mtrNo - 表号: 12/16位字符
+ * @param type  - 类型: 0 - SR6009_RF表号, 1 - SR6009_IR表号, 2 - SR8009表号， 3+ - 其他
+ * @return void
+*/
+void MeterNoLoad(uint8 *mtrNo, uint8 type)
+{
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		mtrNo[0] = 0x00;
+		return;
+	}else{
+		fp = _Fopen("system.cfg", "R");
+	}
+	
+	switch (type)
+	{
+	case 0: _Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+		break;
+	case 1: _Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		break;
+	case 2: _Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+		break;
+	default:
+		_Lseek(fp, 20, 0);		// 其他
+		break;
+	}
+	_Fread(mtrNo, TXTBUF_LEN, fp);
+	_Fclose(fp);
 }
 
 #endif

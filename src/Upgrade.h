@@ -46,20 +46,35 @@ typedef struct
     uint16  lastPktSize;
     uint16  packetCnt;      
     uint8   bitFlags[Upgrd_PacketCntMax / 8];   
-    uint16  bitFlagsCnt;
+    uint16  bitFlagsCnt;                        // actual bitflag byte cnt 
     uint16  missPkts[Upgrd_PacketCntMax];  
-    uint16  missPktsCnt;
+    uint16  missPktsCnt;                        // actual miss pkt cnt
 }PacketInfo;
 
 typedef enum {
-    UpgrdState_Unknow  = 0,         // unknow (init / no response)
-    UpgrdState_Forbid,              // forbid (can't upgrade reason)
+    UpgrdState_Unknow   = 0,        // unknow (init / no response)
+    UpgrdState_Err_5_0v = 1,        // E-5.0v (5.0v vbat  error)    in notice (error 1 ~ error 6 )
+    UpgrdState_Err_3_4v,            // E-3.4v (3.4v vbat error)
+    UpgrdState_Err_SNR,             // E-SNR (SNR error)
+    UpgrdState_Err_RSSI,            // E-RSSI (RSSI error)
+    UpgrdState_Err_VerNo,           // E-VerNo (ver same error)
+    UpgrdState_Err_VerCrc,          // E-CrcV (ver crc error)       in query (error 6 ~ error 8)
+    UpgrdState_Err_AppCrc,          // E-CrcA (app crc error)   
+    UpgrdState_Err_PktCnt = 8,      // E-Cnt (pkt cnt error)   
     UpgrdState_NotStart,            // not   (not start)
     UpgrdState_PktWait,             // wait  (packet wait)
-    UpgrdState_Finish,              // ok    (finish)
-    UpgrdState_Error,                // error (upgrade error 0x08/0x10/0x20)
-    UpgrdState_Max
+    UpgrdState_Finish               // ok    (finish)
 }UpgradeState;
+
+typedef enum {
+    FLG_Unknow,
+    FLG_Forbid,     // err 1-6
+    FLG_NotStart,
+    FLG_PktWait,
+    FLG_Finish,
+    FLG_Error,      // err 7-8
+    FLG_Max
+}StateFlag;
 
 typedef struct docNode{
     struct docNode *prev;

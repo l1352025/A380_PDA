@@ -66,11 +66,12 @@ typedef unsigned char bool;
 #endif
 
 #define VerInfo_Previwer    (char *)"预览版2"    // 预览版时,定义该宏
-#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
-#define LogName     "debug.txt" // 日志文件名
+#define LogFileName "debug.txt" // 日志文件名
+#define LogFileSize (50*1024)   // 日志文件最大字节数：20K
 #define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define LogTxRx     1           // 日志输出Tx/Rx数据：0 - 不输出， 1 - 输出
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
@@ -218,6 +219,8 @@ uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char
 CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
 void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
+void MeterNoSave(uint8 *mtrNo, uint8 type);
+void MeterNoLoad(uint8 *mtrNo, uint8 type);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 

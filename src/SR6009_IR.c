@@ -36,7 +36,7 @@ void WaterCmdFunc_CommonCmd(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
-	char strDstAddrTmp[20];
+	char strDstAddrBak[20];
 
 	_ClearScreen();
 
@@ -83,16 +83,15 @@ void WaterCmdFunc_CommonCmd(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				if(menuItemNo == 1){ // 读用量时
-					sprintf(strDstAddrTmp, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
+					memcpy(strDstAddrBak, StrDstAddr, 20);
+					sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
 				}
-				else{
-					sprintf(strDstAddrTmp, StrDstAddr);	
-				}
+
 				#if (AddrLen == 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", strDstAddrTmp, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", strDstAddrTmp, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
                 #endif
 			}
 
@@ -234,10 +233,10 @@ void WaterCmdFunc_CommonCmd(void)
 					break;
 				}
 
-				if( strcmp(strDstAddrTmp, "D4D4D4D4D4D4D4D4") != 0 
-					&& (strDstAddrTmp[0] < '0' || strDstAddrTmp[0] > '9'))
+				if( strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 
+					&& (StrDstAddr[0] < '0' || StrDstAddr[0] > '9'))
 				{
-					sprintf(strDstAddrTmp, " 请输入");
+					sprintf(StrDstAddr, " 请输入");
 					currUi = 0;
 					continue;
 				}
@@ -245,8 +244,6 @@ void WaterCmdFunc_CommonCmd(void)
 				isUiFinish = true;
 				continue;	// go back to get ui args
 			}
-
-			memcpy(StrDstAddr, strDstAddrTmp, 20);
 
 			// 地址填充
 			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
@@ -264,6 +261,9 @@ void WaterCmdFunc_CommonCmd(void)
 			// 发送、接收、结果显示
 			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
+			if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
+				memcpy(StrDstAddr, strDstAddrBak, 20);
+			}
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
@@ -274,6 +274,9 @@ void WaterCmdFunc_CommonCmd(void)
 			}
 		}
 		
+		if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
+			memcpy(StrDstAddr, strDstAddrBak, 20);
+		}
 	}
 }
 
@@ -2214,7 +2217,7 @@ void MainFuncReadRealTimeData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-	char strDstAddrTmp[20];
+	char strDstAddrBak[20];
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2234,12 +2237,13 @@ void MainFuncReadRealTimeData(void)
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
-			sprintf(strDstAddrTmp, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
+			memcpy(strDstAddrBak, StrDstAddr, 20);
+			sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
 			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", strDstAddrTmp, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", strDstAddrTmp, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
 			#endif
 		}
 			
@@ -2277,10 +2281,10 @@ void MainFuncReadRealTimeData(void)
 				break;
 			}
 
-			if( strcmp(strDstAddrTmp, "D4D4D4D4D4D4D4D4") != 0 
-				&& (strDstAddrTmp[0] < '0' || strDstAddrTmp[0] > '9'))
+			if( strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 
+				&& (StrDstAddr[0] < '0' || StrDstAddr[0] > '9'))
 			{
-				sprintf(strDstAddrTmp, " 请输入");
+				sprintf(StrDstAddr, " 请输入");
 				currUi = 0;
 				continue;
 			}
@@ -2288,8 +2292,6 @@ void MainFuncReadRealTimeData(void)
 			isUiFinish = true;
 			continue;	// go back to get ui args
 		}
-
-		memcpy(StrDstAddr, strDstAddrTmp, 20);
 
 		// 地址填充
 		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
@@ -2307,7 +2309,10 @@ void MainFuncReadRealTimeData(void)
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
-		
+		if(StrDstAddr[0] == 'D'){
+			memcpy(StrDstAddr, strDstAddrBak, 20);
+		}
+
 		// 继续 / 返回
 		if (key == KEY_CANCEL){
 			break;
@@ -2315,6 +2320,10 @@ void MainFuncReadRealTimeData(void)
 			isUiFinish = false;
 			continue;
 		}
+	}
+
+	if(StrDstAddr[0] == 'D'){
+		memcpy(StrDstAddr, strDstAddrBak, 20);
 	}
 }
 
@@ -3106,16 +3115,14 @@ void MainFuncEngineerDebuging(void)
 int main(void)
 {
 	_GuiMenuStru MainMenu;
-	int fp;
-
-	fp = _Fopen("system.cfg", "R");
+	
 	#ifdef Project_6009_RF
-		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-	#else
-		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+	MeterNoLoad(StrDstAddr, 0);
+	#elif defined Project_6009_IR
+	MeterNoLoad(StrDstAddr, 1);
+	#else // Project_8009_RF
+	MeterNoLoad(StrDstAddr, 2);
 	#endif
-	_Fread(StrDstAddr, TXTBUF_LEN, fp);
-	_Fclose(fp);
 	
 	MainMenu.left=0;
 	MainMenu.top=0;

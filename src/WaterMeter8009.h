@@ -2579,27 +2579,19 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 {
 	uint8 sendCnt = 0, cmdResult, ret;
 	uint16 waitTime = 0, currRxLen;
-	int fp;
-
-	if(_Access("system.cfg", 0) < 0){
-		fp = _Fopen("system.cfg", "W");
-	}else{
-		fp = _Fopen("system.cfg", "RW");
-	}
+	
 	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
-		_Lseek(fp, 20, 0);	// 集中器号
+		MeterNoSave(StrDstAddr, 3);
 	}else{
 		#ifdef Project_6009_RF
-		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-		#elif defined(Project_6009_IR)
-		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		MeterNoSave(StrDstAddr, 0);
+		#elif defined Project_6009_IR
+		MeterNoSave(StrDstAddr, 1);
 		#else // Project_8009_RF
-		_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+		MeterNoSave(StrDstAddr, 2);
 		#endif
 	}
-	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
-	_Fclose(fp);
 	
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 #if (AddrLen < 8)

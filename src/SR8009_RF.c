@@ -4251,18 +4251,14 @@ void MainFuncEngineerDebuging(void)
 int main(void)
 {
 	_GuiMenuStru MainMenu;
-	int fp;
-
-	fp = _Fopen("system.cfg", "R");
+	
 	#ifdef Project_6009_RF
-	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-	#elif defined(Project_6009_IR)
-	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+	MeterNoLoad(StrDstAddr, 0);
+	#elif defined Project_6009_IR
+	MeterNoLoad(StrDstAddr, 1);
 	#else // Project_8009_RF
-	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+	MeterNoLoad(StrDstAddr, 2);
 	#endif
-	_Fread(StrDstAddr, TXTBUF_LEN, fp);
-	_Fclose(fp);
 	
 	MainMenu.left=0;
 	MainMenu.top=0;

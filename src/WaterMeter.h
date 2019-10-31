@@ -664,9 +664,10 @@ uint16 Water6009_GetStrTestStatus(uint16 statusCode, char * buf)
 * 描  述：获取无法升级原因
 * 参  数：
 * 		code - 无法升级原因代码
+*		bitVal - 对应位的值
 * 返回值：char * - 解析后的字符串
 */
-char * Water6009_GetStrUpgradeForbidReason(uint8 code)
+char * Water6009_GetStrUpgradeForbidReason(uint8 code, uint8 *bitVal)
 {
 	char * str = NULL;
 	uint8 mask = 1, i;
@@ -674,14 +675,15 @@ char * Water6009_GetStrUpgradeForbidReason(uint8 code)
 	for(i = 0; i < 6; i++){
 
 		mask = (1 << i);
+		*bitVal = code & mask;
 		
-		switch(code & mask){
+		switch(*bitVal){
 		case 0x01:	str = "5.0v VBat";	break;
 		case 0x02:	str = "3.4v VBat";	break;
 		case 0x04:	str = "SNR";	break;
 		case 0x08:	str = "RSSI";	break;
-		case 0x10:	str = "VerSame";	break;
-		case 0x20:	str = "VerCrcErr";	break;
+		case 0x10:	str = "VerNo";	break;
+		case 0x20:	str = "VerCrc";	break;
 		default:
 			break;
 		}
@@ -692,7 +694,8 @@ char * Water6009_GetStrUpgradeForbidReason(uint8 code)
 	}
 
 	if(str == NULL){
-		str = "NoLimit";
+		str = "NoErr";
+		*bitVal = 0;
 	}
 
 	return str;
@@ -702,9 +705,10 @@ char * Water6009_GetStrUpgradeForbidReason(uint8 code)
 * 描  述：获取升级状态
 * 参  数：
 * 		code - 升级状态代码
+*		bitVal - 对应位的值
 * 返回值：char * - 解析后的字符串
 */
-char * Water6009_GetStrUpgradeStatus(uint8 code)
+char * Water6009_GetStrUpgradeStatus(uint8 code, uint8 *bitVal)
 {
 	char * str = NULL;
 	uint8 mask = 1, i;
@@ -712,8 +716,9 @@ char * Water6009_GetStrUpgradeStatus(uint8 code)
 	for(i = 0; i < 6; i++){
 
 		mask = (1 << i);
+		*bitVal = code & mask;
 		
-		switch(code & mask){
+		switch(*bitVal){
 		case 0x01:	str = "未开始";	break;
 		case 0x02:	str = "缺包等待";	break;
 		case 0x04:	str = "升级完成";	break;
@@ -727,6 +732,11 @@ char * Water6009_GetStrUpgradeStatus(uint8 code)
 		if(str != NULL){
 			break;
 		}
+	}
+
+	if(str == NULL){
+		str = "";
+		*bitVal = 0;
 	}
 
 	return str;
@@ -2641,26 +2651,18 @@ CmdResult Protol6009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, u
 {
 	CmdResult cmdResult;
 
-	int fp;
-
-	if(_Access("system.cfg", 0) < 0){
-		fp = _Fopen("system.cfg", "W");
-	}else{
-		fp = _Fopen("system.cfg", "RW");
-	}
 	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
-		_Lseek(fp, 20, 0);	// 集中器号
+		MeterNoSave(StrDstAddr, 3);
 	}else{
 		#ifdef Project_6009_RF
-		_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-		#else
-		_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+		MeterNoSave(StrDstAddr, 0);
+		#elif defined Project_6009_IR
+		MeterNoSave(StrDstAddr, 1);
+		#else // Project_8009_RF
+		MeterNoSave(StrDstAddr, 2);
 		#endif
 	}
-	_Fwrite(StrDstAddr, TXTBUF_LEN, fp);
-	_Fclose(fp);
-	
 
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 #if (AddrLen == 6)
