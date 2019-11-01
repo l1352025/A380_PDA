@@ -36,8 +36,8 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.7-预览2"	        // 版本号
-    #define VerInfo_RevDate (char *)"2019-10-24"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.7-预览3"	        // 版本号
+    #define VerInfo_RevDate (char *)"2019-11-1"        // 版本日期
     #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
@@ -65,13 +65,13 @@ typedef unsigned char bool;
     #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
 #endif
 
-#define VerInfo_Previwer    (char *)"预览版2"    // 预览版时,定义该宏
-//#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Previwer    (char *)"预览版3"    // 预览版时,定义该宏
+#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogFileName "debug.txt" // 日志文件名
-#define LogFileSize (50*1024)   // 日志文件最大字节数：20K
+#define LogFileSize (100*1024)  // 日志文件最大字节数
 #define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define LogTxRx     1           // 日志输出Tx/Rx数据：0 - 不输出， 1 - 输出
 #define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败

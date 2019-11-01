@@ -540,7 +540,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 
 			#if LOG_ON
-			LogPrint("notice on app/boot , docidx: %d\n", docIdx);
+			LogPrint("notice on app/boot , docidx: %d", docIdx);
 			#endif
 
 			docIdx++;
@@ -552,7 +552,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				Args.buf[i++] = 0x70;		// 命令字	70
 
 				#if LOG_ON
-				LogPrint("notice on app , docidx: %d, doing...\n", docIdx -1);
+				LogPrint("notice on app , docidx: %d, doing...", docIdx -1);
 				#endif
 			}
 			else{
@@ -572,7 +572,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				Args.buf[i++] = 0x71;		// 命令字	71
 
 				#if LOG_ON
-				LogPrint("notice on boot , docidx: %d, doing...\n", docIdx -1);
+				LogPrint("notice on boot , docidx: %d, doing...", docIdx -1);
 				#endif
 			}
 			
@@ -618,14 +618,14 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				break;
 			}
 
-			#if LOG_ON
-			LogPrint("send pkt on boot , sendIdx: %d, doing...\n", sendIdx);
-			#endif
-
 			pktIdx = pkt->missPkts[sendIdx];
 			sendIdx++;
 			IsNoAckCmd = true;
 			tryCnt = 1;
+
+			#if LOG_ON
+			LogPrint("send pkt on boot , sendIdx: %d, pktIdx: %d, doing...", sendIdx - 1, pktIdx);
+			#endif
 
 			sprintf(cmdName, "发送升级数据");
 			sprintf(cmdMsg, "      执行中...  \n当前发包：%d/%d", sendIdx, pkt->missPktsCnt);
@@ -656,6 +656,14 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 					&& (++reSendPktCnt) < Upgrd_ReSendPktMax
 				){
 					CurrCmd = WaterCmd_SendUpgradePacket;
+
+					#if LOG_ON
+					u16Tmp = 0;
+					for(i = 0; i < 10 && i < pkt->missPktsCnt; i++){
+					u16Tmp += sprintf(&TmpBuf[u16Tmp], "%d  ", pkt->missPkts[i]);
+					}
+					LogPrint("miss pkt cnt: %d,  miss pkts : %s", pkt->missPktsCnt, TmpBuf);
+					#endif
 				}
 				else if(flags[FLG_Finish] == 1 || flags[FLG_Unknow] == 1){
 					CurrCmd = WaterCmd_QueryUpgradeStatus_OnApp;
@@ -712,7 +720,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 
 			#if LOG_ON
-			LogPrint("query on boot , docIdx: %d\n", docIdx);
+			LogPrint("query on boot , docIdx: %d", docIdx);
 			#endif
 
 			docIdx++;
@@ -733,7 +741,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			ackLen = 93;				// 应答长度 93	
 
 			#if LOG_ON
-			LogPrint("query on boot , docIdx: %d, doing...\n", docIdx - 1);
+			LogPrint("query on boot , docIdx: %d, doing...", docIdx - 1);
 			#endif
 
 			// 数据域
@@ -786,7 +794,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			}
 
 			#if LOG_ON
-			LogPrint("query on app , docIdx: %d\n", docIdx);
+			LogPrint("query on app , docIdx: %d", docIdx);
 			#endif
 			
 			docIdx++;
@@ -806,7 +814,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			ackLen = 41;				// 应答长度 41	
 
 			#if LOG_ON
-			LogPrint("query on app , docIdx: %d, doing...\n", docIdx - 1);
+			LogPrint("query on app , docIdx: %d, doing...", docIdx - 1);
 			#endif
 
 			// 数据域
@@ -972,7 +980,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	uint8 *pData, *ptr, u8Tmp;
 
 	#if LOG_ON
-	LogPrint("[  query enter  ]\n IsNoAckCmd: %d \n", IsNoAckCmd);
+	LogPrint("[  query enter  ]\n IsNoAckCmd: %d ", IsNoAckCmd);
 	#endif
 
 	_ClearScreen();
@@ -1075,7 +1083,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			}
 
 			#if LOG_ON
-			LogPrint("query on boot , docidx: %d\n", docIdx);
+			LogPrint("query on boot , docidx: %d", docIdx);
 			#endif
 
 			docIdx++;
@@ -1088,7 +1096,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			ackLen = 93;				// 应答长度 93	
 
 			#if LOG_ON
-			LogPrint("query on boot , docidx: %d, doing...\n", docIdx -1);
+			LogPrint("query on boot , docidx: %d, doing...", docIdx -1);
 			#endif
 
 			// 数据域
@@ -1155,7 +1163,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			ackLen = 41;				// 应答长度 41	
 
 			#if LOG_ON
-			LogPrint("query on app , docidx: %d, doing...\n", docIdx -1);
+			LogPrint("query on app , docidx: %d, doing...", docIdx -1);
 			#endif
 
 			// 数据域
@@ -1350,10 +1358,6 @@ void UpgradeFunc(void)
 		/*---------------------------------------------*/
 		// ui ctrl
 		_Printfxy(0, 7*16 + 8, version, Color_White);
-
-		#if LOG_ON
-		LogPrint("version:%s\n", version);
-		#endif
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回            确定", Color_White);

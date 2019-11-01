@@ -91,7 +91,10 @@ void LogWrite(uint8 *buf, uint32 len)
 	}
 	
 	if(_Filelenth(fp) > LogFileSize){		// 大于最大字节数时，重建日志文件
-		_Remove(LogFileName);
+		if(_Access("debug.bak", 0) == 0){
+			_Remove("debug.bak");
+		}
+		_Rename(LogFileName, "debug.bak");
 		fp = _Fopen(LogFileName, "W");
 	}
 	_Lseek(fp, 0, 2);
