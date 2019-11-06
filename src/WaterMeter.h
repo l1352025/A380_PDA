@@ -14,10 +14,11 @@ extern uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint
 
 // --------------------------------  全局变量  -----------------------------------------
 //char Screenbuff[160*(160/3+1)*2]; 
-uint8 DispBuf[6144];						// 2k ~ 6K
-uint8 * const LogBuf = &DispBuf[2048];     	// 2k ~ 4k
-uint8 * const TmpBuf = &DispBuf[4096];     	// 1K ~ 2k
-uint8 * const BackupBuf = &DispBuf[5120];  	// 1k
+uint8 DispBuf[128 * 1024];					// 4k ~ 128K
+uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
+uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
+uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+uint8 * const FileBuf = &DispBuf[14336];	// 116k 
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
@@ -694,7 +695,7 @@ char * Water6009_GetStrUpgradeForbidReason(uint8 code, uint8 *bitVal)
 	}
 
 	if(str == NULL){
-		str = "NoErr";
+		str = "Pass";
 		*bitVal = 0;
 	}
 

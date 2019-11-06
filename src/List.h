@@ -56,11 +56,11 @@ typedef struct{
 extern void List_Init(TList *this);
 
 
-#if 0   // win32
+#ifdef USE_WIN32    // win32
     #include <stdlib.h>
     #define memFree(p)  free(p);
     #define memAlloc(size)  malloc(size);
-#else   // A380-arm
+#else               // A380-arm
     extern void    _free(void *ptr);
     extern void *  _malloc(size_t len );
     #define memFree(p)  _free(p);

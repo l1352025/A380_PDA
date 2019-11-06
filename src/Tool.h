@@ -1394,13 +1394,13 @@ int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * s
 *		  Seed - 如电力/水力固定使用 0x8408
 * 返回值：uint16 CRC16值
 */
-uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
+uint16 GetCrc16(uint8 *Buf, uint32 Len, uint16 Seed)
 {
     uint16 crc = 0xFFFF;
     uint8 i;
 
 	while (Len--){
-        crc ^= * Buf++;
+        crc ^= *Buf++;
         for(i = 0; i < 8; i++){
             if (crc & 0x0001){
                 crc >>= 1;
@@ -1425,7 +1425,7 @@ uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed)
 *					若要持续计算，不可对 CrcKeep 重新赋值 ！
 * 返回值：当前的CRC16值： 即 （*CrcKeep ^ 0xFFFF）
 */
-uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep)
+uint16 GetCrc16_Continue(uint8 *Buf, uint32 Len, uint16 Seed, uint16 *CrcKeep)
 {
     uint8 i;
 	uint16 crc16 = *CrcKeep;
@@ -1455,14 +1455,14 @@ uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep)
 *		  Seed - 如电力/水力固定使用 0x8408
 * 返回值：uint8 CRC16值
 */
-uint8 GetCrc8(uint8 *Buf, int len)
+uint8 GetCrc8(uint8 *Buf, uint32 len)
 {
-    uint8 i;
+    uint8 i, *ptr = Buf;
     uint8 crc = 0x0;
 
     while (len--)
     {
-        crc ^= *Buf++;
+        crc ^= *ptr++;
         for (i = 0; i < 8; i++)
         {
             if (crc & 0x01)
@@ -1480,12 +1480,12 @@ uint8 GetCrc8(uint8 *Buf, int len)
 *		  Len - 计算的总长度
 * 返回值：uint8 累加和
 */
-uint8 GetSum8(uint8 *buf, uint16 len)
+uint8 GetSum8(uint8 *buf, uint32 len)
 {
-    uint8 sum = 0;
+    uint8 sum = 0, *ptr = buf;
 
 	while(len-- > 0){
-		sum += *buf++;
+		sum += *ptr++;
 	}
 	
     return sum;
@@ -1683,7 +1683,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 
 		// 发送 
 		TxLen = FramePack(TxBuf, addrs, cmdid, args, sendCnt);
-		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		_GetComStr(TmpBuf, 1000, 1);		// clear
 		_SendComStr(TxBuf, TxLen);
 		sendCnt++;
 		if(sendCnt == 1){
@@ -1694,31 +1694,34 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		}
 
 		// 接收
-		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
+		_GetComStr(TmpBuf, 1000, 1);		// clear
 		RxLen = 0;
 		waitTime = 0;
 		currRxLen = 0;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 0);
 		PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
 		
-
 		do{
-			currRxLen = _GetComStr(&RxBuf[RxLen], 80, 8);	// 时间校准为 N x12 ms : 8x12 = 96 ~= 100ms
-			RxLen += currRxLen;
+			if(IsNoAckCmd == false){
+				currRxLen = _GetComStr(&RxBuf[RxLen], 80, 8);	// 时间校准为 N x12 ms : 8x12 = 96 ~= 100ms
+				RxLen += currRxLen;
+				waitTime += 100;
+			}else{
+				_Sleep(5);
+				waitTime += 5;
+			}
 			key = _GetKeyExt();
 			if(KEY_CANCEL == key){
 				_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
 				DispBuf[0] = 0x00;
 				return CmdResult_Cancel;
 			}
-			waitTime += 100;
 
 			if(TranceiverCycleHook != NULL){
 				TranceiverCycleHook(key); 
 			}
 
 			if(IsNoAckCmd == false){
-				
 				if(waitTime % 1000 == 0){
 					_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 0);
 					PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
@@ -1728,7 +1731,6 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 					break;
 				}
 			}
-
 		}while(waitTime <= timeout || currRxLen > 0);
 
 		#if LOG_ON && LogTxRx

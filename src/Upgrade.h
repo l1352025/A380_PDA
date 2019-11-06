@@ -10,6 +10,9 @@
 #define Upgrd_DocFileName   "UpgradeDoc.csv"    // 批量升级 档案文件名
 #define Upgrd_ReSendPktMax  5                   // 1轮最大补包次数
 
+#define Upgrd_FileBuf_Enable    1               // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
+#define Upgrade_LOG_ON          0               // 升级模块日志开关
+
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 
 {
@@ -90,7 +93,7 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf);
 extern void ClearMissPktFlags(PacketInfo *pktInfo);
 extern void AddMissPktFlags(PacketInfo *pktInfo, uint8 *bitflags, uint16 byteCnt);
-extern uint16 GetMissPktList(PacketInfo *pktInfo);
+extern void GetMissPktList(PacketInfo *pktInfo);
 extern void GetMissPktList_CurrPkt(uint8 *bitfalgs, uint16 byteCnt, uint16 pktCnt, uint16 *missPkts, uint16 *missCnt);
 
 #endif

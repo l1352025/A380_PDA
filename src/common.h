@@ -182,10 +182,10 @@ typedef uint8 (*FuncCmdFrameExplain)(uint8 *rxBuf, uint16 rxlen, const uint8 *ds
 
 //---------------------------------		函数声明	 -----------------------------------------
 int IndexOf(const uint8 * srcArray, int srcLen, const uint8 * dstBytes, int dstLen, int startIndex, int offset);
-uint16 GetCrc16(uint8 *Buf, uint16 Len, uint16 Seed);
-uint16 GetCrc16_Continue(uint8 *Buf, uint16 Len, uint16 Seed, uint16 *CrcKeep);
-uint8 GetCrc8(uint8 *Buf, int len);
-uint8 GetSum8(uint8 *buf, uint16 len);
+uint16 GetCrc16(uint8 *Buf, uint32 Len, uint16 Seed);
+uint16 GetCrc16_Continue(uint8 *Buf, uint32 Len, uint16 Seed, uint16 *CrcKeep);
+uint8 GetCrc8(uint8 *Buf, uint32 len);
+uint8 GetSum8(uint8 *buf, uint32 len);
 char HexToChar(uint8 b);
 uint8 CharToHex(char c);
 uint8 BcdToDec(uint8 bcd);
@@ -224,10 +224,11 @@ void MeterNoLoad(uint8 *mtrNo, uint8 type);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 
-extern uint8 DispBuf[6144];                         // 2k ~ 6K
-extern uint8 * const LogBuf; // = &DispBuf[2048];       // 2k ~ 4k
-extern uint8 * const TmpBuf; // = &DispBuf[4096];       // 1K ~ 2k
-extern uint8 * const BackupBuf; // = &DispBuf[5120];    // 1k
+extern uint8 DispBuf[128 * 1024];					    // 4k ~ 128K
+extern uint8 * const LogBuf; // = &DispBuf[4096];     	// 4k ~ 
+extern uint8 * const TmpBuf; // = &DispBuf[8192];     	// 2K ~ 
+extern uint8 * const BackupBuf; // = &DispBuf[10240];	// 2k ~
+extern uint8 * const FileBuf; // = &DispBuf[14336];	    // 116k 
 extern uint8 TxBuf[1024];
 extern uint8 RxBuf[1024];
 extern uint32 RxLen, TxLen;

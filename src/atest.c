@@ -1,5 +1,9 @@
-#include <stdio.h>
+/**
+ * 编译时需定义宏 USE_WIN32
+*/
+#define USE_WIN32
 
+#include <stdio.h>
 #include "List.h"
 #include "List.c"
 #include "Upgrade.h"
@@ -47,9 +51,8 @@ bool IsMtrNoEqual(void *node, void *mtrNo)
 int main()
 {
     DocInfo docItem, *doc;
-
     TList DocList;
-
+    
     // init
     List_Init(&DocList);
 
