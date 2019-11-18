@@ -165,12 +165,16 @@ typedef enum{
 	3	设置RXD和TXD信道
 	4	设置运营商编号
 	5	路径下发
+	6	读取模块的频点
+	7	设置模块的频点
 	*/
 	WaterCmd_ReadRxTxMgnDistbCnt		= 0x61,
 	WaterCmd_ReadRxdAndTxdChanel,
 	WaterCmd_SetRxdAndTxdChanel, 
 	WaterCmd_SetOperatorNumber,
 	WaterCmd_SetDefinedRoute,
+	WaterCmd_ReadModuleFrequency,
+	WaterCmd_SetModuleFrequency,
 	/*
 	UART表端模块测试：	
 	1	读取模块运行参数
@@ -1581,6 +1585,39 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		// 端口号
 		dispIdx += sprintf(&dispBuf[dispIdx], "端口号: %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_ReadModuleFrequency:		// 读取模块的频点
+		if(rxlen < index + 8 && cmd != 0x1B){
+			break;
+		}
+		// 命令选项跳过
+		index += 1;
+		// 频点1
+		dispIdx += sprintf(&dispBuf[dispIdx], "频点1: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 频点2
+		dispIdx += sprintf(&dispBuf[dispIdx], "频点2: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 频点3
+		dispIdx += sprintf(&dispBuf[dispIdx], "频点3: %d\n", (buf[index] + buf[index + 1] * 256));
+		index += 2;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
+
+	case WaterCmd_SetModuleFrequency:		// 设置模块的频点
+		if(rxlen < index + 1 && cmd != 0x1B){
+			break;
+		}
 		// 命令状态
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);

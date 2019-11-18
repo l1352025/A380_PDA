@@ -908,9 +908,9 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 17, NULL,		
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 19, NULL,		
 		"<<工作参数",
-		17,
+		19,
 		"1. 设置IP+端口+模式",
 		"2. 读取IP+端口+模式",
 		"3. 读取运营商编号",
@@ -927,7 +927,9 @@ void WaterCmdFunc_WorkingParams(void)
 		"14.设置模块运行参数",
 		"15.读取NB入网信息",
 		"16.读取北京水表参数",		
-		"17.设置北京水表参数"	
+		"17.设置北京水表参数",
+		"18.读取模块的频点",		
+		"19.设置模块的频点"
 	);
 
 	while(1){
@@ -1658,7 +1660,7 @@ void WaterCmdFunc_WorkingParams(void)
 					if(i < 6){
 						memset(&StrBuf[6][i], 0x00, 6 - i);
 					}
-					memcpy(&TmpBuf[20], &StrBuf[6][0], i);
+					memcpy(&TmpBuf[20], &StrBuf[6][0], 6);
 					
 					// 上报重连次数
 					u32Args[8] = StrBuf[0][1];
@@ -1826,6 +1828,63 @@ void WaterCmdFunc_WorkingParams(void)
 					Args.buf[i++] = 0;
 				}
 
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 18: 
+				CurrCmd = WaterCmd_ReadModuleFrequency;		// 读取模块的频点
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x1B;		// 命令字	1B
+				ackLen = 8;					// 应答长度 8	
+				// 数据域
+				Args.buf[i++] = 0x00;		// 命令选项：0-读取， 1-设置
+				Args.lastItemLen = i - 1;
+				break;
+
+			case 19: 
+				CurrCmd = WaterCmd_SetModuleFrequency;		// 设置模块的频点
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点1:", StrBuf[1], 5, 6*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点2:", StrBuf[2], 5, 6*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点3:", StrBuf[3], 5, 6*8, true);
+					break;
+				}
+
+				// 频点1,2,3
+				u32Args[1] = (uint32)_atof(StrBuf[1]);
+				if(StrBuf[1][0] < '0' || StrBuf[1][0] > '9' || u32Args[1] > 65535){
+					currUi = *pUiCnt - 3;
+					isUiFinish = false;
+					continue;
+				}
+				u32Args[2] = (uint32)_atof(StrBuf[2]);
+				if(StrBuf[2][0] < '0' || StrBuf[2][0] > '9' || u32Args[2] > 65535){
+					currUi = *pUiCnt - 2;
+					isUiFinish = false;
+					continue;
+				}
+				u32Args[3] = (uint32)_atof(StrBuf[3]);
+				if(StrBuf[3][0] < '0' || StrBuf[3][0] > '9' || u32Args[3] > 65535){
+					currUi = *pUiCnt - 1;
+					isUiFinish = false;
+					continue;
+				}
+
+				i = 0;
+				Args.buf[i++] = 0x1B;		// 命令字	1B
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 命令选项：0-读取， 1-设置
+				Args.buf[i++] = (uint8)(u32Args[1] & 0xFF);			// 频点1	
+				Args.buf[i++] = (uint8)((u32Args[1] >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)(u32Args[2] & 0xFF);			// 频点2	
+				Args.buf[i++] = (uint8)((u32Args[2] >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)(u32Args[3] & 0xFF);			// 频点3	
+				Args.buf[i++] = (uint8)((u32Args[3] >> 8) & 0xFF);
 				Args.lastItemLen = i - 1;
 				break;
 
