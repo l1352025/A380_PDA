@@ -423,7 +423,7 @@ char * Water6009_GetStrSensorType(uint8 typeId)
 uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 {
 	char * str = NULL;
-	uint8 mask = 1, i;
+	uint16 mask = 1, i;
 	uint16 len = 0;
 
 	for(i = 0; i < 14; i++){
@@ -2660,7 +2660,7 @@ void VersionInfoFunc(void)
 		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
 		PrintfXyMultiLine_VaList(0, 6*16, "通信速率：%s", CurrBaud);
 		#ifdef VerInfo_Previwer
-		PrintfXyMultiLine_VaList(0, 7*16 + 8, "      %s   ", VerInfo_Previwer);
+		PrintfXyMultiLine_VaList(0, 7*16 + 8, "%s", VerInfo_Previwer);
 		#endif
 		//--------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);

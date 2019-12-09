@@ -11,12 +11,17 @@
 #include "MeterDocDBF.h"
 #endif
 
+extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
+extern uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
+extern uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
+
 // --------------------------------  全局变量  -----------------------------------------
 //char Screenbuff[160*(160/3+1)*2]; 
-uint8 DispBuf[6144];						// 2k ~ 6K
-uint8 * const LogBuf = &DispBuf[2048];     	// 2k ~ 4k
-uint8 * const TmpBuf = &DispBuf[4096];     	// 1K ~ 2k
-uint8 * const BackupBuf = &DispBuf[5120];  	// 1k
+uint8 DispBuf[128 * 1024];					// 4k ~ 128K
+uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
+uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
+uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+uint8 * const FileBuf = &DispBuf[14336];	// 116k 
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
@@ -678,19 +683,15 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	index = 0;
 	buf[index++] = 0xD3;		// 帧头同步码： 固定为 D3 91
 	buf[index++] = 0x91;
-	
+	buf[index++] = 0x00;		// 帧长：帧长 -- 结束符 
 	buf[index++] = 0x00;	
-	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1
+	buf[index++] = 0x35;		// 报文标志： 方向 (5-手持机) -> (3-表具)
 	buf[index++] = Fsn++;		// 任务号： mac fsn 发起方自累加
 	cmd = *args->items[0];
 	buf[index++] = cmd;			// 命令字
-	buf[index++] = 0xFE;		// 设备类型: FE - 手持机， FA - 上位机， 10 - 冷水表， 11 - GPRS水表
-	buf[index++] = 0x0F;		// 生命周期
-	buf[index++] = addrs->itemCnt & 0x0F;	// 路径信息:  当前位置|路径长度
-	
-	buf[index++] = 0x00;		// 数据域长度： 中继列表 + 数据域
-	// 中继列表
-	for(i = 0; i < (addrs->itemCnt & 0x0F); i++){
+	buf[index++] = addrs->itemCnt & 0x03;	// 路径信息:  当前位置|路径长度（最大3）
+	// 传输路径：源地址、中继地址（最多1个）、目的地址
+	for(i = 0; i < (addrs->itemCnt & 0x03); i++){
 		memcpy(&buf[index], addrs->items[i], AddrLen);
 		index += AddrLen;
 	}
@@ -698,17 +699,16 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	memcpy(&buf[index], args->items[args->itemCnt -1], args->lastItemLen);
 	index += args->lastItemLen;
 
-    // 长度计算
-	buf[2] = (uint8)(index & 0xFF);	
-
-	buf[index++] = 0x55;		// 下行场强
+	buf[index++] = 0xAA;		// 下行场强
 	buf[index++] = 0xAA;		// 上行场强
+
+	buf[2] = (uint8)(index & 0xFF);	// 长度计算
+	buf[3] = (uint8)(index >> 8);	
     
 	crc8 = GetCrc8(&buf[2], index - 2);
-	buf[index++] = crc8;		// crc8 校验
+	buf[index++] = crc8;		// crc8 校验: 帧长 -- 上行场强
 	buf[index++] = 0x16;		// 结束符
 
-		
 
 	if(cmd < 0x40 || cmd == 0x70 || cmd == 0x74){
 		buf[index++] = 0x1E;	// 导言长度标识
@@ -2550,8 +2550,9 @@ void VersionInfoFunc(void)
 		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
 		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
 		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
+		PrintfXyMultiLine_VaList(0, 6*16, "通信速率：%s", CurrBaud);
 		#ifdef VerInfo_Previwer
-		PrintfXyMultiLine_VaList(0, 7*16, "      %s   ", VerInfo_Previwer);
+		PrintfXyMultiLine_VaList(0, 7*16 + 8, "      %s   ", VerInfo_Previwer);
 		#endif
 		//--------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
@@ -2564,7 +2565,7 @@ void VersionInfoFunc(void)
 	}
 }
 
-//--------------------------------------	8009水表命令 发送、接收、结果显示	----------------------------
+//--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
 /*
 * 描述： 命令发送/接收解析		- 执行完成后，返回结果
 * 参数： cmdid	- 当前命令标识
@@ -2573,13 +2574,13 @@ void VersionInfoFunc(void)
 *		ackLen	- 应答长度 (byte)
 *		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
 *		tryCnt	- 重试次数 默认3次
-* 返回： bool  - 命令执行结果： true - 成功， false - 失败		
+* 返回： 命令执行结果： CmdResult_OK - 成功， CmdResult_Failed - 失败	
+*		CmdResult_CrcError - crc错误, CmdResult_Timeout - 超时, CmdResult_Cancel - 已取消
 */
-bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+CmdResult Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
-	uint8 sendCnt = 0, cmdResult, ret;
-	uint16 waitTime = 0, currRxLen;
-	
+	CmdResult cmdResult;
+
 	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
 		MeterNoSave(StrDstAddr, 3);
@@ -2592,75 +2593,19 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		MeterNoSave(StrDstAddr, 2);
 		#endif
 	}
-	
+
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
-#if (AddrLen < 8)
+#if (AddrLen == 6)
 	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
 #else
 	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号:\n   %s ", StrDstAddr);
 #endif
 
-	do{
-		// 发送 
-		_CloseCom();
-		_ComSetTran(CurrPort);
-		_ComSet(CurrBaud, 2);
-		TxLen = PackWater8009RequestFrame(TxBuf, addrs, cmdid, args, sendCnt);
-		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
-		_SendComStr(TxBuf, TxLen);
-		sendCnt++;
-		if(sendCnt == 1){
-			//------------------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, " <  命令发送...  >  ", Color_White);
-		}
-		else{
-			//------------------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			PrintfXyMultiLine_VaList(0, 9*16, " <  命令重发...%d  > ", sendCnt);
-		}
-
-		// 接收
-		_GetComStr(TmpBuf, 1000, 100/10);	// clear , 100ms timeout
-		RxLen = 0;
-		waitTime = 0;
-		currRxLen = 0;
-		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 1);
-		PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
-		do{
-
-			currRxLen = _GetComStr(&RxBuf[RxLen], 200, 16);	// N x10 ms 检测接收, 时间校准为 N x90% x10
-			RxLen += currRxLen;
-			if(KEY_CANCEL == _GetKeyExt()){
-				//------------------------------------------------------
-				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-				_Printfxy(0, 6*16, "命令已取消         ", Color_White);
-				_Printfxy(0, 9*16, "返回  <已取消>  继续", Color_White);
-				DispBuf[0] = 0x00;
-				return false;
-			}
-			waitTime += 200;
-
-			if(waitTime % 1000 == 0){
-				_DoubleToStr(TmpBuf, (double)((timeout - waitTime) / 1000), 1);
-				PrintfXyMultiLine_VaList(0, 5*16, "等待应答 %3d/%-3d  \n最多等待 %s s  ", RxLen, ackLen, TmpBuf);
-			}
-
-			if(RxLen > 0 && currRxLen == 0){
-				break;
-			}
-		}while(waitTime <= timeout || currRxLen > 0);
-
-		PrintfXyMultiLine_VaList(0, 5*16, "当前应答 %3d/%-3d  \n", RxLen, ackLen);
-
-		#if LOG_ON
-			LogPrintBytes("Tx: ", TxBuf, TxLen);
-			LogPrintBytes("Rx: ", RxBuf, RxLen);
-		#endif
-
-		cmdResult = ExplainWater8009ResponseFrame(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
-
-	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
+	cmdResult = CommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
+	
+	if(cmdResult == CmdResult_Cancel){
+		return cmdResult;
+	}
 
 	// 显示结果
 #if RxBeep_On
@@ -2673,7 +2618,6 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		//------------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回  < 成功 >  继续", Color_White);
-		ret = true;
 	}
 	else{
 #if RxBeep_On
@@ -2688,12 +2632,9 @@ bool Protol8009Tranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16
 		//-----------------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 		_Printfxy(0, 9*16, "返回  < 失败 >  继续", Color_White);
-		ret = false;
 	}
 
-	_CloseCom();
-
-	return ret;
+	return cmdResult;
 }
 
 /*
@@ -2711,24 +2652,20 @@ uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	uint8 key;
 
 	// 应答长度、超时时间、重发次数
-#ifdef Project_8009_IR
-	timeout = 5000;
+#ifdef Project_6009_IR
+	timeout = 2000;
 	tryCnt = 3;
 #else
 	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 #endif
 
-	if(false == Protol8009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt)){
-		if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
-			DispBuf[0] = NULL;
-		}
-	}
+	Protol6009Tranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
 
 	key = ShowScrollStr(&DispBuf, 7);
 
 	#if LOG_ON
-			LogPrint("解析结果: \r\n %s", DispBuf);
+		LogPrint("解析结果: \r\n %s", DispBuf);
 	#endif
 
 	return key;

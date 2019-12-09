@@ -36,7 +36,9 @@ void WaterCmdFunc_CommonCmd(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
+	#if UseBroadAddr
 	char strDstAddrBak[20];
+	#endif
 
 	_ClearScreen();
 
@@ -82,10 +84,13 @@ void WaterCmdFunc_CommonCmd(void)
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
+
+				#if UseBroadAddr
 				if(menuItemNo == 1){ // 读用量时
 					memcpy(strDstAddrBak, StrDstAddr, 20);
 					sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
 				}
+				#endif
 
 				#if (AddrLen == 6)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
@@ -261,9 +266,11 @@ void WaterCmdFunc_CommonCmd(void)
 			// 发送、接收、结果显示
 			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
+			#if UseBroadAddr
 			if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
 				memcpy(StrDstAddr, strDstAddrBak, 20);
 			}
+			#endif
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
@@ -274,9 +281,11 @@ void WaterCmdFunc_CommonCmd(void)
 			}
 		}
 		
+		#if UseBroadAddr
 		if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
 			memcpy(StrDstAddr, strDstAddrBak, 20);
 		}
+		#endif
 	}
 }
 
@@ -2276,7 +2285,9 @@ void MainFuncReadRealTimeData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
+	#if UseBroadAddr
 	char strDstAddrBak[20];
+	#endif
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2296,8 +2307,12 @@ void MainFuncReadRealTimeData(void)
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
+
+			#if UseBroadAddr
 			memcpy(strDstAddrBak, StrDstAddr, 20);
 			sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
+			#endif
+
 			#if (AddrLen == 6)
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 			#else
@@ -2368,9 +2383,11 @@ void MainFuncReadRealTimeData(void)
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
+		#if UseBroadAddr
 		if(StrDstAddr[0] == 'D'){
 			memcpy(StrDstAddr, strDstAddrBak, 20);
 		}
+		#endif
 
 		// 继续 / 返回
 		if (key == KEY_CANCEL){
@@ -2381,9 +2398,11 @@ void MainFuncReadRealTimeData(void)
 		}
 	}
 
+	#if UseBroadAddr
 	if(StrDstAddr[0] == 'D'){
 		memcpy(StrDstAddr, strDstAddrBak, 20);
 	}
+	#endif
 }
 
 // 读取冻结数据
