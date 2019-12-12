@@ -1,6 +1,6 @@
 /*
 *
-*	桑锐8009水表手持机 - Lora版
+*	桑锐8009水表手持机 - RF版
 *
 */
 #include "SR8009_RF.h"
@@ -15,10 +15,11 @@
 #include "MeterDocDBF.h"
 #include "MeterDocDBF.c"
 
+
 void FillStrsFunc(char **strs, int16 strsIdx, int16 srcIdx, uint16 cnt)
 {
 	int i = strsIdx;
-
+	
 	for(i = strsIdx; i < strsIdx + cnt; i++){
 		sprintf(strs[i], "列表项 %d", i);
 	}
@@ -283,7 +284,7 @@ void CenterCmdFunc_CommonCmd(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
@@ -292,7 +293,7 @@ void CenterCmdFunc_CommonCmd(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -305,8 +306,6 @@ void CenterCmdFunc_CommonCmd(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 2	档案操作
@@ -478,7 +477,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
@@ -487,7 +486,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -500,8 +499,6 @@ void CenterCmdFunc_DocumentOperation(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 3	路径设置
@@ -630,7 +627,7 @@ void CenterCmdFunc_RouteSetting(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
@@ -639,7 +636,7 @@ void CenterCmdFunc_RouteSetting(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -652,8 +649,6 @@ void CenterCmdFunc_RouteSetting(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 4	命令转发
@@ -855,7 +850,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 
 			// 应答长度、超时时间、重发次数
@@ -864,7 +859,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -877,8 +872,6 @@ void CenterCmdFunc_CommandTransfer(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 void CenterCmdFunc(void)
@@ -920,7 +913,7 @@ void CenterCmdFunc(void)
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
-// 1	常用命令
+// 1	常用功能
 void WaterCmdFunc_CommonCmd(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
@@ -935,15 +928,15 @@ void WaterCmdFunc_CommonCmd(void)
 
 	// 菜单
 	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
-		"<<常用命令",
+		"<<常用功能",
 		7,
-		"1. 读取用户用量",
-		"2. 读取冻结数据",
-		"3. 开阀",
-		"4. 强制开阀",
-		"5. 关阀",
-		"6. 强制关阀",
-		"7. 清异常命令"
+		"1. 读表数据",
+		"2. 设表底数",
+		"3. 表开阀",
+		"4. 表关阀",
+		"5. 清除异常",
+		"6. 读表参数",
+		"7. 设置表号"
 	);
 
 	while(1){
@@ -998,7 +991,7 @@ void WaterCmdFunc_CommonCmd(void)
 					break;
 				}
 				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 9;					// 应答长度 9/13	
+				ackLen = 21;				// 应答长度 21	
 				// 数据域
 				Args.buf[i++] = 0x00;				// 数据格式 00	
 				Args.lastItemLen = i - 1;
@@ -1102,7 +1095,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
@@ -1131,20 +1124,20 @@ void WaterCmdFunc_CommonCmd(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrRelayAddr);
-			#if (AddrLen < 8)
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			#if (AddrLen == 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
 			#endif
 
 			// 应答长度、超时时间、重发次数
-			ackLen += 15 + Addrs.itemCnt * AddrLen;
+			ackLen += 14 + Addrs.itemCnt * AddrLen;
 			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -1157,8 +1150,6 @@ void WaterCmdFunc_CommonCmd(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 2	测试命令
@@ -1407,14 +1398,14 @@ void WaterCmdFunc_TestCmd(void)
 					continue;
 				}
 				
-				Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+				Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 				i = 0;
 				Args.buf[i++] = 0x04;		// 命令字	04
 				ackLen = 128;				// 应答长度 128	
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
-				if(CmdResult_Ok == Protol8009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
+				if(CmdResult_Ok == Protol6009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
 					i = 0;
 					Args.buf[i++] = 0x07;		// 命令字	07
 					ackLen = 1;					// 应答长度 1	
@@ -1426,7 +1417,7 @@ void WaterCmdFunc_TestCmd(void)
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;
 
-					if(CmdResult_Ok == Protol8009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
+					if(CmdResult_Ok == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
 						memcpy(StrDstAddr, StrBuf[0], TXTBUF_LEN);
 					}
 				}
@@ -1454,7 +1445,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
@@ -1484,7 +1475,7 @@ void WaterCmdFunc_TestCmd(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			#if (AddrLen == 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
@@ -1497,7 +1488,7 @@ void WaterCmdFunc_TestCmd(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -1511,237 +1502,12 @@ void WaterCmdFunc_TestCmd(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 3	程序升级
 void WaterCmdFunc_Upgrade(void)
 {
-	uint8 key, menuItemNo, tryCnt = 0, i;
-	ListBox menuList;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
-
-	_ClearScreen();
-
-	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
-		"<<程序升级",
-		7,
-		"1. 单表升级",
-		"2. 查询升级",
-		"3. 广播升级",
-		"4. 添加档案",
-		"5. 删除档案",
-		"6. 查询档案",
-		"7. 升级统计"
-	);
-
-	while(1){
-
-		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		key = ShowListBox(&menuList);
-		//------------------------------------------------------------
-		if (key == KEY_CANCEL){	// 返回
-			break;
-		}
-		menuItemNo = menuList.strIdx + 1;
-
-		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-		isUiFinish = false;
-
-		while(1){
-			
-			_ClearScreen();
-
-			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
-			_Printfxy(0, 0, TmpBuf, Color_White);
-			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-			/*---------------------------------------------*/
-			//----------------------------------------------
-			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-
-			if(false == isUiFinish){
-				(*pUiCnt) = 0;
-				uiRowIdx = 2;
-				#if (AddrLen == 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
-				#else
-				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
-				#endif
-			}
-			
-			// 命令参数处理
-			i = 0;	
-			Args.itemCnt = 2;
-			Args.items[0] = &Args.buf[0];   // 命令字
-			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x30 + menuItemNo);
-
-			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ReadFrozenData:		// "  "
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_OpenValve:			// "  "
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-			
-			case WaterCmd_OpenValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-            case WaterCmd_CloseValve:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			case WaterCmd_ClearException:		// "  ";
-				/*---------------------------------------------*/
-				if(KEY_CANCEL == (key = ShowUI(UiList, &currUi))){
-					break;
-				}
-				Args.itemCnt = 2;
-				Args.items[0] = &Args.buf[0];   //命令字
-				Args.items[1] = &Args.buf[1];
-                *Args.items[0] = 0x01;
-				*Args.items[1] = 0x00;
-				Args.lastItemLen = 1;
-				break;
-
-			default: 
-				break;
-			}
-
-
-			// 创建 “中继地址输入框” 后， 显示UI
-			if(false == isUiFinish){
-#ifdef Project_8009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)    ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
-				
-				key = ShowUI(UiList, &currUi);
-
-				if (key == KEY_CANCEL){
-					break;
-				}
-
-				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-					sprintf(StrDstAddr, " 请输入");
-					currUi = 0;
-					continue;
-				}
-
-				isUiFinish = true;
-				continue;	// go back to get ui args
-			}
-
-			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-			#if (AddrLen == 6)
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-			#else
-			PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-			#endif
-
-			// 应答长度、超时时间、重发次数
-			ackLen += 14 + Addrs.itemCnt * AddrLen;
-			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-			tryCnt = 3;
-
-			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-			
-			
-			// 继续 / 返回
-			if (key == KEY_CANCEL){
-				break;
-			}else{
-				isUiFinish = false;
-				continue;
-			}
-		}
-		
-	}
-
-	_CloseCom();
+	UpgradeFunc();
 }
 
 // 4	预缴用量
@@ -1942,7 +1708,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " 请输??");
+					sprintf(StrBuf[0], " 请输入");
 					currUi = 1;
 					isUiFinish = false;
 					continue;
@@ -1984,7 +1750,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
@@ -2013,7 +1779,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			#if (AddrLen == 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
@@ -2026,7 +1792,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2039,8 +1805,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 5	工作参数
@@ -2306,7 +2070,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
@@ -2335,7 +2099,7 @@ void WaterCmdFunc_WorkingParams(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			#if (AddrLen == 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
@@ -2348,7 +2112,7 @@ void WaterCmdFunc_WorkingParams(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2361,8 +2125,6 @@ void WaterCmdFunc_WorkingParams(void)
 		}
 		
 	}
-
-	_CloseCom();
 }
 
 // 6	其他操作
@@ -2610,7 +2372,7 @@ void WaterCmdFunc_Other(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 				for(i = 0; i < RELAY_MAX; i++){
 					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 						StrRelayAddr[i][0] = 0x00;
@@ -2643,7 +2405,7 @@ void WaterCmdFunc_Other(void)
 			}
 
 			// 地址填充
-			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 			#if (AddrLen == 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
@@ -2656,7 +2418,7 @@ void WaterCmdFunc_Other(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2668,13 +2430,10 @@ void WaterCmdFunc_Other(void)
 			}
 		}
 	}
-
-	_CloseCom();
 }
 
 void WaterCmdFunc(void)
 {
-
 	_GuiMenuStru menu;
 	
 	menu.left=0;
@@ -2716,10 +2475,6 @@ void MainFuncReadRealTimeData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2774,7 +2529,7 @@ void MainFuncReadRealTimeData(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -2803,7 +2558,7 @@ void MainFuncReadRealTimeData(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -2816,7 +2571,7 @@ void MainFuncReadRealTimeData(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -2827,8 +2582,6 @@ void MainFuncReadRealTimeData(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 读取冻结数据
@@ -2839,10 +2592,6 @@ void MainFuncReadFrozenData(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -2912,7 +2661,7 @@ void MainFuncReadFrozenData(void)
 				
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -2941,7 +2690,7 @@ void MainFuncReadFrozenData(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -2954,7 +2703,7 @@ void MainFuncReadFrozenData(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -2965,8 +2714,6 @@ void MainFuncReadFrozenData(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 读取表端时钟
@@ -2977,10 +2724,6 @@ void MainFuncReadMeterTime(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3030,7 +2773,7 @@ void MainFuncReadMeterTime(void)
 		}
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -3059,7 +2802,7 @@ void MainFuncReadMeterTime(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -3072,7 +2815,7 @@ void MainFuncReadMeterTime(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3083,8 +2826,6 @@ void MainFuncReadMeterTime(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 设置表端时钟
@@ -3096,10 +2837,6 @@ void MainFuncSetMeterTime(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3181,7 +2918,7 @@ void MainFuncSetMeterTime(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -3210,7 +2947,7 @@ void MainFuncSetMeterTime(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -3223,7 +2960,7 @@ void MainFuncSetMeterTime(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3234,8 +2971,6 @@ void MainFuncSetMeterTime(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 清异常命令
@@ -3246,10 +2981,6 @@ void MainFuncClearException(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3303,7 +3034,7 @@ void MainFuncClearException(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -3332,7 +3063,7 @@ void MainFuncClearException(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -3345,7 +3076,7 @@ void MainFuncClearException(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3356,8 +3087,6 @@ void MainFuncClearException(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 开阀
@@ -3368,10 +3097,6 @@ void MainFuncOpenValve(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3426,7 +3151,7 @@ void MainFuncOpenValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -3455,7 +3180,7 @@ void MainFuncOpenValve(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -3468,7 +3193,7 @@ void MainFuncOpenValve(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3479,8 +3204,6 @@ void MainFuncOpenValve(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 关阀
@@ -3491,10 +3214,6 @@ void MainFuncCloseValve(void)
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
-
-	_CloseCom();
-	_ComSetTran(CurrPort);
-	_ComSet(CurrBaud, 2);
 
 	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
 	isUiFinish = false;
@@ -3549,7 +3268,7 @@ void MainFuncCloseValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_8009_RF
+#ifdef Project_6009_RF
 			for(i = 0; i < RELAY_MAX; i++){
 				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 					StrRelayAddr[i][0] = 0x00;
@@ -3578,7 +3297,7 @@ void MainFuncCloseValve(void)
 		}
 
 		// 地址填充
-		Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 		#if (AddrLen == 6)
 		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 		#else
@@ -3591,7 +3310,7 @@ void MainFuncCloseValve(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3602,8 +3321,6 @@ void MainFuncCloseValve(void)
 			continue;
 		}
 	}
-
-	_CloseCom();
 }
 
 // 批量抄表
@@ -3619,7 +3336,7 @@ void MainFuncBatchMeterReading(void)
 	uint8 *pByte;
 	uint16 dispIdx, i;
 	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
-	char qryStrXq[50], qryStrLd[50];
+	char *qryStrXq = &TmpBuf[400], *qryStrLd = &TmpBuf[600];
 	uint8 qryTypeXq, qryTypeLd;
 	uint16 qryIndexXq, qryIndexLd;
 	uint32 recCnt;
@@ -4226,6 +3943,9 @@ void MainFuncBatchMeterReading(void)
 // 工程调试		------------------------------
 void MainFuncEngineerDebuging(void)
 {
+	WaterCmdFunc();		// 工程调试 --> 即原来的 表端操作
+
+	/*
 	#if CenterCmd_Enable
 	_GuiMenuStru menu;
 
@@ -4245,6 +3965,7 @@ void MainFuncEngineerDebuging(void)
 	menu.FunctionEx = 0;
 	_Menu(&menu);
 	#endif
+	*/
 }
 
 // --------------------------------   主函数   -----------------------------------------------
@@ -4262,16 +3983,15 @@ int main(void)
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
-	MainMenu.no=8;
+	MainMenu.no=7;
 	MainMenu.title =  "     桑锐手持机    ";
-	MainMenu.str[0] = " 读取用户用量 ";
-	MainMenu.str[1] = " 读取冻结数据 ";
-	MainMenu.str[2] = " 读取表端时钟 ";
-	MainMenu.str[3] = " 设置表端时钟 ";
-	MainMenu.str[4] = " 开阀 ";
-	MainMenu.str[5] = " 关阀 ";
-	MainMenu.str[6] = " 工程调试 ";
-	MainMenu.str[7] = " 批量抄表 ";
+	MainMenu.str[0] = " 批量抄表 ";
+	MainMenu.str[1] = " 读表数据 ";
+	MainMenu.str[2] = " 开阀 ";
+	MainMenu.str[3] = " 关阀 ";
+	MainMenu.str[4] = " 清除异常 ";
+	MainMenu.str[5] = " 工程调试 ";
+	MainMenu.str[6] = " 版本信息 ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -4279,17 +3999,16 @@ int main(void)
 	MainMenu.key[4] = "5";
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
-	MainMenu.key[7] = "8";
-	MainMenu.Function[0] = MainFuncReadRealTimeData;
-	MainMenu.Function[1] = MainFuncReadFrozenData;
-	MainMenu.Function[2] = MainFuncReadMeterTime;
-	MainMenu.Function[3] = MainFuncSetMeterTime;
-	MainMenu.Function[4] = MainFuncOpenValve;
-	MainMenu.Function[5] = MainFuncCloseValve;
-	MainMenu.Function[6] = WaterCmdFunc;	// 工程调试 --> 即原来的 表端操作
-	MainMenu.Function[7] = MainFuncBatchMeterReading;
+	MainMenu.Function[0] = MainFuncBatchMeterReading;
+	MainMenu.Function[1] = MainFuncReadRealTimeData;
+	MainMenu.Function[2] = MainFuncOpenValve;
+	MainMenu.Function[3] = MainFuncCloseValve;
+	MainMenu.Function[4] = MainFuncClearException;
+	MainMenu.Function[5] = MainFuncEngineerDebuging;
+	MainMenu.Function[6] = VersionInfoFunc;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
+	
 }
 
