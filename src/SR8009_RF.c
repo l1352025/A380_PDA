@@ -293,7 +293,7 @@ void CenterCmdFunc_CommonCmd(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -486,7 +486,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -636,7 +636,7 @@ void CenterCmdFunc_RouteSetting(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -859,7 +859,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -969,7 +969,7 @@ void WaterCmdFunc_CommonCmd(void)
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
-				#if (AddrLen == 6)
+				#if (AddrLen <= 6)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
@@ -1137,7 +1137,7 @@ void WaterCmdFunc_CommonCmd(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -1488,7 +1488,7 @@ void WaterCmdFunc_TestCmd(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -1792,7 +1792,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2112,7 +2112,7 @@ void WaterCmdFunc_WorkingParams(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2418,7 +2418,7 @@ void WaterCmdFunc_Other(void)
 			tryCnt = 3;
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -2571,7 +2571,7 @@ void MainFuncReadRealTimeData(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -2703,7 +2703,7 @@ void MainFuncReadFrozenData(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -2815,7 +2815,7 @@ void MainFuncReadMeterTime(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -2960,7 +2960,7 @@ void MainFuncSetMeterTime(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3076,7 +3076,7 @@ void MainFuncClearException(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3193,7 +3193,7 @@ void MainFuncOpenValve(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -3310,7 +3310,7 @@ void MainFuncCloseValve(void)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回

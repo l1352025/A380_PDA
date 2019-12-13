@@ -1,5 +1,5 @@
-#ifndef WaterMeter_H
-#define WaterMeter_H
+#ifndef WaterMeter8009_H
+#define WaterMeter8009_H
 
 #include "SR8009_RF.h"
 
@@ -104,7 +104,7 @@ typedef enum{
 	WaterCmd_ReadReportTimeInterval,
 	WaterCmd_ReadFrozenData,
 	WaterCmd_SetMeterTime,
-	WaterCmd_ReadMeterTime,
+	WaterCmd_ReadMeterTime
 
 }WaterCmdDef;
 
@@ -732,7 +732,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	// 跳过 帧头、设备类型
 	index += 3;
 
-	// 地址域
+	// 表号ID
 	if(memcmp(&buf[index], DstAddr, AddrLen) != 0){
 
 		// 广播命令时，将应答的表地址作为新的目的地址
