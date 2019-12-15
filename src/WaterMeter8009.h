@@ -17,11 +17,17 @@ extern uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint
 
 // --------------------------------  全局变量  -----------------------------------------
 //char Screenbuff[160*(160/3+1)*2]; 
+#if Upgrd_FileBuf_Enable
 uint8 DispBuf[128 * 1024];					// 4k ~ 128K
+#else
+uint8 DispBuf[14 * 1024];					// 4k ~ 14K
+#endif
 uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
 uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
 uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+#if Upgrd_FileBuf_Enable
 uint8 * const FileBuf = &DispBuf[14336];	// 116k 
+#endif
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
@@ -111,37 +117,31 @@ typedef enum{
 
 //----------------------------------------  集中器命令  ------------------------
 /*
-集中器操作：	
-1	常用命令
-2	档案操作
-3	路径设置
-4	命令转发
+采集器操作：	
+1	工作参数
+2	档案参数
+3	控制参数
+4	路由参数
 */
 typedef enum{
 	/*
-	常用操作：	
-	1	读集中器号
-	2	读集中器版本
-	3	读集中器时钟
-	4	设集中器时钟
-	5	读GPRS参数
-	6	设GPRS参数
-	7	读GPRS信号强度
-	8	集中器初始化
-	9	读集中器工作模式
+	工作参数：	
+	1	读取采集器号
+	2	设置采集器号
+	3	读取采集器时钟
+	4	设置采集器时钟
+	5	采集器初始化
+	6	清除抄表数据
 	*/
 	CenterCmd_ReadCenterNo		= 0x1011,
-	CenterCmd_ReadCenterVer,
+	CenterCmd_SetCenterNo,
 	CenterCmd_ReadCenterTime,
 	CenterCmd_SetCenterTime,
-	CenterCmd_ReadGprsParam,
-	CenterCmd_SetGprsParam,
-	CenterCmd_ReadGprsSignal,
 	CenterCmd_InitCenter,
-	CenterCmd_ReadCenterWorkMode,
+	CenterCmd_ClearMeterReadData,
 
 	/*
-	档案操作：	
+	档案参数：	
 	1	读档案数量
 	2	读档案信息
 	3	添加档案信息
@@ -155,30 +155,33 @@ typedef enum{
 	CenterCmd_ModifyDocInfo,
 
 	/*
-	路径设置：	
-	1	读自定义路由
-	2	设自定义路由
-	*/
-	CenterCmd_ReadDefinedRoute	= 0x1031,
-	CenterCmd_SetDefinedRoute,
-
-	/*
-	命令转发：	
-	1	读实时数据
-	2	读定时定量数据
+	控制参数：	
+	1	读定量数据
+	2	读实时数据
 	3	读冻结数据
 	4	开阀
 	5	关阀
-	6	读使能
 	7	清异常
 	*/
-	CenterCmd_ReadRealTimeData	= 0x1041,
-	CenterCmd_ReadFixedTimeData,
-	CenterCmd_ReadFrozenData,
+	CenterCmd_ReadFixedValData	= 0x1031,
+	CenterCmd_ReadRealTimeData,
 	CenterCmd_OpenValve,
 	CenterCmd_CloseValve,
-	CenterCmd_ReadEnableState,
-	CenterCmd_ClearException
+	CenterCmd_ClearException,
+
+	/*
+	路由参数：	
+	1	读取路由列表
+	2	设置路由列表
+	3	读取表具路由
+	4	设置表具路由
+	5	查看路由列表
+	*/
+	CenterCmd_ReadRouteList	= 0x1041,
+	CenterCmd_SetRouteList,
+	CenterCmd_ReadMeterRoute,
+	CenterCmd_SetMeterRoute,
+	CenterCmd_RouteList
 
 }CenterCmdDef;
 
@@ -644,7 +647,7 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	index += args->lastItemLen;
 
 	buf[index++] = 0x55;		// 下行场强
-	buf[index++] = 0x5B;		// 上行场强
+	buf[index++] = 0xAA;		// 上行场强
 	crc8 = GetCrc8(&buf[0], index);
 	buf[index++] = crc8;		// crc8 校验: 帧长 -- 上行场强
 	buf[index++] = 0x16;		// 结束符
@@ -707,6 +710,12 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			index += length;
 			continue;
 		}	
+
+		// ack flag check
+		if(buf[index + 9] & 0x80 == 0x00){
+			index += length;
+			continue;
+		}
 
 		if(cmd != WaterCmd_SetMeterNumber && memcmp(BroadAddr, DstAddr, AddrLen) != 0){
 			// dstaddr check
@@ -903,11 +912,11 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = CmdResult_Ok;
-		index += 84;
-		memcpy(&VerInfo[0], &buf[index], 40);
-		VerInfo[40] = 0x00;
+		index += 7;
+		memcpy(&VerInfo[0], &buf[index], VerLen);
+		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
-		index += 40;
+		index += VerLen;
 		break;
 
 	case WaterCmd_SetMeterNumber:	// 设置表号
@@ -1827,10 +1836,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d%s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
 		index += 1;	
 		index += 10; // 保留
-		memcpy(&VerInfo[0], &buf[index], 40);
-		VerInfo[40] = 0x00;
+		memcpy(&VerInfo[0], &buf[index], VerLen);
+		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %s\n", &VerInfo[0]);
-		index += 40;
+		index += VerLen;
 		break;
 
 	case WaterCmd_SetModuleRunningParams:		// 设置模块运行参数
@@ -1864,6 +1873,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;
+	}
+	else{
+		dispIdx += sprintf(&dispBuf[dispIdx], "应答错误！\n");
 	}
 
 	dispBuf[dispIdx] = '\0';
@@ -1990,13 +2002,16 @@ uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
+	ackLen += 14 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
 #elif defined(Project_6009_RF)
-	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
+	ackLen += 14 + addrs->itemCnt * AddrLen;
+	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 #else // Project_8009_RF
-	timeout = 2000 + (Addrs.itemCnt - 2) * 2000;
+	ackLen += 10 + addrs->itemCnt * AddrLen;
+	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
 	tryCnt = 3;
 #endif
 

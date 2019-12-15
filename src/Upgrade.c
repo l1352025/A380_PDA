@@ -378,7 +378,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	uint32 shutdownTime;
 	uint8 *pData, *ptr, u8Tmp;
 
-	#if Upgrade_LOG_ON
+	#if Upgrd_LOG_ON
 	LogPrint("[  upgrade enter  ]\n");
 	#endif
 
@@ -539,7 +539,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				break;
 			}
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("notice on app/boot , docidx: %d", docIdx);
 			#endif
 
@@ -557,7 +557,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				sprintf(cmdMsg, "      执行中...  ");
 				Args.buf[i++] = 0x70;		// 命令字	70
 
-				#if Upgrade_LOG_ON
+				#if Upgrd_LOG_ON
 				LogPrint("notice on app , docidx: %d, doing...", docIdx -1);
 				#endif
 			}
@@ -582,7 +582,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				sprintf(cmdMsg, "      执行中...  ");
 				Args.buf[i++] = 0x71;		// 命令字	71
 
-				#if Upgrade_LOG_ON
+				#if Upgrd_LOG_ON
 				LogPrint("notice on boot , docidx: %d, doing...", docIdx -1);
 				#endif
 			}
@@ -635,7 +635,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			IsNoAckCmd = true;
 			tryCnt = 1;
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("send pkt on boot , sendIdx: %d, pktIdx: %d, doing...", sendIdx - 1, pktIdx);
 			#endif
 
@@ -670,7 +670,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				){
 					CurrCmd = WaterCmd_SendUpgradePacket;
 
-					#if Upgrade_LOG_ON
+					#if Upgrd_LOG_ON
 					u16Tmp = 0;
 					for(i = 0; i < 10 && i < pkt->missPktsCnt; i++){
 					u16Tmp += sprintf(&TmpBuf[u16Tmp], "%d  ", pkt->missPkts[i]);
@@ -732,7 +732,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				break;
 			}
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on boot , docIdx: %d", docIdx);
 			#endif
 
@@ -759,7 +759,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			Args.buf[i++] = 0x73;		// 命令字	73
 			ackLen = 93;				// 应答长度 93	
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on boot , docIdx: %d, doing...", docIdx - 1);
 			#endif
 
@@ -812,7 +812,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 				break;
 			}
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on app , docIdx: %d", docIdx);
 			#endif
 			
@@ -839,7 +839,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 			Args.buf[i++] = 0x74;		// 命令字	74
 			ackLen = 41;				// 应答长度 41	
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on app , docIdx: %d, doing...", docIdx - 1);
 			#endif
 
@@ -982,7 +982,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 
 	_SetShutDonwTime(shutdownTime);
 
-	#if Upgrade_LOG_ON
+	#if Upgrd_LOG_ON
 	LogPrint("[  upgrade exit  ]\n");
 	#endif
 }
@@ -1004,7 +1004,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	uint32 shutdownTime;
 	uint8 *pData, *ptr, u8Tmp;
 
-	#if Upgrade_LOG_ON
+	#if Upgrd_LOG_ON
 	LogPrint("[  query enter  ]\n IsNoAckCmd: %d ", IsNoAckCmd);
 	#endif
 
@@ -1108,7 +1108,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 				break;
 			}
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on boot , docidx: %d", docIdx);
 			#endif
 
@@ -1121,7 +1121,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			Args.buf[i++] = 0x73;		// 命令字	73
 			ackLen = 93;				// 应答长度 93	
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on boot , docidx: %d, doing...", docIdx -1);
 			#endif
 
@@ -1188,7 +1188,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 			Args.buf[i++] = 0x74;		// 命令字	74
 			ackLen = 41;				// 应答长度 41	
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("query on app , docidx: %d, doing...", docIdx -1);
 			#endif
 
@@ -1307,7 +1307,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 
 	_SetShutDonwTime(shutdownTime);
 
-	#if Upgrade_LOG_ON
+	#if Upgrd_LOG_ON
 	LogPrint("[  query exit  ]\n");
 	#endif
 }
@@ -1439,7 +1439,7 @@ static void UpgradeFunc_ManualNoticeUpgradeOnBoot(uint8 upgradeMode)
 			sprintf(cmdMsg, "      执行中...  ");
 			Args.buf[i++] = 0x71;		// 命令字	71
 
-			#if Upgrade_LOG_ON
+			#if Upgrd_LOG_ON
 			LogPrint("notice on boot , docidx: %d, doing...", docIdx -1);
 			#endif
 			
@@ -1741,7 +1741,7 @@ void UpgradeFunc(void)
 		}
 	}
 
-	#if Upgrd_FileBuf_Enable
+	#if ! Upgrd_FileBuf_Enable
 		if(PktInfo.fileName != NULL && PktInfo.filePtr != 0){
 			_Fclose(PktInfo.filePtr);
 			PktInfo.filePtr = 0;
@@ -1917,7 +1917,7 @@ extern void GetMissPktList(PacketInfo *pktInfo)
 	uint16 i, k, pktIdx = 0;
 	uint8 b;
 
-	#if Upgrd_FileBuf_Enable
+	#if ! Upgrd_FileBuf_Enable
 		if(pktInfo->filePtr == 0){
 			pktInfo->filePtr = _Fopen(pktInfo->fileName, "R");
 		}

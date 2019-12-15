@@ -41,9 +41,11 @@ typedef unsigned char bool;
     #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
-    #define AddrLen     8
-    #define LogPort     CurrPort      // 日志输出串口
-    #define UseBroadAddr    0           // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
+    #define AddrLen     8           // 地址长度(byte)：8 
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define LogPort     CurrPort            // 日志输出串口
+    #define UseBroadAddr    0               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
+    #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"2.5"               // 版本号
@@ -51,9 +53,11 @@ typedef unsigned char bool;
     #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
-    #define AddrLen     6
-    #define LogPort     CurrPort      // 日志输出串口
-    #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
+    #define AddrLen     6           // 地址长度(byte)：6 
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define LogPort     CurrPort            // 日志输出串口
+    #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"1.0"               // 版本号
@@ -61,13 +65,16 @@ typedef unsigned char bool;
     #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
-    #define AddrLen     5
-    #define LogPort     CurrPort      // 日志输出串口
-    #define CenterCmd_Enable    0           // 集中器命令可使用：目前不可用
+    #define AddrLen     5           // 地址长度(byte)：5 
+    #define VerLen      24          // 版本长度(byte)：24 
+    #define LogPort     CurrPort            // 日志输出串口
+    #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #endif
 
+
 #define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
-#define VerInfo_Release                         // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -75,16 +82,15 @@ typedef unsigned char bool;
 #define LogFileSize (100*1024)  // 日志文件最大字节数
 #define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
 #define LogTxRx     1           // 日志输出Tx/Rx数据：0 - 不输出， 1 - 输出
-#define RxBeep_On   0       // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
+#define RxBeep_On   0           // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
 #define LOG_ON      0 
 #define RxBeep_On   1       
 #endif
 
-
+#define RELAY_MAX   3       // 最大中继个数: 3
 #define TXTBUF_MAX  20      // 文本输入缓冲区最大个数
 #define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
-#define RELAY_MAX   3       // 最大中继个数
 #define UI_MAX      20      // 最大UI控件数
 #define ListStrMax  300     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
@@ -225,11 +231,17 @@ void MeterNoLoad(uint8 *mtrNo, uint8 type);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 
+#if Upgrd_FileBuf_Enable
 extern uint8 DispBuf[128 * 1024];					    // 4k ~ 128K
+#else
+extern uint8 DispBuf[14 * 1024];					    // 4k ~ 14K
+#endif
 extern uint8 * const LogBuf; // = &DispBuf[4096];     	// 4k ~ 
 extern uint8 * const TmpBuf; // = &DispBuf[8192];     	// 2K ~ 
 extern uint8 * const BackupBuf; // = &DispBuf[10240];	// 2k ~
+#if Upgrd_FileBuf_Enable
 extern uint8 * const FileBuf; // = &DispBuf[14336];	    // 116k 
+#endif
 extern uint8 TxBuf[1024];
 extern uint8 RxBuf[1024];
 extern uint32 RxLen, TxLen;

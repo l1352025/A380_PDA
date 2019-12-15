@@ -916,6 +916,29 @@ void CenterCmdFunc(void)
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
+/**
+ *  创建中继列表输入框ui，返回其ui行数
+*/
+uint8 CreateRelaysUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
+{
+	uint8 rowIdx = uiRowIdx;
+	uint8 i;
+
+#ifdef Project_6009_RF
+	for(i = 0; i < RELAY_MAX; i++){
+		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+			StrRelayAddr[i][0] = 0x00;
+			sprintf(StrRelayAddr[i], "    (可选)    ");
+		}
+	}
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
+#endif
+
+	return (uiRowIdx - rowIdx);
+}
+
 // 1	常用命令
 void WaterCmdFunc_CommonCmd(void)
 {
@@ -1098,17 +1121,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_6009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)    ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -1414,10 +1427,10 @@ void WaterCmdFunc_TestCmd(void)
 					ackLen = 1;					// 应答长度 1	
 					// 数据域
 					Args.buf[i++] = 0x10;		// 命令选项 10	
-					memcpy(&Args.buf[i], &VerInfo[0], 40);	
-					i += 40;					// 软件版本号
-					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[0], 0, false);
-					i += 6;						// 新地址
+					memcpy(&Args.buf[i], &VerInfo[0], VerLen);	
+					i += VerLen;					// 软件版本号
+					GetBytesFromStringHex(&Args.buf[i], 0, AddrLen, StrBuf[0], 0, false);
+					i += AddrLen;						// 新地址
 					Args.lastItemLen = i - 1;
 
 					if(CmdResult_Ok == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
@@ -1448,17 +1461,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_6009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)    ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -1753,17 +1756,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_6009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)    ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -2073,17 +2066,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_6009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)    ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -2375,17 +2358,7 @@ void WaterCmdFunc_Other(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-#ifdef Project_6009_RF
-				for(i = 0; i < RELAY_MAX; i++){
-					if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-						StrRelayAddr[i][0] = 0x00;
-						sprintf(StrRelayAddr[i], "    (可选)   ");
-					}
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 
 				key = ShowUI(UiList, &currUi);
 
@@ -2532,17 +2505,7 @@ void MainFuncReadRealTimeData(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2664,17 +2627,7 @@ void MainFuncReadFrozenData(void)
 				
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2776,17 +2729,7 @@ void MainFuncReadMeterTime(void)
 		}
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2921,17 +2864,7 @@ void MainFuncSetMeterTime(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -3037,17 +2970,7 @@ void MainFuncClearException(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -3154,17 +3077,7 @@ void MainFuncOpenValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -3271,17 +3184,7 @@ void MainFuncCloseValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-#ifdef Project_6009_RF
-			for(i = 0; i < RELAY_MAX; i++){
-				if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-					StrRelayAddr[i][0] = 0x00;
-					sprintf(StrRelayAddr[i], "    (可选)    ");
-				}
-			}
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], 12, 13*8, true);
-#endif
+			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
 
 			key = ShowUI(UiList, &currUi);
 

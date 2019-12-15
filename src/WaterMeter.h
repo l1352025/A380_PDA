@@ -14,11 +14,17 @@ extern uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint
 
 // --------------------------------  全局变量  -----------------------------------------
 //char Screenbuff[160*(160/3+1)*2]; 
+#if Upgrd_FileBuf_Enable
 uint8 DispBuf[128 * 1024];					// 4k ~ 128K
+#else
+uint8 DispBuf[14 * 1024];					// 4k ~ 14K
+#endif
 uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
 uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
 uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+#if Upgrd_FileBuf_Enable
 uint8 * const FileBuf = &DispBuf[14336];	// 116k 
+#endif
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
@@ -1152,10 +1158,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = CmdResult_Ok;
 		index += 84;
-		memcpy(&VerInfo[0], &buf[index], 40);
-		VerInfo[40] = 0x00;
+		memcpy(&VerInfo[0], &buf[index], VerLen);
+		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
-		index += 40;
+		index += VerLen;
 		break;
 
 	//---------------------------------------		清异常命令		---------------------
@@ -2598,10 +2604,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d%s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
 		index += 1;	
 		index += 10; // 保留
-		memcpy(&VerInfo[0], &buf[index], 40);
-		VerInfo[40] = 0x00;
+		memcpy(&VerInfo[0], &buf[index], VerLen);
+		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %s\n", &VerInfo[0]);
-		index += 40;
+		index += VerLen;
 		break;
 
 	case WaterCmd_SetModuleRunningParams:		// 设置模块运行参数
