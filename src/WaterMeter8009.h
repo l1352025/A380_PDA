@@ -316,19 +316,12 @@ char * Water8009_GetStrSensorType(uint8 typeId)
 	char * str = NULL;
 	
 	switch(typeId){
-	case 0x00:	str = "单干簧管/霍尔";	break;
-	case 0x01:	str = "双干簧管/霍尔";	break;
-	case 0x02:	str = "三干簧管/霍尔";	break;
-	case 0x03:	str = "骏普4位光电直读";	break;
-	case 0x04:	str = "厚膜直读";	break;
-	case 0x05:	str = "骏普1位光电直读";	break;
-	case 0x06:	str = "188协议光电直读";	break;
-	case 0x07:	str = "188协议无磁直读";	break;
-	case 0x08:	str = "2霍尔竟达";	break;
-	case 0x09:	str = "宁波无磁";	break;
-	case 0x0A:	str = "山科无磁";	break;
-	case 0x0B:	str = "东海无磁";	break;
-	case 0x0C:	str = "三川无磁";	break;
+	case 0x00:	str = "单干簧管";	break;
+	case 0x01:	str = "双干簧管";	break;
+	case 0x02:	str = "单霍尔";	break;
+	case 0x03:	str = "双霍尔";	break;
+	case 0x04:	str = "三霍尔";	break;
+	case 0x05:	str = "光电直读";	break;
 	default:	str = "未知";	break;
 	}
 
@@ -344,28 +337,25 @@ char * Water8009_GetStrSensorType(uint8 typeId)
 uint16 Water8009_GetStrAlarmStatus(uint16 status, char *buf)
 {
 	char * str = NULL;
-	uint8 mask = 1, i;
+	uint16 mask = 1, i;
 	uint16 len = 0;
 
-	for(i = 0; i < 14; i++){
+	for(i = 0; i < 11; i++){
 
 		mask = (1 << i);
 		
 		switch(status & mask){
-		case 0x01:	str = "干簧管故障";	break;
-		case 0x02:	str = "阀到位故障";	break;
-		case 0x04:	str = "传感器线断开";	break;
-		case 0x08:	str = "电池欠压";	break;
-		case 0x10:	str = "光电表,一组光管坏";	break;
-		case 0x20:	str = "磁干扰标志";	break;
-		case 0x40:	str = "光电表,多组光管坏";	break;
-		case 0x80:	str = "光电表,正强光干扰";	break;
-		case 0x0100:	str = "水表反转";	break;
-		case 0x0200:	str = "水表被拆卸";	break;
-		case 0x0400:	str = "水表被垂直安装";	break;
-		case 0x0800:	str = "EEPROM异常";	break;
-		case 0x1000:	str = "煤气泄漏";	break;
-		case 0x2000:	str = "欠费标志";	break;
+		
+		case 0x01:	str = "光电表,正强光干扰";	break;
+		case 0x02:	str = "光电表,多组光管坏";	break;
+		case 0x04:	str = "磁干扰标志";	break;
+		case 0x08:	str = "光电表,一组光管坏";	break;
+		case 0x10:	str = "电池欠压";	break;
+		case 0x20:	str = "EEPROM异常";	break;
+		case 0x40:	str = "阀到位故障";	break;
+		case 0x2000:	str = "水表被垂直安装";	break;
+		case 0x4000:	str = "水表被拆卸";	break;
+		case 0x8000:	str = "水表反转";	break;
 		default:
 			break;
 		}
@@ -397,13 +387,14 @@ char * Water8009_GetStrValveStatus(uint8 status)
 {
 	char * str = NULL;
 	
-	switch(status){
-	case 0:	str = "故障";	break;
-	case 1:	str = "开";	break;
-	case 2:	str = "关";	break;
-	default:
-		str = "未知";
-		break;
+	if(status & 0x40 > 0){
+		str = "开";	
+	}
+	else if(status & 0x20 > 0){
+		str = "关";	
+	}
+	else{
+		str = "未知";	
 	}
 
 	return str;
@@ -544,21 +535,38 @@ uint16 Water8009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	uint16 len = 0;
 
 	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "垂直安装检测    :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "主动上传冻结数据:%s\n", ((stateCode & 0x0020) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "透支关阀功能    :%s\n", ((stateCode & 0x0040) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "预付费功能      :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "自动信道分配    :%s\n", ((stateCode & 0x0100) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "防锈功能        :%s\n", ((stateCode & 0x0200) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "掉电关阀功能    :%s\n", ((stateCode & 0x0400) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "RF休眠策略      :%s\n", ((stateCode & 0x0800) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "离线自动关阀    :%s\n", ((stateCode & 0x1000) > 0 ? "开" : " 关"));
-	len += sprintf(&buf[len], "煤气泄漏检测    :%s\n", ((stateCode & 0x2000) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "磁干扰检测功能  :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "定时上传功能	   :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "定量上传功能    :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "垂直安装检测    :%s\n", ((stateCode & 0x0020) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0040) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "防锈功能        :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
+	
+	len += sprintf(&buf[len], "RF分时段工作    :%s\n", ((stateCode & 0x0100) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "抄表同步时钟    :%s\n", ((stateCode & 0x0200) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "上传冻结数据    :%s\n", ((stateCode & 0x0400) > 0 ? "开" : " 关"));
 
-	len += sprintf(&buf[len], "流速控制功能    :%s\n", ((stateCode & 0x8000) > 0 ? "开" : " 关"));
+	return len;
+}
+
+uint16 Water8009_GetStrMeterFuncEnableStateOld(uint16 stateCode, char * buf)
+{
+	uint16 len = 0;
+
+	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "磁干扰检测功能  :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "垂直安装检测    :%s\n", ((stateCode & 0x0020) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0040) > 0 ? "开" : " 关"));
+	
+	len += sprintf(&buf[len], "防锈功能        :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "定时上传功能	   :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "定量上传功能    :%s\n", ((stateCode & 0x0080) > 0 ? "开" : " 关"));
+	
+	len += sprintf(&buf[len], "RF分时段工作    :%s\n", ((stateCode & 0x0100) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "抄表同步时钟    :%s\n", ((stateCode & 0x0200) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "上传冻结数据    :%s\n", ((stateCode & 0x0400) > 0 ? "开" : " 关"));
 
 	return len;
 }
@@ -672,6 +680,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	uint8 crc8, relayCnt, cmd, i, u8Tmp;
 	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
+	double f64Tmp;
 	char *ptr;
 
 	dispIdx = 0;
@@ -776,37 +785,51 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//----------------------------------------		读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 	case CenterCmd_ReadRealTimeData:
-		if(rxlen < index + 21 && cmd != 0x01){
+		if(rxlen < index + 9 || cmd != 0x01){
 			break;
 		}
 		ret = CmdResult_Ok;
 		
-		// 类型
-		ptr = Water8009_GetStrValueType((buf[index] >> 4));
-		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", ptr);
-		index += 1;
-		// 正转用量
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		// 表读数
+		u32Tmp = GetUint32(&buf[index], 3, false);
+		u8Tmp = buf[index + 3];
 		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "正转: %d.%03d\n", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				sprintf(MeterInfo.meterValue, "%d.%03d", u32Tmp, u16Tmp);
+				sprintf(MeterInfo.meterValue, "%d.%02d", u32Tmp, u8Tmp);
 			}
 		#endif
-		// 反转用量
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
+		// 表口径、脉冲系数
+		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
+		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
+		index += 1;
+		//电池电压
+		f64Tmp = (double)buf[index] / 30.117534;
+		ptr = _DoubleToStr(TmpBuf, f64Tmp, 2);
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %s v\n", ptr);
+		index += 1;
+		#ifdef Project_8009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				strcpy(MeterInfo.batteryVoltage, ptr);
+			}
+		#endif
+		//阀门状态
+		ptr = Water8009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s", ptr);
+		index += 1;
+		#ifdef Project_8009_RF
+			if(MeterInfo.dbIdx != Invalid_dbIdx){
+				sprintf(&MeterInfo.meterStatusStr[u32Tmp], "阀门%s,", ptr);
+			}
+		#endif
+
 		//告警状态字
 		#ifdef Project_8009_RF
 			u32Tmp = dispIdx + 6;
 		#endif
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		u16Tmp = GetUint16(buf, 2, true);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
 		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
@@ -815,62 +838,26 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp - 1);
 				u32Tmp = ( (dispIdx - u32Tmp - 1) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp - 1));
 				MeterInfo.meterStatusStr[u32Tmp] = 0x00;
-			}
-		#endif
-		//阀门状态 
-		ptr = Water8009_GetStrValveStatus(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
-		index += 1;
-		#ifdef Project_8009_RF
-			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
-				sprintf(&MeterInfo.meterStatusStr[u32Tmp], " , 阀门%s", ptr);
+				
 			}
 		#endif
-		//电池电压
-		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
-		index += 1;
-		#ifdef Project_8009_RF
-			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				strncpy(MeterInfo.batteryVoltage, &dispBuf[dispIdx - 4], 3);
-			}
-		#endif
-		//环境温度
-		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
-		dispIdx += sprintf(&dispBuf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
-        index += 1;
-		//SNR 噪音比
-		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
-		index += 1;
-		//tx|rx信道
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
-		index += 1;
-		//协议版本
-		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
-		index += 1;
 		break;
 
-
 	case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
-		if(rxlen < index + 7 && cmd != 0x06){
+		if(rxlen < index + 5 || cmd != 0x04){
 			break;
 		}
 		ret = CmdResult_Ok;
-		// 用户用量
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
+		// 表底数
+		u32Tmp = GetUint32(&buf[index], 3, false);
+		u8Tmp = buf[index + 3];
 		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "用户用量:%d.%03d\n", u32Tmp, u16Tmp);
-		// 脉冲系数
-		switch (buf[index]){
-		case 0x00:	u16Tmp = 1;	break;
-		case 0x01:	u16Tmp = 10;	break;
-		case 0x02:	u16Tmp = 100;	break;
-		case 0x03:	u16Tmp = 1000;	break;
-		default:  u16Tmp = buf[index];	break;
-		}
-		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数:%d脉冲/方\n", u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表底数: %d.%02d\n", u32Tmp, u8Tmp);
+		// 表口径、脉冲系数
+		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
+		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
 		index += 1;
 		break;
 
@@ -878,41 +865,56 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	case WaterCmd_CloseValve:		// 关阀
 	case CenterCmd_OpenValve:
 	case CenterCmd_CloseValve:
-		if(rxlen < index + 3 && cmd != 0x03){
+		if(rxlen < index || (cmd != 0x05 && cmd != 0x06)){
 			break;
 		}
 		ret = CmdResult_Ok;
-		// 命令状态
-		ptr = Water8009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
-		if(buf[index - 1] == 0xAB){
-			u16Tmp = (buf[index] + buf[index + 1] * 256);
-			dispIdx += sprintf(&dispBuf[dispIdx], "原因: ");
-			dispIdx += Water8009_GetStrValveCtrlFailed(u16Tmp, &dispBuf[dispIdx]);
-			index += 2;
-		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 		break;
 
 	case WaterCmd_ClearException:	// 清异常命令 
 	case CenterCmd_ClearException:
-		if(rxlen < index + 1 && cmd != 0x05){
+		if(rxlen < index || cmd != 0x03){
 			break;
 		}
 		ret = CmdResult_Ok;
-		// 命令状态
-		ptr = Water8009_GetStrErrorMsg(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
-		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 		break;
 
 	case WaterCmd_ReadMeterCfgInfo:	// 读取表端配置信息
 
-		if(rxlen < index + 124 && cmd != 0x04){
+		if(rxlen < index + 31 || cmd != 0x02){
 			break;
 		}
 		ret = CmdResult_Ok;
-		index += 7;
+		index += 1;
+		// 开关阀时间 200ms * n
+		f64Tmp = (buf[index] & 0x7F) * 0.2;
+		ptr = _DoubleToStr(TmpBuf, f64Tmp, 1);
+		dispIdx += sprintf(&dispBuf[dispIdx], "开关阀时间: %s s\n", ptr);
+		index += 1;
+		// 过流门限值 2mA * n
+		dispIdx += sprintf(&dispBuf[dispIdx], "过流门限值: %d mA\n", (buf[index] & 0x7F) * 2);
+		index += 1;
+		// 脉冲类型、电压类型、信道
+		ptr = Water8009_GetStrSensorType(buf[index] >> 5);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲类型: %d mA\n", ptr);
+		ptr = ((buf[index] & 0x10) > 0 ? "3.6 v" : "6.0 v");
+		dispIdx += sprintf(&dispBuf[dispIdx], "电压类型: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "信道: %d \n", (buf[index] & 0x07));
+		index += 1;
+		// 表口径、脉冲系数
+		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
+		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
+		index += 1;
+		// 磁干扰开阀时间
+		dispIdx += sprintf(&dispBuf[dispIdx], "磁扰开阀时间: %d\n", (buf[index] & 0x7F));
+		index += 1;
+		// 脉冲最小脉宽
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲最小脉宽: %d\n", buf[index]);
+		index += 1;
+		// 版本号
 		memcpy(&VerInfo[0], &buf[index], VerLen);
 		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
@@ -920,7 +922,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetMeterNumber:	// 设置表号
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x1c){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -930,82 +932,101 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
 		if(buf[index - 1] == 0xAA){
-			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, 6, 0, false);
+			GetStringHexFromBytes((char *)&TmpBuf[0], buf, index, AddrLen, 0, false);
 			TmpBuf[12] = 0x00;
 			dispIdx += sprintf(&dispBuf[dispIdx], "新表号: %s\n", &TmpBuf[0]);
 		}
 		else{
 			ret = CmdResult_Failed;
 		}
-		index += 6;
+		index += AddrLen;
 		break;
 
 	//----------------------------------		功能配置		----------------------------
 
 	case WaterCmd_ReadReverseMeasureData:	// 读取反转用量
-		if(rxlen < index + 6 && cmd != 0x0A){
+		if(rxlen < index + 4 || cmd != 0x0A){
 			break;
 		}
 		ret = CmdResult_Ok;
-		// 反转读数
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "反转读数:%d.%03d\n", u32Tmp, u16Tmp);
+		if(rxlen > index + 4 + 9){
+			// 反转读数
+			u32Tmp = GetUint32(&buf[index], 3, false);
+			u8Tmp = buf[index + 3];
+			dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
+			index += 4;
+			// 表口径、脉冲系数
+			ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
+			dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+			dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
+			index += 1;
+			//电池电压
+			f64Tmp = (double)buf[index] / 30.117534;
+			ptr = _DoubleToStr(TmpBuf, f64Tmp, 2);
+			dispIdx += sprintf(&dispBuf[dispIdx], "电池: %s v\n", ptr);
+			index += 1;
+			//阀门状态
+			ptr = Water8009_GetStrValveStatus(buf[index]);
+			dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s", ptr);
+			index += 1;
+			//告警状态字
+			u16Tmp = GetUint16(buf, 2, true);
+			dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+			dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+			index += 2;
+		}
+		else{
+			// 反转读数
+			u32Tmp = GetUint32(&buf[index], 3, false);
+			u8Tmp = buf[index + 3];
+			dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
+			index += 4;
+		}
 		break;
 
 	case WaterCmd_ClearReverseMeasureData:	// 清除反转用量
-		if(rxlen < index + 6 && cmd != 0x0A){
+		if(rxlen < index || cmd != 0x12){
 			break;
 		}
 		ret = CmdResult_Ok;
-		// 反转读数
-		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-		index += 4;
-		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-		index += 2;
-		dispIdx += sprintf(&dispBuf[dispIdx], "反转读数:%d.%03d\n", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 		break;
 
 	case WaterCmd_ReadFuncEnableStateOld:	// 读取功能使能状态 old
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
+		u16Tmp = GetUint16(buf, 2, false);
+		dispIdx += Water8009_GetStrMeterFuncEnableStateOld(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		break;
 
 	case WaterCmd_ReadFuncEnableStateNew:	// 读取功能使能状态 new
 	case CenterCmd_ReadEnableState:
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
+		u16Tmp = GetUint16(buf, 2, false);
 		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		break;
 
 	
 	case WaterCmd_SetFuncEnableState:	// 设置功能使能状态 
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd < 0x0C || cmd > 0x10 || cmd != 0x1A){
 			break;
 		}
 		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
-		index += 2;
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 		break;
 
 
 	case WaterCmd_ReadTimeAndRfState:	// 查询时钟及RF状态 
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1017,7 +1038,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 
 	case WaterCmd_ReadRfWorkTime:		// 查询RF工作时段 
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1028,7 +1049,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetRfWorkTime:		// 设置RF工作时段 
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1042,7 +1063,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//--------------------------------		DMA 项目	-----------------------------------
 
 	case WaterCmd_UploadCenterFrequency:		// 主动上传中心频点
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1053,7 +1074,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_EnableReportAmeterData:		// 使能模块上传电表数
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1064,7 +1085,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetReportTimeInterval:		// 设置上传时间间隔
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1075,7 +1096,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadReportTimeInterval:		// 读取上传时间间隔
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1086,7 +1107,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadFrozenData:	// 读取冻结数据
-		if(rxlen < index + 88 && cmd != 0x02){
+		if(rxlen < index + 88 || cmd != 0x02){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1183,7 +1204,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadMeterTime:	// 读表端时钟
-		if(rxlen < index + 7 && cmd != 0x13){
+		if(rxlen < index + 7 || cmd != 0x13){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1194,7 +1215,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetMeterTime:		// 校表端时钟
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1210,7 +1231,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//-------------------------------------------------------------------------------------------------
 	//--------------------------------------		常用操作		-------------------------------------
 	case CenterCmd_ReadCenterNo:	// 读集中器号
-		if(rxlen < index + 6 && cmd != 0x41){
+		if(rxlen < index + 6 || cmd != 0x41){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1221,7 +1242,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterVer:		// 读集中器版本
-		if(rxlen < index + 6 && cmd != 0x40){
+		if(rxlen < index + 6 || cmd != 0x40){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1237,7 +1258,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterTime:		// 读集中器时钟
-		if(rxlen < index + 7 && cmd != 0x43){
+		if(rxlen < index + 7 || cmd != 0x43){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1249,7 +1270,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetCenterTime:		// 设集中器时钟
-		if(rxlen < index + 1 && cmd != 0x44){
+		if(rxlen < index + 1 || cmd != 0x44){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1260,7 +1281,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsParam:		// 读GPRS参数
-		if(rxlen < index + 16 && cmd != 0x45){
+		if(rxlen < index + 16 || cmd != 0x45){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1299,7 +1320,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetGprsParam:		// 设GPRS参数
-		if(rxlen < index + 1 && cmd != 0x46){
+		if(rxlen < index + 1 || cmd != 0x46){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1310,7 +1331,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsSignal:		// 读GPRS信号强度
-		if(rxlen < index + 4 && cmd != 0x47){
+		if(rxlen < index + 4 || cmd != 0x47){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1349,7 +1370,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_InitCenter:		// 集中器初始化
-		if(rxlen < index + 2 && cmd != 0x48){
+		if(rxlen < index + 2 || cmd != 0x48){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1364,7 +1385,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterWorkMode:		// 读集中器工作模式
-		if(rxlen < index + 7 && cmd != 0x49){
+		if(rxlen < index + 7 || cmd != 0x49){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1395,7 +1416,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		档案操作：		-------------------------------------
 	case CenterCmd_ReadDocCount:		// 读档案数量
-		if(rxlen < index + 3 && cmd != 0x50){
+		if(rxlen < index + 3 || cmd != 0x50){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1408,7 +1429,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadDocInfo:			// 读档案信息
-		if(rxlen < index + 3 && cmd != 0x51){
+		if(rxlen < index + 3 || cmd != 0x51){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1435,7 +1456,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_AddDocInfo:			// 添加档案信息
-		if(rxlen < index + 1 && cmd != 0x52){
+		if(rxlen < index + 1 || cmd != 0x52){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1456,7 +1477,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_DeleteDocInfo:			// 删除档案信息
-		if(rxlen < index + 7 && cmd != 0x53){
+		if(rxlen < index + 7 || cmd != 0x53){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1474,7 +1495,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ModifyDocInfo:			// 修改档案信息
-		if(rxlen < index + 1 && cmd != 0x54){
+		if(rxlen < index + 1 || cmd != 0x54){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1486,7 +1507,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		路径设置：		-------------------------------------
 	case CenterCmd_ReadDefinedRoute:		// 读自定义路由
-		if(rxlen < index + 10 && cmd != 0x55){
+		if(rxlen < index + 10 || cmd != 0x55){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1528,7 +1549,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetDefinedRoute:			// 设自定义路由
-		if(rxlen < index + 7 && cmd != 0x56){
+		if(rxlen < index + 7 || cmd != 0x56){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1545,7 +1566,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		命令转发：		-------------------------------------
 	case CenterCmd_ReadFixedTimeData:			// 读定时定量数据
-		if(rxlen < index + 28 && cmd != 0x63){
+		if(rxlen < index + 28 || cmd != 0x63){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1607,7 +1628,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadFrozenData:			// 读冻结数据
-		if(rxlen < index + 7 && cmd != 0x64){
+		if(rxlen < index + 7 || cmd != 0x64){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1714,7 +1735,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		UART表端模块测试：		---------------------
 	case WaterCmd_ReadModuleRunningParams:		// 读取模块运行参数
-		if(rxlen < index + 124 && cmd != 0x3A){
+		if(rxlen < index + 124 || cmd != 0x3A){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1843,7 +1864,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetModuleRunningParams:		// 设置模块运行参数
-		if(rxlen < index + 1 && cmd != 0x3F){
+		if(rxlen < index + 1 || cmd != 0x3F){
 			break;
 		}
 		ret = CmdResult_Ok;

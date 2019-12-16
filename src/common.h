@@ -197,6 +197,8 @@ char HexToChar(uint8 b);
 uint8 CharToHex(char c);
 uint8 BcdToDec(uint8 bcd);
 uint8 DecToBcd(uint8 dec);
+uint16 GetUint16(uint8 *buf, uint8 len, bool reverse);
+uint32 GetUint32(uint8 *buf, uint8 len, bool reverse);
 int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse);
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse);
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);

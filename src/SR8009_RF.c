@@ -919,6 +919,7 @@ void CenterCmdFunc(void)
 uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
 {
 	uint8 rowIdx = uiRowIdx;
+	uint8 i;
 
 #ifdef Project_8009_RF
 	for(i = 0; i < RELAY_MAX; i++){
@@ -1150,21 +1151,21 @@ void WaterCmdFunc_CommonCmd(void)
 				
 				Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
 				i = 0;
-				Args.buf[i++] = 0x02;		// 命令字	04
-				ackLen = 30;				// 应答长度 30	
+				Args.buf[i++] = 0x02;		// 命令字	
+				ackLen = 30;				// 应答长度	
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
 				if(CmdResult_Ok == Protol8009Tranceiver(WaterCmd_ReadMeterCfgInfo, &Addrs, &Args, ackLen, timeout, tryCnt)){
 					i = 0;
-					Args.buf[i++] = 0x1C;		// 命令字	07
-					ackLen = 1;					// 应答长度 1
+					Args.buf[i++] = 0x1C;		// 命令字
+					ackLen = 7;					// 应答长度 
 					timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
 					tryCnt = 3;	
 					// 数据域
-					Args.buf[i++] = 0xA2;		// 命令选项 10	
-					memcpy(&Args.buf[i], &VerInfo[0], 40);	
-					i += 40;					// 软件版本号
+					Args.buf[i++] = 0xA2;		// 命令选项	
+					memcpy(&Args.buf[i], &VerInfo[0], VerLen);	
+					i += VerLen;					// 软件版本号
 					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[0], 0, false);
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;

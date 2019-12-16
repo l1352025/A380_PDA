@@ -1301,6 +1301,50 @@ uint8 DecToBcd(uint8 dec)
 	return (uint8)(dec + (dec / 10) * 6);
 }
 
+/**
+ * 从缓冲区中取出 Uint16 值
+*/
+uint16 GetUint16(uint8 *buf, uint8 len, bool reverse)
+{
+	uint16 u16Tmp;
+	uint8 i;
+
+	if(reverse){
+		for(i = 0; i < len; i++){
+			u16Tmp += (uint16)(*(buf + i) << i * 8);
+		}
+	}
+	else{
+		for(i = 0; i < len; i++){
+			u16Tmp += (uint16)(*(buf + (len - i - 1)) << i * 8);
+		}
+	}
+
+	return u16Tmp;
+}
+
+/**
+ * 从缓冲区中取出 Uint32 值
+*/
+uint32 GetUint32(uint8 *buf, uint8 len, bool reverse)
+{
+	uint32 u32Tmp;
+	uint8 i;
+
+	if(reverse){
+		for(i = 0; i < len; i++){
+			u32Tmp += (uint32)(*(buf + i) << i * 8);
+		}
+	}
+	else{
+		for(i = 0; i < len; i++){
+			u32Tmp += (uint32)(*(buf + (len - i - 1)) << i * 8);
+		}
+	}
+
+	return u32Tmp;
+}
+
 /*
 * 描  述：将字节数组转换成16进制字符串
 * 参  数：strHex - 目的字符串缓冲区地址
