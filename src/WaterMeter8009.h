@@ -677,7 +677,7 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
 	bool ret = CmdResult_Failed;
-	uint8 crc8, relayCnt, cmd, i, u8Tmp;
+	uint8 crc8, relayCnt, cmd, subCmd, i, u8Tmp;
 	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
 	double f64Tmp;
@@ -774,6 +774,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	// 跳过 数据域长度 --> 路由信息
 	index += (1 + relayCnt * AddrLen);
+
+	// 子命令字
+	subCmd = buf[index]; // 可能没有
 	
 	// 数据域解析
 	payloadIdx = index;
@@ -808,7 +811,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		//电池电压
 		f64Tmp = (double)buf[index] / 30.117534;
 		ptr = _DoubleToStr(TmpBuf, f64Tmp, 2);
-		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %s v\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %s v\n", ptr);
 		index += 1;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
@@ -817,7 +820,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#endif
 		//阀门状态
 		ptr = Water8009_GetStrValveStatus(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s", ptr);
 		index += 1;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
@@ -830,7 +833,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			u32Tmp = dispIdx + 6;
 		#endif
 		u16Tmp = GetUint16(buf, 2, true);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
 		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		#ifdef Project_8009_RF
@@ -1017,7 +1020,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	
 	case WaterCmd_SetFuncEnableState:	// 设置功能使能状态 
-		if(rxlen < index + 2 || cmd < 0x0C || cmd > 0x10 || cmd != 0x1A){
+		if(rxlen < index + 2 ){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1025,204 +1028,209 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 
-	case WaterCmd_ReadTimeAndRfState:	// 查询时钟及RF状态 
-		if(rxlen < index + 2 || cmd != 0x0B){
+	case WaterCmd_ReadTimeAndRfState:	// 查询时钟及RF状态 、打开/关闭RF分时段功能 09-00/01
+		if(rxlen < index + 9 || cmd != 0x09){
 			break;
 		}
-		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
-		index += 2;
+		// 操作结果
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index - 1] == 0xAA){
+			// 模块使能状态
+			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
+			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
+			index += 1;
+			// 当前时钟
+			dispIdx += GetTimeStr(&dispBuf[dispIdx], "表端当前时钟: \n  %02X%02X-%02X-%02X %02X:%02X:%02X\n"
+				, &buf[index], 7);
+			index += 7;
+		}
 		break;
 
 
-	case WaterCmd_ReadRfWorkTime:		// 查询RF工作时段 
-		if(rxlen < index + 2 || cmd != 0x0B){
+	case WaterCmd_ReadRfWorkTime:		// 查询RF工作时段 09-04
+		if(rxlen < index + 6 || cmd != 0x09){
 			break;
 		}
-		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
-		index += 2;
+		// 操作结果
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index - 1] == 0xAA){
+			// 模块使能状态
+			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
+			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
+			index += 1;
+			// 工作时段
+			if(buf[index] == buf[index + 2]){
+				dispIdx += sprintf(&dispBuf[dispIdx], "每月工作时间段：\n");
+				dispIdx += sprintf(&dispBuf[dispIdx], "%x号%02X:00-%x号%02X:00\n", 
+					buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+			}
+			else{
+				dispIdx += sprintf(&dispBuf[dispIdx], "每天工作时间段：\n");
+				dispIdx += sprintf(&dispBuf[dispIdx], "%02X:00-%02X:00\n", buf[index + 1], buf[index + 3]);
+			}
+			index += 4;
+		}
 		break;
 
-	case WaterCmd_SetRfWorkTime:		// 设置RF工作时段 
-		if(rxlen < index + 2 || cmd != 0x0B){
+	case WaterCmd_SetRfWorkTime:		// 设置RF工作时段 09-84
+		if(rxlen < index + 6 || cmd != 0x09){
 			break;
 		}
-		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
-		index += 2;
+		// 操作结果
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		if(buf[index - 1] == 0xAA){
+			// 模块使能状态
+			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
+			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
+			index += 1;
+			// 工作时段
+			if(buf[index] == buf[index + 2]){
+				dispIdx += sprintf(&dispBuf[dispIdx], "每月工作时间段：\n");
+				dispIdx += sprintf(&dispBuf[dispIdx], "%x号%02X:00-%x号%02X:00\n", 
+					buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+			}
+			else{
+				dispIdx += sprintf(&dispBuf[dispIdx], "每天工作时间段：\n");
+				dispIdx += sprintf(&dispBuf[dispIdx], "%02X:00-%02X:00\n", buf[index + 1], buf[index + 3]);
+			}
+			index += 4;
+		}
 		break;
 
 
 	//--------------------------------		DMA 项目	-----------------------------------
 
-	case WaterCmd_UploadCenterFrequency:		// 主动上传中心频点
-		if(rxlen < index + 1 || cmd != 0x14){
+	case WaterCmd_UploadCenterFrequency:		// 主动上传中心频点 09-09/89
+		if(rxlen < index + 2 || cmd != 0x09){
 			break;
 		}
-		// 命令状态
+		// 操作结果
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		// 跳过 子命令字
+		index += 1;
 		break;
 
-	case WaterCmd_EnableReportAmeterData:		// 使能模块上传电表数
-		if(rxlen < index + 1 || cmd != 0x14){
+	case WaterCmd_EnableReportAmeterData:		// 使能模块上传电表数 09-0B/8B
+		if(rxlen < index + 1 || cmd != 0x09){
 			break;
 		}
-		// 命令状态
+		// 操作结果
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
-		break;
-
-	case WaterCmd_SetReportTimeInterval:		// 设置上传时间间隔
-		if(rxlen < index + 1 || cmd != 0x14){
-			break;
-		}
-		// 命令状态
-		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
-		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		// 跳过 子命令字
 		index += 1;
 		break;
 
+	case WaterCmd_SetReportTimeInterval:		// 设置上传时间间隔 09-0A
 	case WaterCmd_ReadReportTimeInterval:		// 读取上传时间间隔
-		if(rxlen < index + 1 || cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x09){
 			break;
 		}
-		// 命令状态
+		// 操作结果
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		// 跳过 子命令字
+		index += 1;
+		// 时间间隔
+		dispIdx += sprintf(&dispBuf[dispIdx], "时间间隔: %d 小时\n", buf[index]);
+		index += 1;
 		break;
 
-	case WaterCmd_ReadFrozenData:	// 读取冻结数据
-		if(rxlen < index + 88 || cmd != 0x02){
+	case WaterCmd_ReadFrozenData:	// 读取冻结数据 09-05/06
+		if(rxlen < index + 54 || cmd != 0x09){
 			break;
 		}
-		ret = CmdResult_Ok;
-		// 冻结数据类型
-		dispIdx += sprintf(&dispBuf[dispIdx], "类型: %s\n", (buf[index] == 0x01 ? "正传" : "反转"));
+		// 操作结果
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
-
-		if(rxlen < index + 104){	// 冻结数据格式-旧版本 1 + 78 byte
-			// 冻结数据起始序号
-			u8Tmp = buf[index] * 10;
-			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
-			index += 1;
-			// 冻结数据起始时间
-			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
-				, buf[payloadIdx + 2], buf[payloadIdx + 3], buf[payloadIdx + 4], buf[payloadIdx + 5], buf[payloadIdx + 6]);
-			index += 5;
-			// 冻结数据方式 ：0-按天, 1-按月
-			// 冻结数据数量 ：按天最大24条，按月最大30条
-			dispIdx += sprintf(&dispBuf[dispIdx], "方式: 每%s冻结%d条\n", (buf[index] == 0x01 ? "天" : "月"), buf[index + 1]);
-			index += 2;	
-			// 冻结数据时间间隔
-			if(buf[index] == 0){
-				dispIdx += sprintf(&dispBuf[dispIdx], "间隔: 每%s冻结1条\n", (buf[index - 2] == 0x01 ? "天" : "月"));
-			}
-			else{
-				dispIdx += sprintf(&dispBuf[dispIdx], "间隔: %d%s冻结1条\n", buf[index], (buf[index - 2] == 0x01 ? "小时" : "天"));
-			}
-			index += 1;
-			// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
-			dispIdx += sprintf(&dispBuf[dispIdx], "读取的10条数据如下: \n");
-			for(i = 0; i < 10; i++){
-				u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-				index += 4;
-				u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-				index += 2;
-				dispIdx += sprintf(&dispBuf[dispIdx], "%d, %x/%x: %d.%03d\n", i, buf[payloadIdx + 4], buf[index], u32Tmp, u16Tmp);
-				index +=1;
-			}
-		}
-		else{		// 冻结数据格式-新版本	1 + 104 byte
-			// 冻结数据起始序号
-			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 倒数第%d天数据\n", buf[index] + 1);
-			index += 1;
-			// 时间信息
-			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %02X-%02X %02X:%02X\n",
-				buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
+		// 冻结数据类型: 05-正转
+		dispIdx += sprintf(&dispBuf[dispIdx], "冻结类型: %s\n", (buf[index] == 0x05 ? "正转" : "反转"));
+		index += 1;
+		// 冻结数据起始序号
+		u8Tmp = buf[index] * 10;
+		dispIdx += sprintf(&dispBuf[dispIdx], "数据范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+		index += 1;
+		// 冻结的用量数据：7*N 字节 （6 byte 用量 + 1 byte date.day）
+		dispIdx += sprintf(&dispBuf[dispIdx], "读取的10条数据如下: \n");
+		for(i = 0; i < 10; i++){
+			u32Tmp = GetUint32(&buf[index], 3, false);
+			u8Tmp = buf[index + 3];
+			dispIdx += sprintf(&dispBuf[dispIdx], "%02d : %d.%02d\n", i, u32Tmp, u8Tmp);
 			index += 4;
-			// 累计用量
-			u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
-			index += 4;
-			u16Tmp = ((buf[index + 1] << 8) + buf[index]);
-			index += 2;
-			dispIdx += sprintf(&dispBuf[dispIdx], "累计用量: %d.%03d\n", u32Tmp, u16Tmp);
-			// 0:00 ~ 23:30 增量
-			u8Tmp = 0;
-			u16Tmp = 0x00;
-			for(i = 0; i < 47; i++){
-				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
-				u16Tmp += 0x30;
-				if(u16Tmp == 0x60){
-					u16Tmp = 0x00;
-					u8Tmp += 1;
-				}
-				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X增量:%d\n", u8Tmp, u16Tmp, (buf[index] + buf[index + 1]*256));
-				index += 2;
-			}
 		}
-
-		//告警状态字
-		u16Tmp = (buf[index] + buf[index + 1] * 256);
-		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
-		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
-		index += 2;
-		//阀门状态 
-		ptr = Water8009_GetStrValveStatus(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
+		// 冻结数据起始时间
+		dispIdx += GetTimeStr(&dispBuf[dispIdx], "起始时间: \n %02X%02X%02X%02X %02X:%02X:00\n", &buf[index], 6);
+		index += 6;
+		// 冻结数据时间间隔
+		dispIdx += sprintf(&dispBuf[dispIdx], "时间间隔: %d 分钟\n", buf[index]);
 		index += 1;
 		//电池电压
-		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
+		f64Tmp = (double)buf[index] / 30.117534;
+		ptr = _DoubleToStr(TmpBuf, f64Tmp, 2);
+		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %s v\n", ptr);
 		index += 1;
-		//环境温度
-		ptr = ((buf[index] & 0x80) > 0 ? "-" : "");
-		dispIdx += sprintf(&dispBuf[dispIdx], "温度: %s%d  ", ptr, (buf[index] & 0x7F));
-        index += 1;
-		//SNR 噪音比
-		dispIdx += sprintf(&dispBuf[dispIdx], "SNR : %d\n", buf[index]);
+		//阀门状态
+		ptr = Water8009_GetStrValveStatus(buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s", ptr);
 		index += 1;
-		//tx|rx信道
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: Tx-%d, Rx-%d\n", (buf[index] & 0x0F), (buf[index] >> 4));
-		index += 1;
-		//协议版本
-		dispIdx += sprintf(&dispBuf[dispIdx], "协议版本: %d\n", buf[index]);
-		index += 1;
+		//告警状态字
+		u16Tmp = GetUint16(buf, 2, true);
+		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
+		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
+		index += 2;
 		break;
 
-	case WaterCmd_ReadMeterTime:	// 读表端时钟
-		if(rxlen < index + 7 || cmd != 0x13){
+	case WaterCmd_ReadMeterTime:	// 读表端时钟 09-00
+		if(rxlen < index + 9 || cmd != 0x09){
 			break;
 		}
-		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "表端时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
-			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
-			, buf[index + 4], buf[index + 5], buf[index + 6]);
-		index += 7;
-		break;
-
-	case WaterCmd_SetMeterTime:		// 校表端时钟
-		if(rxlen < index + 1 || cmd != 0x14){
-			break;
-		}
-		// 命令状态
+		// 操作结果
 		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
 		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
 		index += 1;
+		if(buf[index - 1] == 0xAA){
+			// 模块使能状态 跳过
+			index += 1;
+			// 当前时钟
+			dispIdx += GetTimeStr(&dispBuf[dispIdx], "表端当前时钟: \n  %02X%02X-%02X-%02X %02X:%02X:%02X\n"
+				, &buf[index], 7);
+			index += 7;
+		}
+		break;
+
+	case WaterCmd_SetMeterTime:		// 校表端时钟：抄表指令01 + 时间
+		if(rxlen < index + 9 || cmd != 0x01){
+			break;
+		}
+		ret = CmdResult_Ok;
+		// 抄表成功则校时成功
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
+		index += 9;
 		break;
 
 

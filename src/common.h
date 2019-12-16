@@ -199,6 +199,7 @@ uint8 BcdToDec(uint8 bcd);
 uint8 DecToBcd(uint8 dec);
 uint16 GetUint16(uint8 *buf, uint8 len, bool reverse);
 uint32 GetUint32(uint8 *buf, uint8 len, bool reverse);
+int GetTimeStr(uint8 *time, const char *format, uint8 *buf, uint8 len);
 int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse);
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse);
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);

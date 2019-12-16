@@ -1345,6 +1345,34 @@ uint32 GetUint32(uint8 *buf, uint8 len, bool reverse)
 	return u32Tmp;
 }
 
+/**
+ * 从缓存区中取出 时间字符串, 返回字符串长度
+*/
+int GetTimeStr(uint8 *time, const char *format, uint8 *buf, uint8 len)
+{
+	int strLen = 0;
+
+	if(len == 7){
+		strLen = sprintf(time, format, *(buf), *(buf + 1), *(buf + 2), *(buf + 3), *(buf + 4)
+			, *(buf + 5), *(buf + 6));
+	}
+	else if(len == 6){
+		strLen = sprintf(time, format, *(buf), *(buf + 1), *(buf + 2), *(buf + 3), *(buf + 4)
+			, *(buf + 5));
+	}
+	else if(len == 5){
+		strLen = sprintf(time, format, *(buf), *(buf + 1), *(buf + 2), *(buf + 3), *(buf + 4));
+	}
+	else if(len == 4){
+		strLen = sprintf(time, format, *(buf), *(buf + 1), *(buf + 2), *(buf + 3));
+	}
+	else if(len == 3){
+		strLen = sprintf(time, format, *(buf), *(buf + 1), *(buf + 2), *(buf + 3));
+	}
+
+	return strLen;
+}
+
 /*
 * 描  述：将字节数组转换成16进制字符串
 * 参  数：strHex - 目的字符串缓冲区地址
