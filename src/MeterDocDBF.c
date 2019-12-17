@@ -6,7 +6,11 @@
 
 #include "MeterDocDBF.h"
 #include "Common.h"
+#ifdef Project_6009_RF
 #include "WaterMeter.h"
+#else
+#include "WaterMeter8009.h"
+#endif
 
 //-----------------------	全局变量定义
 MeterInfoSt MeterInfo;
@@ -354,7 +358,11 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		Args.lastItemLen = i - 1;
 
 		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#ifdef Project_6009_RF
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#else
+			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#endif
 
 		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
@@ -849,7 +857,11 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		}
 
 		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#ifdef Project_6009_RF
+			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#else
+			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#endif
 
 		// 应答长度、超时时间、重发次数
 		ackLen += 14 + Addrs.itemCnt * AddrLen;
@@ -857,7 +869,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		tryCnt = 3;
 
 		// 发送、接收、结果显示
-		if(false == Protol6009Tranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
+		if(false == ProtolCommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
 			if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
 				DispBuf[0] = NULL;
 			}

@@ -1824,6 +1824,77 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 }
 
 /*
+* 描述： 命令发送/接收解析		- 执行完成后，返回结果
+* 参数： cmdid	- 当前命令标识
+*		addrs	- 地址域		
+*		args	- 命令参数：args->items[0] - 命令ID, args->items[1] - 数据域
+*		ackLen	- 应答长度 (byte)
+*		timeout	- 超时时间 (ms)  默认为 8s + 中继数 x 2 x 6s
+*		tryCnt	- 重试次数 默认3次
+* 返回： 命令执行结果： CmdResult_OK - 成功， CmdResult_Failed - 失败	
+*		CmdResult_CrcError - crc错误, CmdResult_Timeout - 超时, CmdResult_Cancel - 已取消
+*/
+CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+{
+	CmdResult cmdResult;
+
+	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
+		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
+		MeterNoSave(StrDstAddr, 3);
+	}else{
+		#ifdef Project_6009_RF
+		MeterNoSave(StrDstAddr, 0);
+		#elif defined Project_6009_IR
+		MeterNoSave(StrDstAddr, 1);
+		#else // Project_8009_RF
+		MeterNoSave(StrDstAddr, 2);
+		#endif
+	}
+
+	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+#if (AddrLen <= 6)
+	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
+#else
+	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号:\n   %s ", StrDstAddr);
+#endif
+
+	cmdResult = CommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
+	
+	if(cmdResult == CmdResult_Cancel){
+		return cmdResult;
+	}
+
+	// 显示结果
+#if RxBeep_On
+	_SoundOn();
+	_Sleep(50);
+	_SoundOff();
+#endif
+	if(cmdResult == CmdResult_Ok){
+		_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		//------------------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回  < 成功 >  继续", Color_White);
+	}
+	else{
+#if RxBeep_On
+		_Sleep(30);
+		_SoundOn();
+		_Sleep(30);
+		_SoundOff();
+#endif
+		if(cmdResult == CmdResult_Failed){
+		//	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+		}
+		//-----------------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回  < 失败 >  继续", Color_White);
+	}
+
+	return cmdResult;
+}
+
+/*
 * 描 述：命令收发时定周期回调 - 按键时打开lcd背景灯
 * 参 数：currKey	- 命令收发时定周期检测的按键值
 * 返 回：void

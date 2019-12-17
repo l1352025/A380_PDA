@@ -62,7 +62,7 @@ typedef unsigned char bool;
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"1.0"               // 版本号
     #define VerInfo_RevDate (char *)"2019-09-04"        // 版本日期
-    #define TransType   (char *)"Lora透传"              // 通信方式	
+    #define TransType   (char *)"RF透传"                // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     5           // 地址长度(byte)：5 
@@ -73,7 +73,7 @@ typedef unsigned char bool;
 #endif
 
 
-#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
+//#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
 #define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
@@ -227,6 +227,7 @@ void DatetimeToTimeStrs(const char *datetime, char *year, char *month, char *day
 uint8 TimeStrsToTimeBytes(uint8 bytes[], char *year, char *month, char *day, char *hour, char *min, char *sec);
 uint8 IpStrsToIpBytes(uint8 ip[], char *strIp1, char *strIp2, char *strIp3, char *strIp4);
 CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
+CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
 void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
 void MeterNoSave(uint8 *mtrNo, uint8 type);
