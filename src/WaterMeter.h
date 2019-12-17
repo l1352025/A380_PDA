@@ -991,9 +991,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp - 1);
-				u32Tmp = ( (dispIdx - u32Tmp - 1) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp - 1));
-				MeterInfo.meterStatusStr[u32Tmp] = 0x00;
+				u16Tmp = (uint16)(dispIdx - u32Tmp);
+				if(u16Tmp + 9 > Size_MeterStatusStr){
+					u16Tmp = Size_MeterStatusStr - 9;
+				}
+				strncpy(&MeterInfo.meterStatusStr[0], &dispBuf[u32Tmp], u16Tmp);
 			}
 		#endif
 		//阀门状态 
@@ -1003,7 +1005,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
-				sprintf(&MeterInfo.meterStatusStr[u32Tmp], " , 阀门%s", ptr);
+				sprintf(&MeterInfo.meterStatusStr[u16Tmp], ", 阀门%s", ptr);
 			}
 		#endif
 		//电池电压

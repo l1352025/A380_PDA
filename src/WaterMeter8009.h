@@ -398,11 +398,51 @@ char * Water8009_GetStrValveStatus(uint8 status)
 	return str;
 }
 /*
-* 描  述：获取8009水表 集中器错误码
+* 描  述：获取8009水表 表端错误码
 * 参  数：status	- 状态
 * 返回值：char *	- 解析后的字符串
 */
 char * Water8009_GetStrErrorMsg(uint8 errorCode)
+{
+	char * str = NULL;
+
+	switch(errorCode){
+	case 0xAA:
+		str = "操作成功";
+		break;
+	case 0xAB:
+	    str = "操作失败";
+		break;
+	case 0xBA:
+	    str = "对象不存在";
+		break;
+	case 0xBB:
+	    str = "对象重复";
+		break;
+	case 0xBC:
+		str = "对象已满";
+		break;
+	case 0xCC:
+	    str = "批量操作结束";
+		break;
+	case 0xEE:
+	    str = "协议错误";
+		break;
+	
+	default:
+		str = "未知错误";
+		break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：获取8009水表 集中器错误码
+* 参  数：status	- 状态
+* 返回值：char *	- 解析后的字符串
+*/
+char * Water8009_GetStrCenterErrorMsg(uint8 errorCode)
 {
 	char * str = NULL;
 
@@ -475,6 +515,7 @@ char * Water8009_GetStrErrorMsg(uint8 errorCode)
 
 	return str;
 }
+
 
 /*
 * 描  述：获取8009水表 阀控失败原因
@@ -820,13 +861,14 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				sprintf(&MeterInfo.meterStatusStr[u32Tmp], "阀门%s,", ptr);
+				u8Tmp = sprintf(&MeterInfo.meterStatusStr[0], "阀门%s,", ptr);
+				MeterInfo.meterStatusStr[u8Tmp - 1] = 0x00;
 			}
 		#endif
 
 		//告警状态字
 		#ifdef Project_8009_RF
-			u32Tmp = dispIdx + 6;
+			u32Tmp = dispIdx + 10;
 		#endif
 		u16Tmp = GetUint16(buf, 2, true);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
@@ -834,11 +876,12 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				strncpy(MeterInfo.meterStatusStr, &dispBuf[u32Tmp], dispIdx - u32Tmp - 1);
-				u32Tmp = ( (dispIdx - u32Tmp - 1) >= Size_MeterStatusStr ? Size_MeterStatusStr - 1 : (dispIdx - u32Tmp - 1));
-				MeterInfo.meterStatusStr[u32Tmp] = 0x00;
+				u16Tmp = (uint16)(dispIdx - u32Tmp);
+				if(u16Tmp + u8Tmp > Size_MeterStatusStr){
+					u16Tmp = Size_MeterStatusStr - u8Tmp;
+				}
+				strncpy(&MeterInfo.meterStatusStr[u8Tmp], &dispBuf[u32Tmp], u16Tmp);
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
-				
 			}
 		#endif
 		break;
