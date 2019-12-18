@@ -743,7 +743,7 @@ uint8 ShowUI(UI_ItemList uiList, uint8 *itemNo)
 				}
 
 				if( ptr->text[0] >= '0' && ptr->text[0] <= '9'){
-					if((ptr->ui.txtbox.dataLen == 12 || ptr->ui.txtbox.dataLen == 14 || ptr->ui.txtbox.dataLen == 16)
+					if((ptr->ui.txtbox.dataLen == AddrLen * 2)
 						&& (key == KEY_ENTER || key == KEY_UP || key == KEY_DOWN)){
 						_leftspace(ptr->text, ptr->ui.txtbox.dataLen, '0');
 						if(strncmp(ZeroAddr, ptr->text, ptr->ui.txtbox.dataLen) == 0){
@@ -1306,17 +1306,17 @@ uint8 DecToBcd(uint8 dec)
 */
 uint16 GetUint16(uint8 *buf, uint8 len, bool reverse)
 {
-	uint16 u16Tmp;
+	uint16 u16Tmp = 0;
 	uint8 i;
 
 	if(reverse){
 		for(i = 0; i < len; i++){
-			u16Tmp += (uint16)(*(buf + i) << i * 8);
+			u16Tmp |= (uint16)(*(buf + i) << i * 8);
 		}
 	}
 	else{
 		for(i = 0; i < len; i++){
-			u16Tmp += (uint16)(*(buf + (len - i - 1)) << i * 8);
+			u16Tmp |= (uint16)(*(buf + (len - i - 1)) << i * 8);
 		}
 	}
 
@@ -1328,17 +1328,17 @@ uint16 GetUint16(uint8 *buf, uint8 len, bool reverse)
 */
 uint32 GetUint32(uint8 *buf, uint8 len, bool reverse)
 {
-	uint32 u32Tmp;
+	uint32 u32Tmp = 0;
 	uint8 i;
 
 	if(reverse){
 		for(i = 0; i < len; i++){
-			u32Tmp += (uint32)(*(buf + i) << i * 8);
+			u32Tmp |= (uint32)(*(buf + i) << i * 8);
 		}
 	}
 	else{
 		for(i = 0; i < len; i++){
-			u32Tmp += (uint32)(*(buf + (len - i - 1)) << i * 8);
+			u32Tmp |= (uint32)(*(buf + (len - i - 1)) << i * 8);
 		}
 	}
 

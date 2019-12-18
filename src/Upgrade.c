@@ -273,7 +273,7 @@ static void UpgradeFunc_UpgradeDocMgmt(void)
 		case 1:	// 添加档案
 			{
 				_ClearScreen();
-				TextBoxCreate(&uiTxtbox, 0, 2*16 + 8, "  > ", StrDstAddr, (AddrLen * 2), (AddrLen * 8 + 8), true);
+				TextBoxCreate(&uiTxtbox, 0, 2*16 + 8, "  > ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 
 				while(2){
 					_Printfxy(0, 0, "<<添加档案", Color_White);
@@ -1610,7 +1610,7 @@ void UpgradeFunc(void)
 	ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "1. 选择升级文件");	
 	if(upgradeMode == 1){
 		LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 输入表号");	
-		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "  >", StrDstAddr, (AddrLen * 2), (AddrLen * 8 + 8), true);
+		TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "  >", StrDstAddr, (AddrLen * 2), (AddrLen*2*8 + 8), true);
 	}
 	else{
 		ButtonCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16 + 8, "2. 升级档案管理");	

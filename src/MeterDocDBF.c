@@ -344,17 +344,22 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		
 		// 表号设置
 		strcpy(StrDstAddr, meterInfo->meterNum);
-		StringPadLeft(StrDstAddr, 12, '0');
-
+		
 		// 命令参数处理
 		i = 0;	
 		CurrCmd = WaterCmd_ReadRealTimeData;	// 读实时数据
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		Args.buf[i++] = 0x01;		// 命令字	01
-		ackLen = 21;				// 应答长度 21	
-		Args.buf[i++] = 0x00;		// 数据格式 00	
+		#ifdef Project_6009_RF
+			Args.buf[i++] = 0x01;		// 命令字	01
+			ackLen = 21;				// 应答长度 21	
+			Args.buf[i++] = 0x00;		// 数据格式 00	
+		#else // Project_8009_RF
+			Args.buf[i++] = 0x01;		// 命令字	01
+			ackLen = 9;					// 应答长度 9	
+		#endif
+		
 		Args.lastItemLen = i - 1;
 
 		// 地址填充
@@ -365,9 +370,15 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		#endif
 
 		// 应答长度、超时时间、重发次数
-		ackLen += 14 + Addrs.itemCnt * AddrLen;
-		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-		tryCnt = 3;
+		#ifdef Project_6009_RF
+			ackLen += 15 + Addrs.itemCnt * AddrLen;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 2;
+		#else // Project_8009_RF
+			ackLen += 10 + Addrs.itemCnt * AddrLen;
+			timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
+			tryCnt = 2;
+		#endif
 
 		// 发送、接收、结果显示
 		cmdResult = CommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
@@ -672,7 +683,9 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 		query->resultCnt = 1;
 
 		_ReadField(Idx_MeterNum, strTmp);					// 表号
-		strncpy(meterInfo->meterNum, strTmp, Size_MeterNum);	
+		strncpy(meterInfo->meterNum, strTmp, Size_MeterNum);
+		meterInfo->meterNum[AddrLen * 2] = 0x00;	
+		StringPadLeft(meterInfo->meterNum, AddrLen * 2, '0');
 
 		_ReadField(Idx_UserNum, strTmp);					// 户号
 		strncpy(meterInfo->userNum, strTmp, Size_UserNum);	
@@ -813,42 +826,58 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		case 1:
 			CurrCmd = WaterCmd_ReadRealTimeData;		// "读取用户用量"
 			/*---------------------------------------------*/
-			Args.buf[i++] = 0x01;		// 命令字	01
-			ackLen = 21;				// 应答长度 21	
-			// 数据域
-			Args.buf[i++] = 0x00;				// 数据格式 00	
+			#ifdef Project_6009_RF
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				Args.buf[i++] = 0x00;		// 数据格式 00	
+			#else // Project_8009_RF
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 9;					// 应答长度 9	
+			#endif
 			Args.lastItemLen = i - 1;
 			break;
 
 		case 2:
 			CurrCmd = WaterCmd_OpenValve;			// " 开阀 "
 			/*---------------------------------------------*/
-			Args.buf[i++] = 0x03;		// 命令字	03
-			ackLen = 3;					// 应答长度 3	
-			// 数据域
-			Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-			Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			#ifdef Project_6009_RF
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			#else // Project_8009_RF
+				Args.buf[i++] = 0x05;		// 命令字	05
+				ackLen = 0;					// 应答长度 0	
+			#endif
 			Args.lastItemLen = i - 1;
 			break;
 
 		case 3:
 			CurrCmd = WaterCmd_CloseValve;		// " 关阀 ";
 			/*---------------------------------------------*/
-			Args.buf[i++] = 0x03;		// 命令字	03
-			ackLen = 3;					// 应答长度 3	
-			// 数据域
-			Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-			Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			#ifdef Project_6009_RF
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 3;					// 应答长度 3	
+				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
+				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
+			#else // Project_8009_RF
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 0;					// 应答长度 0	
+			#endif
 			Args.lastItemLen = i - 1;
 			break;
 
 		case 4:
 			CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
 			/*---------------------------------------------*/
-			Args.buf[i++] = 0x05;		// 命令字	05
-			ackLen = 1;					// 应答长度 1	
-			// 数据域
-			Args.buf[i++] = 0x00;		// 命令选项 00	
+			#ifdef Project_6009_RF
+				Args.buf[i++] = 0x05;		// 命令字	05
+				ackLen = 1;					// 应答长度 1	
+				Args.buf[i++] = 0x00;		// 命令选项 00	
+			#else // Project_8009_RF
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 0;					// 应答长度 0	
+			#endif
 			Args.lastItemLen = i - 1;
 			break;
 
@@ -864,9 +893,15 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		#endif
 
 		// 应答长度、超时时间、重发次数
-		ackLen += 14 + Addrs.itemCnt * AddrLen;
-		timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-		tryCnt = 3;
+		#ifdef Project_6009_RF
+			ackLen += 15 + Addrs.itemCnt * AddrLen;
+			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
+			tryCnt = 2;
+		#else // Project_8009_RF
+			ackLen += 10 + Addrs.itemCnt * AddrLen;
+			timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
+			tryCnt = 2;
+		#endif
 
 		// 发送、接收、结果显示
 		if(false == ProtolCommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){

@@ -344,10 +344,10 @@ uint16 Water8009_GetStrAlarmStatus(uint16 status, char *buf)
 		
 		switch(status & mask){
 		
-		case 0x01:	str = "光电表,正强光干扰";	break;
-		case 0x02:	str = "光电表,多组光管坏";	break;
+		case 0x01:	str = "光电表-正强光干扰";	break;
+		case 0x02:	str = "光电表-多组光管坏";	break;
 		case 0x04:	str = "磁干扰标志";	break;
-		case 0x08:	str = "光电表,一组光管坏";	break;
+		case 0x08:	str = "光电表-一组光管坏";	break;
 		case 0x10:	str = "电池欠压";	break;
 		case 0x20:	str = "EEPROM异常";	break;
 		case 0x40:	str = "阀到位故障";	break;
@@ -385,10 +385,10 @@ char * Water8009_GetStrValveStatus(uint8 status)
 {
 	char * str = NULL;
 	
-	if(status & 0x40 > 0){
+	if((status & 0x40) > 0){
 		str = "开";	
 	}
-	else if(status & 0x20 > 0){
+	else if((status & 0x20) > 0){
 		str = "关";	
 	}
 	else{
@@ -737,15 +737,15 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	// 缓冲区多包中查找
 	while(1){
 
-		// min length check (15 + 1)
-		if(rxlen < index + 16){		
+		// min length check
+		if(rxlen < index + 15){		
 			sprintf(&dispBuf[dispIdx], "结果: 超时,无应答");
 			return CmdResult_Timeout;
 		}
 
 		// start check
 		if(buf[index] == 0xFE && buf[index + 1] == 0x68){
-			index += 2;
+			// pass
 		}else{
 			index++;
 			continue;
@@ -759,7 +759,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}	
 
 		// ack flag check
-		if(buf[index + 9] & 0x80 == 0x00){
+		if((buf[index + 9] & 0x80) == 0x00){
 			index += length;
 			continue;
 		}
@@ -795,7 +795,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		GetStringHexFromBytes(StrDstAddr, buf, index, AddrLen, 0, false);
 
 		dispIdx = 0;
-		#if (AddrLen == 6)
+		#if (AddrLen <= 6)
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
 		#else
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: \n   %s\n", StrDstAddr);
@@ -809,6 +809,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	// 控制字1：命令字
 	cmd = (uint8)(buf[index] & 0x1F);
+	index += 1;
 
 	// 跳过 数据域长度 --> 路由信息
 	index += (1 + relayCnt * AddrLen);
@@ -829,12 +830,11 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = CmdResult_Ok;
-		
 		// 表读数
 		u32Tmp = GetUint32(&buf[index], 3, false);
 		u8Tmp = buf[index + 3];
-		index += 4;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
+		index += 4;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterValue, "%d.%02d", u32Tmp, u8Tmp);
@@ -842,7 +842,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#endif
 		// 表口径、脉冲系数
 		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
-		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表端口径: %s\n", ptr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
 		index += 1;
 		//电池电压
@@ -857,7 +857,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#endif
 		//阀门状态
 		ptr = Water8009_GetStrValveStatus(buf[index]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s\n", ptr);
+	#if LOG_ON
+		LogPrint("阀门状态 %02x\n", buf[index]);
+	#endif
 		index += 1;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
@@ -870,10 +873,13 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#ifdef Project_8009_RF
 			u32Tmp = dispIdx + 10;
 		#endif
-		u16Tmp = GetUint16(buf, 2, true);
+		u16Tmp = GetUint16(&buf[index], 2, true);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
 		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
+	#if LOG_ON
+		LogPrint("告警状态 %04x\n", u16Tmp);
+	#endif
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				u16Tmp = (uint16)(dispIdx - u32Tmp);
@@ -898,21 +904,28 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "表底数: %d.%02d\n", u32Tmp, u8Tmp);
 		// 表口径、脉冲系数
 		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
-		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表端口径: %s\n", ptr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
 		index += 1;
 		break;
 
 	case WaterCmd_OpenValve:		// 开阀
-	case WaterCmd_CloseValve:		// 关阀
-		if(rxlen < index || (cmd != 0x05 && cmd != 0x06)){
+		if(rxlen < index || cmd != 0x05){
 			break;
 		}
 		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
 		break;
 
-	case WaterCmd_ClearException:	// 清异常命令 
+	case WaterCmd_CloseValve:		// 关阀
+		if(rxlen < index || cmd != 0x06){
+			break;
+		}
+		ret = CmdResult_Ok;
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
+		break;
+
+	case WaterCmd_ClearException:	// 清异常命令 03
 		if(rxlen < index || cmd != 0x03){
 			break;
 		}
@@ -926,7 +939,6 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = CmdResult_Ok;
-		index += 1;
 		// 开关阀时间 200ms * n
 		f64Tmp = (buf[index] & 0x7F) * 0.2;
 		ptr = _DoubleToStr(TmpBuf, f64Tmp, 1);
@@ -937,23 +949,25 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 脉冲类型、电压类型、信道
 		ptr = Water8009_GetStrSensorType(buf[index] >> 5);
-		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲类型: %s mA\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲类型: %s\n", ptr);
 		ptr = ((buf[index] & 0x10) > 0 ? "3.6 v" : "6.0 v");
 		dispIdx += sprintf(&dispBuf[dispIdx], "电压类型: %s\n", ptr);
-		dispIdx += sprintf(&dispBuf[dispIdx], "信道: %d \n", (buf[index] & 0x07));
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信信道: %d\n", (buf[index] & 0x07));
 		index += 1;
 		// 表口径、脉冲系数
 		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
-		dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+		dispIdx += sprintf(&dispBuf[dispIdx], "表端口径: %s\n", ptr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
 		index += 1;
 		// 磁干扰开阀时间
-		dispIdx += sprintf(&dispBuf[dispIdx], "磁扰开阀时间: %d\n", (buf[index] & 0x7F));
+		dispIdx += sprintf(&dispBuf[dispIdx], "磁扰开阀时间: %d s\n", (buf[index] & 0x7F));
 		index += 1;
 		// 脉冲最小脉宽
-		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲最小脉宽: %d\n", buf[index]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "脉冲最小脉宽: %d ms\n", buf[index]);
 		index += 1;
-		// 版本号
+		// 跳过 0x0A 不知道啥玩意，协议里遗漏的东西
+		index += 1;
+		// 版本号 24 byte
 		memcpy(&VerInfo[0], &buf[index], VerLen);
 		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "版本: %s\n", &VerInfo[0]);
@@ -996,7 +1010,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			index += 4;
 			// 表口径、脉冲系数
 			ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
-			dispIdx += sprintf(&dispBuf[dispIdx], "表口径: %s\n", ptr);
+			dispIdx += sprintf(&dispBuf[dispIdx], "表端口径: %s\n", ptr);
 			dispIdx += sprintf(&dispBuf[dispIdx], "脉冲系数: %d\n", (buf[index] & 0x7F));
 			index += 1;
 			//电池电压
@@ -1009,7 +1023,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s", ptr);
 			index += 1;
 			//告警状态字
-			u16Tmp = GetUint16(buf, 2, true);
+			u16Tmp = GetUint16(&buf[index], 2, true);
 			dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
 			dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 			index += 2;
@@ -1037,7 +1051,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = GetUint16(buf, 2, false);
+		u16Tmp = GetUint16(&buf[index], 2, false);
 		dispIdx += Water8009_GetStrMeterFuncEnableStateOld(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		break;
@@ -1048,7 +1062,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		ret = CmdResult_Ok;
 		dispIdx += sprintf(&dispBuf[dispIdx], "功能使能状态如下\n");
-		u16Tmp = GetUint16(buf, 2, false);
+		u16Tmp = GetUint16(&buf[index], 2, false);
 		dispIdx += Water8009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
 		break;
@@ -1074,9 +1088,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		if(buf[index - 1] == 0xAA){
 			// 模块使能状态
-			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x01) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
-			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x02) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
 			index += 1;
 			// 当前时钟
@@ -1098,9 +1112,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		if(buf[index - 1] == 0xAA){
 			// 模块使能状态
-			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x01) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
-			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x02) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
 			index += 1;
 			// 工作时段
@@ -1128,9 +1142,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		if(buf[index - 1] == 0xAA){
 			// 模块使能状态
-			ptr = (buf[index] & 0x01 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x01) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "RF分时段工作: %s\n", ptr);
-			ptr = (buf[index] & 0x02 > 0 ? "开" : "关");
+			ptr = ((buf[index] & 0x02) > 0 ? "开" : "关");
 			dispIdx += sprintf(&dispBuf[dispIdx], "抄表同步时钟: %s\n", ptr);
 			index += 1;
 			// 工作时段
@@ -1233,7 +1247,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s", ptr);
 		index += 1;
 		//告警状态字
-		u16Tmp = GetUint16(buf, 2, true);
+		u16Tmp = GetUint16(&buf[index], 2, true);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
 		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
@@ -1579,7 +1593,8 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			}
 		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
-		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
+		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", 
+			(buf[index] - 30) * 2,  (buf[index + 1] - 30) * 2);
 		index += 2;
 	}
 	else{
@@ -1639,17 +1654,17 @@ uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
-	ackLen += 14 + addrs->itemCnt * AddrLen;
+	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
 #elif defined(Project_6009_RF)
-	ackLen += 14 + addrs->itemCnt * AddrLen;
+	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
 #else // Project_8009_RF
 	ackLen += 10 + addrs->itemCnt * AddrLen;
 	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
-	tryCnt = 3;
+	tryCnt = 2;
 #endif
 
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);

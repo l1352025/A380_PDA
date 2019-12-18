@@ -87,10 +87,10 @@ void CenterCmdFunc_CommonCmd(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -358,10 +358,10 @@ void CenterCmdFunc_DocumentOperation(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -543,10 +543,10 @@ void CenterCmdFunc_RouteSetting(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -561,7 +561,7 @@ void CenterCmdFunc_RouteSetting(void)
 			case CenterCmd_ReadDefinedRoute:	// 读自定义路由
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号: ", StrBuf[0], 12, 13*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号: ", StrBuf[0], AddrLen*2, (AddrLen*2*8 + 8), true);
 					break;
 				}
 				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
@@ -693,10 +693,10 @@ void CenterCmdFunc_CommandTransfer(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -908,8 +908,8 @@ uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
 			sprintf(StrRelayAddr[i], "    (可选)    ");
 		}
 	}
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], 12, 13*8, true);
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], 12, 13*8, true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], AddrLen*2, (AddrLen*2*8 + 8), true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
 #endif
 
 	return (uiRowIdx - rowIdx);
@@ -923,7 +923,7 @@ void WaterCmdFunc_CommonCmd(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
 
@@ -973,10 +973,10 @@ void WaterCmdFunc_CommonCmd(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -1002,9 +1002,9 @@ void WaterCmdFunc_CommonCmd(void)
 			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 10, 11*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表口径:", &StrBuf[1][0], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
 						"小", "大");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
 						"1", "10", "100");
@@ -1023,11 +1023,18 @@ void WaterCmdFunc_CommonCmd(void)
 				u32Tmp = (uint32) _atof(StrBuf[0]);
 				u16Tmp = (uint16)((_atof(StrBuf[0]) - u32Tmp)*100);
 						
-				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);		// 表底数：整数 3byte
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	
-				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
-				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | StrBuf[1][1]);	// 脉冲系数	
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);				// 表底数：小数 1byte
+				switch (StrBuf[1][1])
+				{
+				case 0: u8Tmp = 1; break;
+				case 1: u8Tmp = 10; break;
+				case 2: u8Tmp = 100; break;
+				default: u8Tmp = 10; break;
+				}
+				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 脉冲系数	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1106,11 +1113,11 @@ void WaterCmdFunc_CommonCmd(void)
 			case WaterCmd_SetMeterNumber:		// 设置表号
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					#if (AddrLen == 5)
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "新表号:", StrBuf[0], 10, 13*8, true);
+					#if (AddrLen <= 6)
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "新表号:", StrBuf[0], AddrLen*2, (AddrLen*2*8 + 8), true);
 					#else
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "新表号:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrBuf[0], 16, 17*8, true);	
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrBuf[0], AddrLen*2, (AddrLen*2*8 + 8), true);	
 					#endif
 					break;
 				}
@@ -1133,6 +1140,8 @@ void WaterCmdFunc_CommonCmd(void)
 				i = 0;
 				Args.buf[i++] = 0x02;		// 命令字	
 				ackLen = 30;				// 应答长度	
+				timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
+				tryCnt = 2;	
 				Args.lastItemLen = i - 1;
 
 				// 若读取到版本号，则设置表号
@@ -1141,11 +1150,11 @@ void WaterCmdFunc_CommonCmd(void)
 					Args.buf[i++] = 0x1C;		// 命令字
 					ackLen = 7;					// 应答长度 
 					timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
-					tryCnt = 3;	
+					tryCnt = 2;	
 					// 数据域
 					Args.buf[i++] = 0xA2;		// 命令选项	
 					memcpy(&Args.buf[i], &VerInfo[0], VerLen);	
-					i += VerLen;					// 软件版本号
+					i += VerLen;				// 软件版本号
 					GetBytesFromStringHex(&Args.buf[i], 0, 6, StrBuf[0], 0, false);
 					i += 6;						// 新地址
 					Args.lastItemLen = i - 1;
@@ -1277,10 +1286,10 @@ void WaterCmdFunc_FunctionConfig(void)
 					(*pUiCnt) = 0;
 					uiRowIdx = 2;
 					#if (AddrLen <= 6)
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 					#else
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 					#endif
 				}
 			}
@@ -1490,7 +1499,7 @@ void WaterCmdFunc_DmaProjectCmd(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
 
@@ -1540,10 +1549,10 @@ void WaterCmdFunc_DmaProjectCmd(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 
@@ -1569,9 +1578,9 @@ void WaterCmdFunc_DmaProjectCmd(void)
 			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 10, 11*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表口径:", &StrBuf[1][0], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
 						"小", "大");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
 						"1", "10", "100");
@@ -1590,11 +1599,18 @@ void WaterCmdFunc_DmaProjectCmd(void)
 				u32Tmp = (uint32) _atof(StrBuf[0]);
 				u16Tmp = (uint16)((_atof(StrBuf[0]) - u32Tmp)*100);
 						
-				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);		// 表底数：整数 3byte
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	
-				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
-				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | StrBuf[1][1]);	// 脉冲系数	
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);				// 表底数：小数 1byte
+				switch (StrBuf[1][1])
+				{
+				case 0: u8Tmp = 1; break;
+				case 1: u8Tmp = 10; break;
+				case 2: u8Tmp = 100; break;
+				default: u8Tmp = 10; break;
+				}
+				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 脉冲系数	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1751,10 +1767,10 @@ void WaterCmdFunc_WorkingParams(void)
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
 				#if (AddrLen <= 6)
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 				#endif
 			}
 			
@@ -1772,7 +1788,7 @@ void WaterCmdFunc_WorkingParams(void)
 					if(StrBuf[1][0] == 0x00){
 						StrBuf[1][0] = 0x01;
 					}
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 9, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
 						"1", "10", "100", "1000");
@@ -1963,10 +1979,10 @@ void MainFuncReadRealTimeData(void)
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
 			#if (AddrLen <= 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 			#endif
 		}
 			
@@ -2064,10 +2080,10 @@ void MainFuncClearException(void)
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
 			#if (AddrLen <= 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 			#endif
 		}
 			
@@ -2164,10 +2180,10 @@ void MainFuncOpenValve(void)
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
 			#if (AddrLen <= 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 			#endif
 		}
 			
@@ -2264,10 +2280,10 @@ void MainFuncCloseValve(void)
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
 			#if (AddrLen <= 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, 12, 13*8, true);
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, 16, 17*8, true);	
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 			#endif
 		}
 		
@@ -2951,6 +2967,8 @@ void MainFuncBatchMeterReading(void)
 		}
 
 	} // while 1 批量抄表
+
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 }
 
 // 工程调试		------------------------------
@@ -2988,12 +3006,18 @@ int main(void)
 	
 	#ifdef Project_6009_RF
 	MeterNoLoad(StrDstAddr, 0);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#elif defined Project_6009_IR
 	MeterNoLoad(StrDstAddr, 1);
 	#else // Project_8009_RF
 	MeterNoLoad(StrDstAddr, 2);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#endif
 	
+	#if LOG_ON
+		LogPrint("抄表程序 已进入 \n");
+	#endif
+
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=7;
@@ -3022,6 +3046,10 @@ int main(void)
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
-	
+
+	#if LOG_ON
+		LogPrint("抄表程序 已退出！\n\n\n");
+	#endif
+
 }
 

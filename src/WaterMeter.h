@@ -441,10 +441,10 @@ uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 		case 0x02:	str = "阀到位故障";	break;
 		case 0x04:	str = "传感器线断开";	break;
 		case 0x08:	str = "电池欠压";	break;
-		case 0x10:	str = "光电表,一组光管坏";	break;
+		case 0x10:	str = "光电表-一组光管坏";	break;
 		case 0x20:	str = "磁干扰标志";	break;
-		case 0x40:	str = "光电表,多组光管坏";	break;
-		case 0x80:	str = "光电表,正强光干扰";	break;
+		case 0x40:	str = "光电表-多组光管坏";	break;
+		case 0x80:	str = "光电表-正强光干扰";	break;
 		case 0x0100:	str = "水表反转";	break;
 		case 0x0200:	str = "水表被拆卸";	break;
 		case 0x0400:	str = "水表被垂直安装";	break;
@@ -1423,10 +1423,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 数据非法原因
 		if(buf[index - 1] == 0xAE){
-			if(buf[index] & 0x01 > 0){
+			if((buf[index] & 0x01) > 0){
 				dispIdx += sprintf(&dispBuf[dispIdx], "-->参考起始用量不合法\n");
 			}
-			if(buf[index] & 0x02 > 0){
+			if((buf[index] & 0x02) > 0){
 				dispIdx += sprintf(&dispBuf[dispIdx], "-->设置的预缴用量未达到开阀门限\n");
 			}
 			index += 1;
@@ -2699,11 +2699,17 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 
 	// 应答长度、超时时间、重发次数
 #ifdef Project_6009_IR
+	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
-#else
-	timeout = 10000 + (Addrs.itemCnt - 2) * 6000 * 2;
+#elif defined(Project_6009_RF)
+	ackLen += 15 + addrs->itemCnt * AddrLen;
+	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;
+#else // Project_8009_RF
+	ackLen += 10 + addrs->itemCnt * AddrLen;
+	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
+	tryCnt = 2;
 #endif
 
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
