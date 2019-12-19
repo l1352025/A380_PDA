@@ -1228,7 +1228,7 @@ void WaterCmdFunc_CommonCmd(void)
 void WaterCmdFunc_FunctionConfig(void)
 {
 	uint8 key, menuItemNo, tryCnt = 0, i;
-	ListBox menuList;
+	ListBox menuList, menuList_2;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
@@ -1292,10 +1292,10 @@ void WaterCmdFunc_FunctionConfig(void)
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
 					#endif
 				}
+				i = 0;	
 			}
 
 			// 命令参数处理
-			i = 0;	
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
@@ -1341,21 +1341,71 @@ void WaterCmdFunc_FunctionConfig(void)
 
 			case WaterCmd_SetFuncEnableState:		// 设置功能使能状态
 				/*---------------------------------------------*/
-				if(false == isUiFinish){
+				if(uiPage == 1){
+					if(false == isUiFinish){
+						break;
+					}
+					uiPage++;
+				}
+				else if(uiPage == 2){
+					if(false == isUiFinish){
+						// 设置功能使能状态-菜单
+						ListBoxCreate(&menuList_2, 0, 0, 20, 7, 8, NULL,
+							"<<设置功能状态",
+							12,
+							"1. 磁干扰关阀-开启",
+							"2. 磁干扰关阀-关闭",
+							"3. 磁干扰检测-关闭",
+							"4. 防拆卸-开启",
+							"5. 防拆卸-关闭",
+							"6. 垂直安装检测-开启",
+							"7. 垂直安装检测-关闭",
+							"8. 主动告警-开启",
+							"9. 主动告警-关闭",
+							"10.上报和防锈-设置"
+						);
+						break;
+					}
+
+					uiPage = 0xFF;
+
+					// 命令字	0C~16
+					switch (menuList_2.strIdx + 1)
+					{
+					case 1: Args.buf[i++] = 0x0C; break;
+					case 2: Args.buf[i++] = 0x0D; break;
+					case 3: Args.buf[i++] = 0x0E; break;
+					case 4: Args.buf[i++] = 0x0F; break;
+					case 5: Args.buf[i++] = 0x10; break;
+					case 6: Args.buf[i++] = 0x13; break;
+					case 7: Args.buf[i++] = 0x14; break;
+					case 8: Args.buf[i++] = 0x15; break;
+					case 9: Args.buf[i++] = 0x16; break;
+					case 10: break;
+					default:
+						break;
+					}
+					
+					ackLen = 0;					// 应答长度 0	
+					// 数据域
+					Args.lastItemLen = i - 1;
 					break;
 				}
-				Args.buf[i++] = 0x17;		// 命令字	0C~16、19-00/01/02/04/08
+				else if(uiPage == 3){
+					if(false == isUiFinish){
 
+						break;
+					}
+					uiPage++;
 
-
-
-
-
-
-				ackLen = 2;					// 应答长度 2	
-				// 数据域
-				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+					// 命令字	19-00/01/02/04/08
+					Args.buf[i++] = 0x19;
+					ackLen = 0;					// 应答长度 0	
+					// 数据域
+					// 子命令字：b0-防锈开，b1-防锈关，b2-定时开/关，b3-定量开/关
+					Args.buf[i++] = 0x00;		// 子命令字
+					Args.lastItemLen = i - 1;
+				}
 				break;
 
 			case WaterCmd_ReadTimeAndRfState:		// 查询时钟及RF状态
@@ -1366,7 +1416,6 @@ void WaterCmdFunc_FunctionConfig(void)
 				Args.buf[i++] = 0x09;		// 命令字	09-00
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
-				Args.buf[i++] = 0x00;
 				Args.lastItemLen = i - 1;
 				uiPage = 0xFF;
 				break;

@@ -3842,5 +3842,6 @@ int main(void)
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
+	
 }
 
