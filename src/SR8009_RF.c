@@ -81,7 +81,7 @@ void CenterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -352,7 +352,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -537,7 +537,7 @@ void CenterCmdFunc_RouteSetting(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -687,7 +687,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -967,7 +967,7 @@ void WaterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1232,7 +1232,7 @@ void WaterCmdFunc_FunctionConfig(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
 	uint8 uiPage;	// 0x00 - 首页， 0xFF - 最后一页
@@ -1279,7 +1279,7 @@ void WaterCmdFunc_FunctionConfig(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(uiPage == 1){
 				if(false == isUiFinish){
@@ -1349,10 +1349,12 @@ void WaterCmdFunc_FunctionConfig(void)
 				}
 				else if(uiPage == 2){
 					if(false == isUiFinish){
-						// 设置功能使能状态-菜单
-						ListBoxCreate(&menuList_2, 0, 0, 20, 7, 8, NULL,
-							"<<设置功能状态",
-							12,
+						(*pUiCnt) = 0;
+						uiRowIdx = 2;
+						// 菜单
+						ListBoxCreate(&menuList_2, 0, 0, 20, 7, 10, NULL,
+							"<<设置该表状态",
+							10,
 							"1. 磁干扰关阀-开启",
 							"2. 磁干扰关阀-关闭",
 							"3. 磁干扰检测-关闭",
@@ -1366,8 +1368,6 @@ void WaterCmdFunc_FunctionConfig(void)
 						);
 						break;
 					}
-
-					uiPage = 0xFF;
 
 					// 命令字	0C~16
 					switch (menuList_2.strIdx + 1)
@@ -1385,25 +1385,41 @@ void WaterCmdFunc_FunctionConfig(void)
 					default:
 						break;
 					}
+
+					if(menuList_2.strIdx + 1 == 10){
+						uiPage++;
+						break;
+					}
 					
 					ackLen = 0;					// 应答长度 0	
 					// 数据域
 					Args.lastItemLen = i - 1;
+					uiPage = 0xFF;
 					break;
 				}
 				else if(uiPage == 3){
 					if(false == isUiFinish){
-
+						(*pUiCnt) = 0;
+						uiRowIdx = 2;
+						LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报和防锈-设置:");
+						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时防锈:", &StrBuf[1][0], 2, 
+						"关闭", "开启");
+						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时上报:", &StrBuf[1][1], 2, 
+						"关闭", "开启");
+						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定量上报:", &StrBuf[1][2], 2, 
+						"关闭", "开启");
 						break;
 					}
-					uiPage++;
-
+					
 					// 命令字	19-00/01/02/04/08
 					Args.buf[i++] = 0x19;
 					ackLen = 0;					// 应答长度 0	
 					// 数据域
 					// 子命令字：b0-防锈开，b1-防锈关，b2-定时开/关，b3-定量开/关
-					Args.buf[i++] = 0x00;		// 子命令字
+					u8Tmp = StrBuf[1][0] == 0 ? 0x02 : 0x01;
+					u8Tmp |= StrBuf[1][1] << 2;
+					u8Tmp |= StrBuf[1][2] << 3;
+					Args.buf[i++] = u8Tmp;		// 子命令字
 					Args.lastItemLen = i - 1;
 				}
 				break;
@@ -1416,6 +1432,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				Args.buf[i++] = 0x09;		// 命令字	09-00
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
+				Args.buf[i++] = 0x00;		// 子命令字 00
 				Args.lastItemLen = i - 1;
 				uiPage = 0xFF;
 				break;
@@ -1446,35 +1463,84 @@ void WaterCmdFunc_FunctionConfig(void)
 				}
 				else if(uiPage == 2){
 					if(false == isUiFinish){
+						(*pUiCnt) = 0;
+						uiRowIdx = 2;
+
 						if(StrBuf[0][0] == 0){
+							if(StrBuf[1][0] == 0x00){
+								sprintf(StrBuf[1], "08");
+								sprintf(StrBuf[2], "25");
+								sprintf(StrBuf[3], "06");
+							}
 							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每月某些天工作:");
 							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0~23):", StrBuf[1], 2, 2*8, true);
 							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始日(1~31):", StrBuf[2], 2, 2*8, true);
 							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束日(1~31):", StrBuf[3], 2, 2*8, true);
 						}
 						else{
+							if(StrBuf[4][0] == 0x00){
+								sprintf(StrBuf[4], "06");
+								sprintf(StrBuf[5], "19");
+							}
 							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每天某时段工作:");
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0~23):", StrBuf[1], 2, 2*8, true);
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束时(0~23):", StrBuf[2], 2, 2*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0~23):", StrBuf[4], 2, 2*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束时(0~23):", StrBuf[5], 2, 2*8, true);
 						}
 						break;
 					}
 
 					if(StrBuf[0][0] == 0){
-						
+						TmpBuf[1] = (uint8) _atof(StrBuf[1]);
+						TmpBuf[2] = (uint8) _atof(StrBuf[2]);
+						TmpBuf[3] = (uint8) _atof(StrBuf[3]);
+						if(TmpBuf[1] > 23){
+							currUi = 1;
+							isUiFinish = false;
+							continue;
+						}
+						if(TmpBuf[2] < 1 || TmpBuf[2] > 31){
+							currUi = 2;
+							isUiFinish = false;
+							continue;
+						}
+						if(TmpBuf[3] < 1 || TmpBuf[3] > 31 ){
+							currUi = 3;
+							isUiFinish = false;
+							continue;
+						}
+						TmpBuf[10] = DecToBcd(TmpBuf[2]);
+						TmpBuf[11] = DecToBcd(TmpBuf[1]);
+						TmpBuf[12] = DecToBcd(TmpBuf[3]);
+						TmpBuf[13] = DecToBcd(TmpBuf[1]);
 					}
 					else{
-						
+						TmpBuf[4] = (uint8) _atof(StrBuf[4]);
+						TmpBuf[5] = (uint8) _atof(StrBuf[5]);
+						TmpBuf[6] = _GetDay();
+						if(TmpBuf[4] > 23){
+							currUi = 1;
+							isUiFinish = false;
+							continue;
+						}
+						if(TmpBuf[5] > 23){
+							currUi = 2;
+							isUiFinish = false;
+							continue;
+						}
+						TmpBuf[10] = DecToBcd(TmpBuf[6]);
+						TmpBuf[11] = DecToBcd(TmpBuf[4]);
+						TmpBuf[12] = DecToBcd(TmpBuf[6]);
+						TmpBuf[13] = DecToBcd(TmpBuf[5]);
 					}
 					
 					Args.buf[i++] = 0x09;		// 命令字	09-84
 					ackLen = 2;					// 应答长度 2	
 					// 数据域
 					Args.buf[i++] = 0x84;		// 子命令 84
-					Args.buf[i++] = 0x00;		// 4字节时钟数据
-					Args.buf[i++] = 0x00;
-					Args.buf[i++] = 0x00;
-					Args.buf[i++] = 0x00;
+					Args.buf[i++] = TmpBuf[10];	// 4字节时钟数据
+					Args.buf[i++] = TmpBuf[11];
+					Args.buf[i++] = TmpBuf[12];
+					Args.buf[i++] = TmpBuf[13];
 					Args.lastItemLen = i - 1;
 					uiPage = 0xFF;
 				}
@@ -1592,7 +1658,7 @@ void WaterCmdFunc_DmaProjectCmd(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -1810,7 +1876,7 @@ void WaterCmdFunc_WorkingParams(void)
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -2022,7 +2088,7 @@ void MainFuncReadRealTimeData(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+		_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2123,7 +2189,7 @@ void MainFuncClearException(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+		_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2223,7 +2289,7 @@ void MainFuncOpenValve(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+		_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
@@ -2323,7 +2389,7 @@ void MainFuncCloseValve(void)
 		/*---------------------------------------------*/
 		//----------------------------------------------
 		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回   <输入>   执行", Color_White);
+		_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;

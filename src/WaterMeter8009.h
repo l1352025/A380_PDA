@@ -1069,11 +1069,37 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	
 	case WaterCmd_SetFuncEnableState:	// 设置功能使能状态 
-		if(rxlen < index + 2 ){
+		if(rxlen < index){
 			break;
 		}
-		ret = CmdResult_Ok;
-		dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
+		if(cmd >= 0x0C && cmd <= 0x0F
+			|| cmd >= 0x13 && cmd <= 0x16 
+			|| cmd == 0x19){
+			// pass
+		}
+		else{
+			break;
+		}
+		if(rxlen < index + 6){
+			ret = CmdResult_Ok;
+			dispIdx += sprintf(&dispBuf[dispIdx], "结果: 操作成功\n");
+		}
+		else{
+			ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+			ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+			dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+			index += 1;
+			if(buf[index - 1] == 0xAA){
+				// 模块使能状态
+				ptr = ((buf[index] & 0x01) > 0 ? "开启" : "关闭");
+				dispIdx += sprintf(&dispBuf[dispIdx], "定时防锈: %s\n", ptr);
+				ptr = ((buf[index] & 0x04) > 0 ? "开启" : "关闭");
+				dispIdx += sprintf(&dispBuf[dispIdx], "定时上报: %s\n", ptr);
+				ptr = ((buf[index] & 0x08) > 0 ? "开启" : "关闭");
+				dispIdx += sprintf(&dispBuf[dispIdx], "定时上报: %s\n", ptr);
+				index += 1;
+			}
+		}
 		break;
 
 
