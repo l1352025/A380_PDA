@@ -32,7 +32,6 @@ void WaterCmdFunc_CommonCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -72,8 +71,8 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -291,7 +290,6 @@ void WaterCmdFunc_TestCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -329,8 +327,8 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -538,7 +536,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -575,8 +572,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -821,7 +818,7 @@ void WaterCmdFunc_WorkingParams(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte, *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
+	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, enableStatus, u16Tmp;
 	uint32 port, u32Tmp, u32Args[20];
@@ -871,8 +868,8 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------

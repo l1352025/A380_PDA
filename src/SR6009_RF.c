@@ -38,7 +38,6 @@ void CenterCmdFunc_CommonCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -77,8 +76,8 @@ void CenterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -313,7 +312,6 @@ void CenterCmdFunc_DocumentOperation(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -348,8 +346,8 @@ void CenterCmdFunc_DocumentOperation(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -501,7 +499,6 @@ void CenterCmdFunc_RouteSetting(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -533,8 +530,8 @@ void CenterCmdFunc_RouteSetting(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -646,7 +643,6 @@ void CenterCmdFunc_CommandTransfer(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -683,8 +679,8 @@ void CenterCmdFunc_CommandTransfer(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -926,7 +922,6 @@ void WaterCmdFunc_CommonCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -963,8 +958,8 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1150,7 +1145,6 @@ void WaterCmdFunc_TestCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -1191,8 +1185,8 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1497,7 +1491,6 @@ void WaterCmdFunc_PrepaiedVal(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -1534,8 +1527,8 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -1779,7 +1772,7 @@ void WaterCmdFunc_WorkingParams(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte, *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
+	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -1818,8 +1811,8 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -2084,7 +2077,6 @@ void WaterCmdFunc_Other(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint16 ackLen = 0, timeout, u16Tmp;
 
@@ -2119,8 +2111,8 @@ void WaterCmdFunc_Other(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -3163,7 +3155,7 @@ void MainFuncBatchMeterReading(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint8 *pByte;
+	uint8 *ptr;
 	uint16 dispIdx, i;
 	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
 	char *qryStrXq = &TmpBuf[400], *qryStrLd = &TmpBuf[600];
@@ -3575,12 +3567,12 @@ void MainFuncBatchMeterReading(void)
 				MeterInfo.qryUserNum = NULL;
 				MeterInfo.qryRoomNum = NULL;
 				switch (menuList_2.strIdx + 1){
-				case 1: pByte = "输入表号: "; MeterInfo.qryMeterNum = StrBuf[0]; break;
-				case 2: pByte = "输入户号: "; MeterInfo.qryUserNum = StrBuf[0]; break;
-				case 3: pByte = "输入门牌号:"; MeterInfo.qryRoomNum = StrBuf[0]; break;
+				case 1: ptr = "输入表号: "; MeterInfo.qryMeterNum = StrBuf[0]; break;
+				case 2: ptr = "输入户号: "; MeterInfo.qryUserNum = StrBuf[0]; break;
+				case 3: ptr = "输入门牌号:"; MeterInfo.qryRoomNum = StrBuf[0]; break;
 				default: break;
 				}
-				_Printfxy(0, 2*16, pByte, Color_White);
+				_Printfxy(0, 2*16, ptr, Color_White);
 				StrBuf[0][0] = 0x00;
 				inputSt.left = 0;
 				inputSt.top = 3*16;

@@ -32,6 +32,7 @@ const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x
 uint8 DstAddr[10];
 uint8 VerInfo[42];
 uint16 CurrCmd;
+char * CurrCmdName;
 ParamsBuf Addrs;		
 ParamsBuf Args;
 char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
@@ -1044,7 +1045,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 104){	// 冻结数据格式-旧版本 1 + 78 byte
 			// 冻结数据起始序号
 			u8Tmp = buf[index] * 10;
-			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d-%d 条\n", u8Tmp, u8Tmp + 9);
 			index += 1;
 			// 冻结数据起始时间
 			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
@@ -1091,7 +1092,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			u8Tmp = 0;
 			u16Tmp = 0x00;
 			for(i = 0; i < 47; i++){
-				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
+				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X-", u8Tmp, u16Tmp);
 				u16Tmp += 0x30;
 				if(u16Tmp == 0x60){
 					u16Tmp = 0x00;
@@ -2397,7 +2398,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		if(rxlen < index + 104){	// 冻结数据格式-旧版本 1 + 78 byte
 			// 冻结数据起始序号
 			u8Tmp = buf[index] * 10;
-			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d~%d 条\n", u8Tmp, u8Tmp + 9);
+			dispIdx += sprintf(&dispBuf[dispIdx], "范围: 第 %d-%d 条\n", u8Tmp, u8Tmp + 9);
 			index += 1;
 			// 冻结数据起始时间
 			dispIdx += sprintf(&dispBuf[dispIdx], "时间: %X%x%x%x %x:00:00\n"
@@ -2444,7 +2445,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			u8Tmp = 0;
 			u16Tmp = 0x00;
 			for(i = 0; i < 47; i++){
-				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X~", u8Tmp, u16Tmp);
+				dispIdx += sprintf(&dispBuf[dispIdx], "%d:%02X-", u8Tmp, u16Tmp);
 				u16Tmp += 0x30;
 				if(u16Tmp == 0x60){
 					u16Tmp = 0x00;
@@ -2715,10 +2716,6 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
 
 	key = ShowScrollStr(&DispBuf, 7);
-
-	#if LOG_ON
-		LogPrint("解析结果: \r\n %s", DispBuf);
-	#endif
 
 	return key;
 }

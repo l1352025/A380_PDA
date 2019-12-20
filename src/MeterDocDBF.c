@@ -152,10 +152,6 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 	}
 	_Use("");		// 关闭数据库
 
-	#if LOG_ON
-		LogPrint("query->reqMaxCnt = %d, buildings->cnt = %d", query->reqMaxCnt, buildings->cnt);
-	#endif
-
 	query->dbCurrIdx = i;
 }
 
@@ -313,6 +309,11 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 
 	// 自动抄表
 	while(cnt < meters->cnt){
+
+		#if LOG_ON
+			CurrCmdName = strTmp;
+			sprintf(CurrCmdName, "批量抄表 %d/%d", (cnt + 1), meters->cnt); 
+		#endif
 
 		// LCD背景灯控制
 		LcdLightCycleCtrl(&lcdCtrl, 4);
@@ -750,7 +751,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 	uint8 key, i;
 	uint16 dispIdx = 0;
 	ListBox menuList;
-	uint8 * pByte, tryCnt;
+	uint8 tryCnt;
 	uint16 ackLen = 0, timeout;
 	char *dispBuf;
 
@@ -808,10 +809,10 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 
 		// 户表命令-标题
 		_ClearScreen();
-		pByte = menuList.str[menuList.strIdx];
+		CurrCmdName = menuList.str[menuList.strIdx];
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		//--------------------------------------
-		sprintf(TmpBuf, "<<%s",&pByte[3]);
+		sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 		_Printfxy(0, 0, TmpBuf, Color_White);
 		//------------------------------------
 

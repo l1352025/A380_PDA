@@ -1748,6 +1748,10 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		return CmdResult_Cancel;
 	}
 
+	#if LOG_ON
+		LogPrint("当前命令: %s", CurrCmdName);
+	#endif
+
 	do{
 		_CloseCom();
 		_ComSetTran(CurrPort);
@@ -1819,6 +1823,10 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
 
 	_CloseCom();
+
+	#if LOG_ON
+		LogPrint("解析结果: \r\n%s", DispBuf);
+	#endif
 
 	return cmdResult;
 }

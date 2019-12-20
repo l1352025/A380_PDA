@@ -35,7 +35,6 @@ void CenterCmdFunc_CommonCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -74,8 +73,8 @@ void CenterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -310,7 +309,6 @@ void CenterCmdFunc_DocumentOperation(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -345,8 +343,8 @@ void CenterCmdFunc_DocumentOperation(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -498,7 +496,6 @@ void CenterCmdFunc_RouteSetting(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -530,8 +527,8 @@ void CenterCmdFunc_RouteSetting(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -643,7 +640,6 @@ void CenterCmdFunc_CommandTransfer(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout;
 
@@ -680,8 +676,8 @@ void CenterCmdFunc_CommandTransfer(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -922,7 +918,6 @@ void WaterCmdFunc_CommonCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -960,8 +955,8 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1231,11 +1226,9 @@ void WaterCmdFunc_FunctionConfig(void)
 	ListBox menuList, menuList_2;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
 	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
-	uint16 ackLen = 0, timeout, u16Tmp;
-	uint32 u32Tmp;
-	uint8 uiPage;	// 0x00 - 首页， 0xFF - 最后一页
+	uint16 ackLen = 0, timeout;
+	uint8 uiPage, isSendReady = false;	// uiPage: 0 - 首页 , isSendReady: 发送就绪
 
 	_ClearScreen();
 
@@ -1245,9 +1238,9 @@ void WaterCmdFunc_FunctionConfig(void)
 		8,
 		"1. 读取反转用量",
 		"2. 清除反转用量",
-		"3. 读取功能使能状态old",
-		"4. 读取功能使能状态new",
-		"5. 设置功能使能状态",
+		"3. 读取功能状态old",
+		"4. 读取功能状态new",
+		"5. 设置功能状态",
 		"6. 查询时钟及RF状态",
 		"7. 查询RF工作时段",
 		"8. 设置RF工作时段"
@@ -1272,8 +1265,8 @@ void WaterCmdFunc_FunctionConfig(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1299,7 +1292,7 @@ void WaterCmdFunc_FunctionConfig(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x10 + menuItemNo);
+			CurrCmd = (0x20 + menuItemNo);
 
 			switch(CurrCmd){
 			case WaterCmd_ReadReverseMeasureData:		// 读取反转用量
@@ -1311,7 +1304,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				ackLen = 9;					// 应答长度 9	
 				// 数据域
 				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+				isSendReady = true;
 				break;
 
 			case WaterCmd_ClearReverseMeasureData:		// 清除反转用量
@@ -1323,7 +1316,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				ackLen = 0;					// 应答长度 0	
 				// 数据域
 				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+				isSendReady = true;
 				break;
 
 			case WaterCmd_ReadFuncEnableStateOld:		// 读功能使能状态old
@@ -1336,7 +1329,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+				isSendReady = true;
 				break;
 
 			case WaterCmd_SetFuncEnableState:		// 设置功能使能状态
@@ -1346,6 +1339,8 @@ void WaterCmdFunc_FunctionConfig(void)
 						break;
 					}
 					uiPage++;
+					isUiFinish = false;
+					continue;
 				}
 				else if(uiPage == 2){
 					if(false == isUiFinish){
@@ -1353,7 +1348,7 @@ void WaterCmdFunc_FunctionConfig(void)
 						uiRowIdx = 2;
 						// 菜单
 						ListBoxCreate(&menuList_2, 0, 0, 20, 7, 10, NULL,
-							"<<设置该表状态",
+							"<<选择设置项",
 							10,
 							"1. 磁干扰关阀-开启",
 							"2. 磁干扰关阀-关闭",
@@ -1366,10 +1361,19 @@ void WaterCmdFunc_FunctionConfig(void)
 							"9. 主动告警-关闭",
 							"10.上报和防锈-设置"
 						);
-						break;
+						key = ShowListBox(&menuList_2);
+						if(key == KEY_CANCEL){
+							uiPage--;
+							continue;
+						}
+						CurrCmdName = menuList_2.str[menuList_2.strIdx];
+						sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
+						_Printfxy(0, 0, TmpBuf, Color_White);
+						isUiFinish = true;
 					}
 
 					// 命令字	0C~16
+					i = 0;
 					switch (menuList_2.strIdx + 1)
 					{
 					case 1: Args.buf[i++] = 0x0C; break;
@@ -1388,20 +1392,23 @@ void WaterCmdFunc_FunctionConfig(void)
 
 					if(menuList_2.strIdx + 1 == 10){
 						uiPage++;
-						break;
+						isUiFinish = false;
+						continue;
 					}
 					
 					ackLen = 0;					// 应答长度 0	
 					// 数据域
 					Args.lastItemLen = i - 1;
-					uiPage = 0xFF;
+					isSendReady = true;
 					break;
 				}
 				else if(uiPage == 3){
+					CurrCmdName = menuList_2.str[menuList_2.strIdx];
+					sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
+					_Printfxy(0, 0, TmpBuf, Color_White);
 					if(false == isUiFinish){
 						(*pUiCnt) = 0;
 						uiRowIdx = 2;
-						LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报和防锈-设置:");
 						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时防锈:", &StrBuf[1][0], 2, 
 						"关闭", "开启");
 						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时上报:", &StrBuf[1][1], 2, 
@@ -1412,6 +1419,7 @@ void WaterCmdFunc_FunctionConfig(void)
 					}
 					
 					// 命令字	19-00/01/02/04/08
+					i = 0;
 					Args.buf[i++] = 0x19;
 					ackLen = 0;					// 应答长度 0	
 					// 数据域
@@ -1421,6 +1429,7 @@ void WaterCmdFunc_FunctionConfig(void)
 					u8Tmp |= StrBuf[1][2] << 3;
 					Args.buf[i++] = u8Tmp;		// 子命令字
 					Args.lastItemLen = i - 1;
+					isSendReady = true;
 				}
 				break;
 
@@ -1434,7 +1443,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				// 数据域
 				Args.buf[i++] = 0x00;		// 子命令字 00
 				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+				isSendReady = true;
 				break;
 
 			case WaterCmd_ReadRfWorkTime:		// 查询RF工作时段
@@ -1447,7 +1456,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				// 数据域
 				Args.buf[i++] = 0x04;
 				Args.lastItemLen = i - 1;
-				uiPage = 0xFF;
+				isSendReady = true;
 				break;
 
 			case WaterCmd_SetRfWorkTime:		// 设置RF工作时段
@@ -1456,10 +1465,12 @@ void WaterCmdFunc_FunctionConfig(void)
 					if(false == isUiFinish){
 						LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:");
 						CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, " ", &StrBuf[0][0], 2, 
-						"每月某些天工作", "每天某时段工作");
+						"每月工作时段", "每天工作时段");
 						break;
 					}
 					uiPage++;
+					isUiFinish = false;
+					continue;
 				}
 				else if(uiPage == 2){
 					if(false == isUiFinish){
@@ -1472,19 +1483,19 @@ void WaterCmdFunc_FunctionConfig(void)
 								sprintf(StrBuf[2], "25");
 								sprintf(StrBuf[3], "06");
 							}
-							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每月某些天工作:");
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0~23):", StrBuf[1], 2, 2*8, true);
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始日(1~31):", StrBuf[2], 2, 2*8, true);
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束日(1~31):", StrBuf[3], 2, 2*8, true);
+							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每月工作时段:");
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始日(1-31):", StrBuf[1], 2, 2*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束日(1-31):", StrBuf[2], 2, 2*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0-23):", StrBuf[3], 2, 2*8, true);
 						}
 						else{
 							if(StrBuf[4][0] == 0x00){
 								sprintf(StrBuf[4], "06");
 								sprintf(StrBuf[5], "19");
 							}
-							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每天某时段工作:");
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0~23):", StrBuf[4], 2, 2*8, true);
-							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束时(0~23):", StrBuf[5], 2, 2*8, true);
+							LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "每天工作时段:");
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "开始时(0-23):", StrBuf[4], 2, 2*8, true);
+							TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "结束时(0-23):", StrBuf[5], 2, 2*8, true);
 						}
 						break;
 					}
@@ -1493,25 +1504,25 @@ void WaterCmdFunc_FunctionConfig(void)
 						TmpBuf[1] = (uint8) _atof(StrBuf[1]);
 						TmpBuf[2] = (uint8) _atof(StrBuf[2]);
 						TmpBuf[3] = (uint8) _atof(StrBuf[3]);
-						if(TmpBuf[1] > 23){
+						if(TmpBuf[1] < 1 || TmpBuf[1] > 31){
 							currUi = 1;
 							isUiFinish = false;
 							continue;
 						}
-						if(TmpBuf[2] < 1 || TmpBuf[2] > 31){
+						if(TmpBuf[1] < 1 || TmpBuf[1] > 31 ){
 							currUi = 2;
 							isUiFinish = false;
 							continue;
 						}
-						if(TmpBuf[3] < 1 || TmpBuf[3] > 31 ){
+						if(TmpBuf[3] > 23){
 							currUi = 3;
 							isUiFinish = false;
 							continue;
 						}
-						TmpBuf[10] = DecToBcd(TmpBuf[2]);
-						TmpBuf[11] = DecToBcd(TmpBuf[1]);
-						TmpBuf[12] = DecToBcd(TmpBuf[3]);
-						TmpBuf[13] = DecToBcd(TmpBuf[1]);
+						TmpBuf[10] = DecToBcd(TmpBuf[1]);
+						TmpBuf[11] = DecToBcd(TmpBuf[3]);
+						TmpBuf[12] = DecToBcd(TmpBuf[2]);
+						TmpBuf[13] = DecToBcd(TmpBuf[3]);
 					}
 					else{
 						TmpBuf[4] = (uint8) _atof(StrBuf[4]);
@@ -1533,6 +1544,7 @@ void WaterCmdFunc_FunctionConfig(void)
 						TmpBuf[13] = DecToBcd(TmpBuf[5]);
 					}
 					
+					i = 0;
 					Args.buf[i++] = 0x09;		// 命令字	09-84
 					ackLen = 2;					// 应答长度 2	
 					// 数据域
@@ -1542,7 +1554,7 @@ void WaterCmdFunc_FunctionConfig(void)
 					Args.buf[i++] = TmpBuf[12];
 					Args.buf[i++] = TmpBuf[13];
 					Args.lastItemLen = i - 1;
-					uiPage = 0xFF;
+					isSendReady = true;
 				}
 				
 				break;
@@ -1556,7 +1568,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				break;
 			}
 
-			if(uiPage != 0xFF){
+			if(false == isSendReady){
 				if(false == isUiFinish){
 
 					if(uiPage == 1){
@@ -1569,6 +1581,7 @@ void WaterCmdFunc_FunctionConfig(void)
 
 					if (key == KEY_CANCEL){
 						uiPage--;
+						isUiFinish = false;
 					}
 
 					if(uiPage == 1){
@@ -1593,13 +1606,12 @@ void WaterCmdFunc_FunctionConfig(void)
 			// 发送、接收、结果显示
 			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
+			isSendReady = false;
+			isUiFinish = false;
 			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
-				break;
-			}else{
-				isUiFinish = false;
-				continue;
+				uiPage--;
 			}
 		}
 		
@@ -1613,10 +1625,9 @@ void WaterCmdFunc_DmaProjectCmd(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte;
-	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
+	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
-	uint32 u32Tmp;
 
 	_ClearScreen();
 
@@ -1628,7 +1639,7 @@ void WaterCmdFunc_DmaProjectCmd(void)
 		"2. 使能上传电表数据",
 		"3. 设置上传时间间隔",
 		"4. 读取上传时间间隔",
-		"5. 读冻结正转信息",
+		"5. 读冻结正转数据",
 		"6. 设置时钟",
 		"7. 读取时钟"
 	);
@@ -1651,8 +1662,8 @@ void WaterCmdFunc_DmaProjectCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			/*---------------------------------------------*/
@@ -1676,104 +1687,143 @@ void WaterCmdFunc_DmaProjectCmd(void)
 			Args.itemCnt = 2;
 			Args.items[0] = &Args.buf[0];   // 命令字
 			Args.items[1] = &Args.buf[1];	// 数据域
-			CurrCmd = (0x10 + menuItemNo);
+			CurrCmd = (0x30 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// 读表数据
+			case WaterCmd_UploadCenterFrequency:		// 主动上传中心频点
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中心频点:");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "", &StrBuf[1][0], 2, 
+						"0: 470 MHz", "1: 478.3 MHz");
 					break;
 				}
-				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 9;				// 应答长度 9/13	
+				Args.buf[i++] = 0x09;		// 命令字	01
+				ackLen = 2;					// 应答长度 2/1	
 				// 数据域
+				Args.buf[i++] = 0x09 | (StrBuf[1][0] << 7);	// 子命令字	09/89
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
+			case WaterCmd_EnableReportAmeterData:		// 使能上传电表数据
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
-					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
-						"小", "大");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
-						"1", "10", "100");
 					break;
 				}
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					sprintf(StrBuf[0], " ");
+				Args.buf[i++] = 0x09;		// 命令字	09
+				ackLen = 2;					// 应答长度 2/1	
+				// 数据域
+				Args.buf[i++] = 0x8B;		// 子命令字	0B/8B - 不上传/立即上传
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_SetReportTimeInterval:		// 设置上传时间间隔 
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					if(StrBuf[0][0] == 0x00){
+						sprintf(StrBuf[0], "  (0-255 h)");
+					}
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时间间隔:", StrBuf[0], 3, 11*8, true);
+					break;
+				}
+				u16Tmp = (uint16)_atof(StrBuf[0]);
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0' || u16Tmp > 255){
+					sprintf(StrBuf[0], "  (0-255 h)");
 					currUi = 1;
 					isUiFinish = false;
 					continue;
 				}
-
-				Args.buf[i++] = 0x04;		// 命令字	04
-				ackLen = 5;					// 应答长度 5	
+				Args.buf[i++] = 0x09;		// 命令字	09
+				ackLen = 2;					// 应答长度 2/1	
 				// 数据域
-				u32Tmp = (uint32) _atof(StrBuf[0]);
-				u16Tmp = (uint16)((_atof(StrBuf[0]) - u32Tmp)*100);
-						
-				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);		// 表底数：整数 3byte
-				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
-				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	
-				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);				// 表底数：小数 1byte
-				switch (StrBuf[1][1])
-				{
-				case 0: u8Tmp = 1; break;
-				case 1: u8Tmp = 10; break;
-				case 2: u8Tmp = 100; break;
-				default: u8Tmp = 10; break;
-				}
-				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 脉冲系数	
+				Args.buf[i++] = 0x8A;		// 子命令字	0A/8A - 读取/设置
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);	
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_OpenValve:			// 开阀 
+            case WaterCmd_ReadReportTimeInterval:		// 读取上传时间间隔
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
 				}
-				Args.buf[i++] = 0x05;		// 命令字	05
+				Args.buf[i++] = 0x09;		// 命令字	09
+				ackLen = 2;					// 应答长度 2/1	
+				// 数据域
+				Args.buf[i++] = 0x0A ;		// 子命令字	0A/8A - 读取/设置
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ReadFrozenData:			// 读冻结正转数据
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					sprintf(StrBuf[0], "0 (0-9有效)");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
+					break;
+				}
+				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+					currUi = 1;
+					isUiFinish = false;
+					continue;
+				}
+				Args.buf[i++] = 0x09;		// 命令字	09
 				ackLen = 0;					// 应答长度 0	
 				// 数据域
+				Args.buf[i++] = 0x05;		// 子命令字	05/06 - 读正转/读反转
+				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
 				Args.lastItemLen = i - 1;
 				break;
 
-            case WaterCmd_CloseValve:			// 关阀
+			case WaterCmd_SetMeterTime:				// 校表端时钟 
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					_GetDateTime(time, '-',  ':');
+					DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+					TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+					break;
+				}
+				// 时间有效值校验
+				if( (i = TimeStrsToTimeBytes(timeBytes, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+					currUi = 2 + (i -1);
+					isUiFinish = false;
+					continue;
+				}
+
+				sprintf(time, "%s-%s-%s %s:%s:%s",
+					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_SetDateTime(time);
+
+				i = 0;
+				Args.buf[i++] = 0x01;		// 命令字	01 （抄表时带上时间）
+				ackLen = 9;					// 应答长度 9/13	
+				// 数据域
+				Args.buf[i++] = DecToBcd(timeBytes[0]);		// 时间 - yyyy/mm/dd HH:mm:ss
+				Args.buf[i++] = DecToBcd(timeBytes[1]);		
+				Args.buf[i++] = DecToBcd(timeBytes[2]);		
+				Args.buf[i++] = DecToBcd(timeBytes[3]);			
+				Args.buf[i++] = DecToBcd(timeBytes[4]);			
+				Args.buf[i++] = DecToBcd(timeBytes[5]);			
+				Args.buf[i++] = DecToBcd(timeBytes[6]);	
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ReadMeterTime:	// 读表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
 				}
-				Args.buf[i++] = 0x06;		// 命令字	06
+				Args.buf[i++] = 0x09;		// 命令字	09
 				ackLen = 0;					// 应答长度 0	
 				// 数据域
+				Args.buf[i++] = 0x00;		// 子命令字	00
 				Args.lastItemLen = i - 1;
 				break;
-
-			case WaterCmd_ClearException:		// 清异常命令
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 0;					// 应答长度 0	
-				// 数据域
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_ReadMeterCfgInfo:		// 读表参数
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x02;		// 命令字	02
-				ackLen = 30;				// 应答长度 30	
-				// 数据域
-				Args.lastItemLen = i - 1;
-				break;
-
-			
 
 			default: 
 				break;
@@ -1831,7 +1881,7 @@ void WaterCmdFunc_WorkingParams(void)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 * pByte, *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
+	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
@@ -1870,8 +1920,8 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			pByte = menuList.str[menuItemNo - 1];
-			sprintf(TmpBuf, "<<%s",&pByte[3]);
+			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 			//----------------------------------------------
@@ -2477,7 +2527,7 @@ void MainFuncBatchMeterReading(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint8 *pByte;
+	uint8 *ptr;
 	uint16 dispIdx, i;
 	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
 	char *qryStrXq = &TmpBuf[400], *qryStrLd = &TmpBuf[600];
@@ -2889,12 +2939,12 @@ void MainFuncBatchMeterReading(void)
 				MeterInfo.qryUserNum = NULL;
 				MeterInfo.qryRoomNum = NULL;
 				switch (menuList_2.strIdx + 1){
-				case 1: pByte = "输入表号: "; MeterInfo.qryMeterNum = StrBuf[0]; break;
-				case 2: pByte = "输入户号: "; MeterInfo.qryUserNum = StrBuf[0]; break;
-				case 3: pByte = "输入门牌号:"; MeterInfo.qryRoomNum = StrBuf[0]; break;
+				case 1: ptr = "输入表号: "; MeterInfo.qryMeterNum = StrBuf[0]; break;
+				case 2: ptr = "输入户号: "; MeterInfo.qryUserNum = StrBuf[0]; break;
+				case 3: ptr = "输入门牌号:"; MeterInfo.qryRoomNum = StrBuf[0]; break;
 				default: break;
 				}
-				_Printfxy(0, 2*16, pByte, Color_White);
+				_Printfxy(0, 2*16, ptr, Color_White);
 				StrBuf[0][0] = 0x00;
 				inputSt.left = 0;
 				inputSt.top = 3*16;

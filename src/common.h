@@ -60,8 +60,8 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"1.0 预览版1"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-12-18"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.0 预览1"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-12-20"        // 版本日期
     #define TransType   (char *)"RF透传"                // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -253,6 +253,7 @@ extern const uint8 LocalAddr[10];	// 地址 201900002019/0000，12/16字符
 extern uint8 DstAddr[10];
 extern uint8 VerInfo[42];
 extern uint16 CurrCmd;
+extern char * CurrCmdName;
 extern ParamsBuf Addrs;		
 extern ParamsBuf Args;
 extern char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
