@@ -1165,6 +1165,94 @@ void StringPadLeft(const char * srcStr, int totalLen, char padChar)
 }
 
 /*
+* 描  述：字符串右侧填充
+* 参  数：srcStr - 原字符串
+*		  totalLen - 总字符长度：原字符+右侧填充的字符（若原字符长度>=总长度，则无需填充）
+*		  padChar - 填充的字符
+* 返回值：void
+*/
+void StringPadRight(const char * srcStr, int totalLen, char padChar)
+{
+	uint32 srcStrLen, i = 0;
+	char *pw;
+
+	srcStrLen = strlen(srcStr);
+	if(srcStrLen >= totalLen || padChar == 0x00){
+		return;
+	}
+
+	pw = &srcStr[srcStrLen];
+	for(i = srcStrLen; i < totalLen; i++){
+		*pw++ = padChar;
+	}
+	*pw = 0x00;
+}
+
+/**
+ * 字符串转换为小数
+ * @param doubleStr - 浮点数字符串 : (如 -123.5)
+ * @param decCnt	- 保留几位小数 : (如 2)
+ * @param isNegative - 是否是负数：（如 true）
+ * @param decimalInt - 整数部分 ：(如 123）
+ * @param decimalDec - 小数部分 ：（如 50）
+ * @return bool - 返回转换结果：true - 成功， false - 失败
+*/
+bool StringToDecimal(const char *doubleStr, uint8 decCnt, bool *isNegative, uint32 *decimalInt, uint16 *decimalDec)
+{
+	uint32 u32 = 0;
+	uint16 u16 = 0;
+	uint8 i = 0;
+	char *str = &doubleStr[0];
+	char *p;
+
+	if(*str == '+' || *str == '-'){
+		*isNegative = (*str == '-' ? true : false);
+		str++;
+	}
+	if(*str < '0' || *str > '9'){
+		return false;
+	}
+	p = str;
+	while(*p != 0x00){
+		if(*p == '.'){
+			i++;
+		}
+		else if(*p < '0' || *p > '9'){
+			return false;
+		}
+
+		if(i >= 2){
+			return false;
+		}
+		p++;
+	}
+	
+	while(*str != 0x00 && *str != '.'){
+		u32 = u32 * 10 + (*str - '0');
+		str++;
+	}
+
+	if(*str == '.'){
+		str++;
+		i = 0;
+		while(*str != 0x00 && i < decCnt){
+			u16 = u16 * 10 + (*str - '0');
+			str++;
+			i++;
+		}
+		while(i < decCnt){
+			u16 = u16 * 10;
+			i++;
+		}
+	}
+
+	*decimalInt = u32;
+	*decimalDec = u16;
+
+	return true;
+}
+
+/*
 * 描  述：字符串头部裁剪
 * 参  数：srcStr - 字符串起始地址
 *		  trimChar - 裁剪的字符

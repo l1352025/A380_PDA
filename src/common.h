@@ -74,7 +74,7 @@ typedef unsigned char bool;
 
 
 //#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
-#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -203,6 +203,8 @@ int GetTimeStr(uint8 *time, const char *format, uint8 *buf, uint8 len);
 int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength, char separate, bool reverse);
 int GetBytesFromStringHex(uint8 bytes[], int iStart, int iLength, const char * strHex, char separate, bool reverse);
 void StringPadLeft(const char * srcStr, int totalLen, char padChar);
+void StringPadRight(const char * srcStr, int totalLen, char padChar);
+bool StringToDecimal(const char *doubleStr, uint8 decCnt, bool *isNegative, uint32 *decimalInt, uint16 *decimalDec);
 int StringTrimStart(const char * srcStr, char trimChar);
 int StringTrimEnd(const char * srcStr, char trimChar);
 void StringFixGbkStrEndError(const char * srcStr);

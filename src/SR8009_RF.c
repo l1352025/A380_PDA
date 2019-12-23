@@ -994,7 +994,7 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
+			case WaterCmd_SetBaseValPulseRatio:	// 设表底数 和 脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
@@ -1005,7 +1005,7 @@ void WaterCmdFunc_CommonCmd(void)
 						"1", "10", "100");
 					break;
 				}
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+				if(false == StringToDecimal(StrBuf[0], 2, &u8Tmp, &u32Tmp, &u16Tmp)){
 					sprintf(StrBuf[0], " ");
 					currUi = 1;
 					isUiFinish = false;
@@ -1015,9 +1015,6 @@ void WaterCmdFunc_CommonCmd(void)
 				Args.buf[i++] = 0x04;		// 命令字	04
 				ackLen = 5;					// 应答长度 5	
 				// 数据域
-				u32Tmp = (uint32) _atof(StrBuf[0]);
-				u16Tmp = (uint16)((_atof(StrBuf[0]) - u32Tmp)*100);
-						
 				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);		// 表底数：整数 3byte
 				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
 				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	

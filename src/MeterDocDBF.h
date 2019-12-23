@@ -21,7 +21,7 @@
 #define	Size_MeterNum				16	//表号长度 		12
 #define	Size_UserNum               	16	//户号长度		32
 #define Size_RoomNum              	20	//门牌号长度	16
-#define Size_MeterReadStatus        2	//抄表状态长度	1   : 0 - 未抄  1 - 已抄 
+#define Size_MeterReadStatus        2	//抄表状态长度	1   : 0 - 未抄  1 - 成功，2 - 失败 
 #define	Size_UserName               40	//户名长度		50
 #define Size_MobileNum           	12	//手机号长度	50
 #define	Size_UserAddr               80	//地址长度 		100 
@@ -84,7 +84,7 @@ typedef enum{
 	Idx_QF,					// "QF",		// 
 	Idx_SignalValue,		// "XHQD",		// 信号强度
 	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间
-	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态
+	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0 - 未抄， 1 - 成功， 2 - 失败
 	Idx_BLZDA,				// "BLZDA",		// BLZD[A-J] 10个 》》
 	Idx_BLZDB,				// "BLZDB",		// 
 	Idx_BLZDC,				// "BLZDC",		// 集中器 编号
@@ -207,9 +207,9 @@ typedef struct{
 	char 	*qryMeterReadStatus;	// 抄表状态
 	char 	districName[Size_DistrictName];		// 小区名
 	char 	buildingName[Size_BuildingName];	// 楼栋名
-	uint16 	meterCnt;		// 当前表总数
-	uint16 	readOkCnt;		// 已抄数量
-	uint16 	readNgCnt;		// 未抄数量
+	uint16 	meterCnt;		// 当前表总数：未抄+成功+失败
+	uint16 	readOkCnt;		// 成功数量
+	uint16 	readNgCnt;		// 失败数量
 }MeterListSt;
 
 

@@ -805,7 +805,13 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	index += AddrLen;
 
 	// 控制字2：路由级别|当前位置
-	relayCnt = (uint8)(buf[index] >> 4);
+	switch ((uint8)(buf[index] >> 4))
+	{
+	case 0: relayCnt = 0; break;
+	case 4: relayCnt = 1; break;
+	case 8: relayCnt = 2; break;
+	default: break;
+	}
 	index += 1;
 
 	// 控制字1：命令字
@@ -881,7 +887,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 				if(u16Tmp + u8Tmp > Size_MeterStatusStr){
 					u16Tmp = Size_MeterStatusStr - u8Tmp;
 				}
-				strncpy(&MeterInfo.meterStatusStr[u8Tmp], &dispBuf[u32Tmp], u16Tmp);
+				strncpy(&MeterInfo.meterStatusStr[u8Tmp - 1], &dispBuf[u32Tmp], u16Tmp);
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
 			}
 		#endif
