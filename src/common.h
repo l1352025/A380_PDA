@@ -43,30 +43,33 @@ typedef unsigned char bool;
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define AddrLen     8           // 地址长度(byte)：8 
     #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
     #define LogPort     CurrPort            // 日志输出串口
     #define UseBroadAddr    0               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
     #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.5"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-08-01"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.7 预览1"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-12-26"        // 版本日期
     #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     6           // 地址长度(byte)：6 
     #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  0           // 显示磁干扰状态开关：0
     #define LogPort     CurrPort            // 日志输出串口
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"1.0 预览1"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-12-20"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.0 预览3"               // 版本号
+    #define VerInfo_RevDate (char *)"2019-12-26"        // 版本日期
     #define TransType   (char *)"RF透传"                // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define AddrLen     5           // 地址长度(byte)：5 
     #define VerLen      24          // 版本长度(byte)：24 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
     #define LogPort     CurrPort            // 日志输出串口
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
@@ -74,7 +77,7 @@ typedef unsigned char bool;
 
 
 //#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
-//#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -251,7 +254,8 @@ extern uint8 * const FileBuf; // = &DispBuf[14336];	    // 116k
 extern uint8 TxBuf[1024];
 extern uint8 RxBuf[1024];
 extern uint32 RxLen, TxLen;
-extern const uint8 LocalAddr[10];	// 地址 201900002019/0000，12/16字符
+extern const uint8 LocalAddr[10];   // 本机地址 2019000020190000，10/12/16字符
+const uint8 BroadAddr[10];          // 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
 extern uint8 DstAddr[10];
 extern uint8 VerInfo[42];
 extern uint16 CurrCmd;

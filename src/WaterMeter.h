@@ -28,7 +28,8 @@ uint8 * const FileBuf = &DispBuf[14336];	// 116k
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
-const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
+const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 本机地址 2019000020190000，10/12/16字符
+const uint8 BroadAddr[10] = { 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0x00, 0x00};	// 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
 uint8 DstAddr[10];
 uint8 VerInfo[42];
 uint16 CurrCmd;
@@ -443,7 +444,9 @@ uint16 Water6009_GetStrAlarmStatus(uint16 status, char *buf)
 		case 0x04:	str = "传感器线断开";	break;
 		case 0x08:	str = "电池欠压";	break;
 		case 0x10:	str = "光电表-一组光管坏";	break;
+		#if ShowEMI_ON
 		case 0x20:	str = "磁干扰标志";	break;
+		#endif
 		case 0x40:	str = "光电表-多组光管坏";	break;
 		case 0x80:	str = "光电表-正强光干扰";	break;
 		case 0x0100:	str = "水表反转";	break;
@@ -889,9 +892,16 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			continue;
 		}	
 
+		// srcaddr check
+		addrsCnt = (buf[index + 7] & 0x0F);
+		if(cmd != WaterCmd_SetMeterNumber && memcmp(BroadAddr, DstAddr, AddrLen) != 0){
+			if(memcmp(&buf[index + 8], DstAddr, AddrLen) != 0){
+				index += length;
+				continue;
+			}
+		}
 		// dstaddr check
-		addrsCnt = buf[index + 7];
-		if(memcmp(&buf[index + 8 + (addrsCnt - 1) * AddrLen], dstAddr, AddrLen) != 0){
+		if(memcmp(&buf[index + 8 + (addrsCnt - 1) * AddrLen], LocalAddr, AddrLen) != 0){
 			index += length;
 			continue;
 		}
@@ -992,11 +1002,15 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				u16Tmp = (uint16)(dispIdx - u32Tmp);
+				u16Tmp = (uint16)(dispIdx - u32Tmp - 2);	// 去掉后面的 “ \n”
 				if(u16Tmp + 9 > Size_MeterStatusStr){
 					u16Tmp = Size_MeterStatusStr - 9;
 				}
 				strncpy(&MeterInfo.meterStatusStr[0], &dispBuf[u32Tmp], u16Tmp);
+				if(u16Tmp > 0)
+				{
+					MeterInfo.meterStatusStr[u16Tmp++] = ',';
+				}
 			}
 		#endif
 		//阀门状态 
@@ -1006,7 +1020,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		#ifdef Project_6009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
-				sprintf(&MeterInfo.meterStatusStr[u16Tmp], ", 阀门%s", ptr);
+				sprintf(&MeterInfo.meterStatusStr[u16Tmp], "阀门%s", ptr);
 			}
 		#endif
 		//电池电压

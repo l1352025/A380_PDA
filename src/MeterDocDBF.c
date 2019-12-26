@@ -218,13 +218,13 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		meters->meterCnt++;				// 当前表总数
 		_ReadField(Idx_MeterReadStatus, strTmp);		
 		strTmp[Size_MeterReadStatus - 1] = '\0';
-		if(strcmp(strTmp, "1") == 0){
+		if(strTmp[0] == '1'){
 			meters->readOkCnt++;		// 成功数量
 		}
-		else if(strcmp(strTmp, "2") == 0){
+		else if(strTmp[0] == '2'){
 			meters->readNgCnt++;		// 失败数量
 		}else{
-			// 0 - 未抄数量
+			strTmp[0] = '0';			// 0 - 未抄数量
 		}
 		
 		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
@@ -283,7 +283,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
 	uint8 key, i, cnt;
 	uint16 ackLen, timeout, dispIdx;
-	uint8 tryCnt, lcdCtrl;
+	uint8 tryCnt, lcdCtrl, readStatus;
 	CmdResult cmdResult = CmdResult_Ok;
 	char *dispBuf = &DispBuf;
 	MeterInfoSt *meterInfo = &MeterInfo;
@@ -291,6 +291,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	uint32 shutdownTime;
 
 	if(meters->cnt == 0){
+		ShowMsg(1*16, 3*16, "未抄/失败列表为空!", 2000);
 		return KEY_CANCEL;
 	}
 
@@ -378,11 +379,11 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		#ifdef Project_6009_RF
 			ackLen += 15 + Addrs.itemCnt * AddrLen;
 			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-			tryCnt = 2;
+			tryCnt = 3;
 		#else // Project_8009_RF
 			ackLen += 10 + Addrs.itemCnt * AddrLen;
 			timeout = 2000 + (Addrs.itemCnt - 1) * 2000;
-			tryCnt = 2;
+			tryCnt = 3;
 		#endif
 
 		// 发送、接收、结果显示
@@ -393,23 +394,23 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		}
 		else if(cmdResult == CmdResult_Ok){
 			// 成功，保存结果到数据库
-			
 			_Printfxy(0, 9*16, " < 当前抄表: 成功 > ", Color_White);
 			meters->readOkCnt++;
+			readStatus = 1;
 		}
 		else{
-			// 失败，不作处理
+			// 失败，写入抄表时间
 			_Printfxy(0, 9*16, " < 当前抄表: 失败 > ", Color_White);
 			meters->readNgCnt++;
+			readStatus = 2;
 		}
-		meterInfo->meterReadType[0] = '0';		// 抄表方式： 掌机抄表
-		SaveMeterReadResult(meterInfo);
-		_Sleep(1000);
+		SaveMeterReadResult(meterInfo, 0, readStatus);		// 掌机抄表
+		_Sleep(500);
 
 		// 显示电量
 		_Printfxy(0, 9*16, "                   ", Color_White);
 		_DispTimeSys();	
-		_Sleep(1000);
+		_Sleep(500);
 
 		cnt++;
 	}
@@ -470,9 +471,10 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 	/*---------------------------------------------*/
 	dispIdx += sprintf(&dispBuf[dispIdx], "小区: %s\n", meters->districName);
 	dispIdx += sprintf(&dispBuf[dispIdx], "楼栋: %s\n", meters->buildingName);
-	dispIdx += sprintf(&dispBuf[dispIdx], "总数: %d\n", meters->meterCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "已抄: %d\n", meters->readOkCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "未抄: %d\n", meters->readNgCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "表具总数: %d\n", meters->meterCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "已抄成功: %d\n", meters->readOkCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "当前失败: %d\n", meters->readNgCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "当前未抄: %d\n", meters->meterCnt - meters->readOkCnt - meters->readNgCnt);
 	//----------------------------------------------
 	_Printfxy(0, 9*16, "返回  < 完成 >  确定", Color_White);
 
@@ -494,7 +496,7 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 	MeterListSt *meters = meterReadList;
 
 	// 列表显示方式-界面
-	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄列表" : "<<未抄列表");
+	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
 	ListBoxCreate(&showTpList, 0, 0, 20, 7, 4, NULL,
 		title, 
 		4,
@@ -528,7 +530,7 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 		_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 		QueryMeterList(meters, &DbQuery);	// 已抄/未抄列表 查询
 		ListBoxCreateEx(&meterList, 0, 0, 20, 7, meters->cnt, NULL,
-				title, meters->strs, Size_ListStr, meters->cnt);
+				&title[2], meters->strs, Size_ListStr, meters->cnt);
 		while(2){
 
 			_Printfxy(0, 9*16, "返回        户表信息", Color_White);
@@ -583,9 +585,11 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 /*
 * 描 述：保存抄表结果
 * 参 数：meterInfo	- 户表信息
+* 		readType - 抄表方式：0-掌机抄表，1-手工录入
+* 		readStatus - 抄表状态：0-未抄，1-成功，2-失败
 * 返 回：void
 */
-void SaveMeterReadResult(MeterInfoSt *meterInfo)
+void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus)
 {
 	char time[20];
 
@@ -593,19 +597,27 @@ void SaveMeterReadResult(MeterInfoSt *meterInfo)
 	_Use(MeterDocDB);	// 打开数据库
 	_Go(meterInfo->dbIdx);
 
-	meterInfo->meterReadStatus[1] = '\0';
-	meterInfo->meterReadType[1] = '\0';
+	sprintf(meterInfo->meterReadType, "%d", readType);
+	sprintf(meterInfo->meterReadStatus, "%d", readStatus);
+	if(readType == 1){
+		sprintf(meterInfo->meterStatusHex, "000000");
+		sprintf(meterInfo->meterStatusStr, "手工录入");
+		sprintf(meterInfo->batteryVoltage, "3.3");
+		sprintf(meterInfo->signalValue, "99");
+	}
 
 	// 更新抄表结果
 	_GetDateTime(time, '-', ':');
 	_Replace(Idx_MeterReadStatus, meterInfo->meterReadStatus);	// 抄表状态 0 - 未抄， 1 - 成功， 2 - 失败
 	_Replace(Idx_MeterReadType, meterInfo->meterReadType);		// 抄表方式 0 - 掌机抄表 ， 1 - 手工录入
 	_Replace(Idx_MeterReadTime, time);							// 抄表时间
-	_Replace(Idx_MeterValue, meterInfo->meterValue);
-	_Replace(Idx_MeterStatusHex, meterInfo->meterStatusHex);
-	_Replace(Idx_MeterStatusStr, meterInfo->meterStatusStr);
-	_Replace(Idx_BatteryVoltage, meterInfo->batteryVoltage);
-	_Replace(Idx_SignalValue, meterInfo->signalValue);
+	if(readStatus == 1){
+		_Replace(Idx_MeterValue, meterInfo->meterValue);
+		_Replace(Idx_MeterStatusHex, meterInfo->meterStatusHex);
+		_Replace(Idx_MeterStatusStr, meterInfo->meterStatusStr);
+		_Replace(Idx_BatteryVoltage, meterInfo->batteryVoltage);
+		_Replace(Idx_SignalValue, meterInfo->signalValue);
+	}
 
 	_Use("");			// 关闭数据库
 }
@@ -616,9 +628,13 @@ void SaveMeterReadResult(MeterInfoSt *meterInfo)
 *		 query		- 数据库查询结构
 * 返 回：void
 */
+#define UseSearchFunc 0
 void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 {
-	uint32 i, recCnt;
+	#if ! UseSearchFunc
+	uint32 i;
+	#endif
+	uint32 recCnt;
 	char *strTmp = &TmpBuf[0];
 
 	_Select(1);
@@ -628,15 +644,16 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 	query->resultCnt = 0;
 	query->errorCode = 0;
 
-	if(meterInfo->dbIdx != Invalid_dbIdx){	// 数据库记录索引 是否有效？
-		if(meterInfo->dbIdx > recCnt -1){
+	if(meterInfo->dbIdx != Invalid_dbIdx){	// 数据库记录索引 是否有效？  【有效值为 1 ~ 最大记录数】
+		if(meterInfo->dbIdx > recCnt){		
 			meterInfo->dbIdx = Invalid_dbIdx;
 		}
 	}
 
 	if(meterInfo->dbIdx == Invalid_dbIdx){	// 数据库记录索引无效时 执行查询
 
-		#if 1
+		#if UseSearchFunc
+
 		if(meterInfo->qryMeterNum != NULL
 			&& _LocateEx(Idx_MeterNum, '=', meterInfo->qryMeterNum, 1, recCnt, 0) > 0){ 
 			// 按表号查询
@@ -762,14 +779,17 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 	ListBox menuList;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
-	uint8 currUi = 0, uiRowIdx, isUiFinish, u8Tmp;
-	uint8 tryCnt;
+	uint8 currUi = 0, uiRowIdx, u8Tmp;
+	uint8 tryCnt, readStatus;
+	CmdResult cmdResult = CmdResult_Ok;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
 	char *dispBuf;
 
 	while(1){
 		_ClearScreen();
+
+		readStatus = meterInfo->meterReadStatus[0] - '0';
 
 		// 户表信息-界面
 		//-----------------------------------------------------
@@ -779,12 +799,17 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", meterInfo->meterNum);
 		dispIdx += sprintf(&dispBuf[dispIdx], "户号: %s\n", meterInfo->userNum);
 		dispIdx += sprintf(&dispBuf[dispIdx], "门牌号: %s\n", meterInfo->roomNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "抄表状态: %s\n", (meterInfo->meterReadStatus[0] == '1' ? "已抄" : "未抄"));
+		if(meterInfo->meterReadType[0] == '1'){
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表状态: 成功(录)\n");
+		}
+		else{
+			dispIdx += sprintf(&dispBuf[dispIdx], "抄表状态: %s\n", (readStatus == 0 ? "未抄" : (readStatus == 1 ? "成功" : "失败")));
+		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "户名: %s\n", meterInfo->userName);
 		dispIdx += sprintf(&dispBuf[dispIdx], "手机: %s\n", meterInfo->mobileNum);
 		dispIdx += sprintf(&dispBuf[dispIdx], "地址: %s\n", meterInfo->userAddr);
 		dispIdx += sprintf(&dispBuf[dispIdx], "抄表方式: %s\n", 
-			(meterInfo->meterReadType[0] == '0' ? "手持机抄表" : (meterInfo->meterReadType[0] == '1' ? "集中器抄表" : " ")));
+			(meterInfo->meterReadType[0] == '0' ? "掌机抄表" : (meterInfo->meterReadType[0] == '1' ? "手工录入" : " ")));
 		dispIdx += sprintf(&dispBuf[dispIdx], "抄表时间: \n %s\n", meterInfo->meterReadTime);
 		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %s\n", meterInfo->meterValue);
 		dispIdx += sprintf(&dispBuf[dispIdx], "表状态: %s\n", meterInfo->meterStatusStr);
@@ -828,6 +853,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		//--------------------------------------
 		sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 		_Printfxy(0, 0, TmpBuf, Color_White);
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);	
 		//------------------------------------
 
 		// 命令参数处理
@@ -896,12 +922,20 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 			Args.lastItemLen = i - 1;
 			break;
 
-		case 5:
+		case 5:										// 手工录入
 			while(2){
-				pUiCnt = 0;
-				uiRowIdx = 3;
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "输入读数:", StrBuf[0], 9, 11*8, true);
+				(*pUiCnt) = 0;
+				uiRowIdx = 2;
+				currUi = 0;
+				sprintf(StrBuf[1], "表号: %s", meterInfo->meterNum);
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, StrBuf[1]);
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "录入读数:", StrBuf[0], 9, 11*8, true);
 						pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, " ");
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表状态: 手工录入");
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "电池电压: 3.3 v");
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "信号强度: 99");
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
 				key = ShowUI(UiList, &currUi);
 
 				if (key == KEY_CANCEL){
@@ -913,14 +947,13 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 					continue;
 				}
 
-				meterInfo->meterReadStatus[0] = '1';	// 抄表状态： 成功
-				meterInfo->meterReadType[0] = '1';		// 抄表方式： 手工录入
+				readStatus = 1;
 				sprintf(MeterInfo.meterValue, "%d.%02d", u32Tmp, (u16Tmp & 0xFF));
-				SaveMeterReadResult(meterInfo);
+				SaveMeterReadResult(meterInfo, 1, readStatus);	// 手工录入
 				ShowMsg(16, 3*16, "表读数 录入成功!", 1000);
 				break;
 			}
-			break;
+			continue;		// 显示户表信息
 
 		default: 
 			break;
@@ -945,18 +978,22 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		#endif
 
 		// 发送、接收、结果显示
-		if(false == ProtolCommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt)){
-			if(strncmp(DispBuf, "表号", 4) != 0){	// 命令已取消	
-				DispBuf[0] = NULL;
-			}else{
-				meterInfo->meterReadStatus[0] = '2';	// 抄表状态： 失败
-			}
+		cmdResult = ProtolCommandTranceiver(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		if(cmdResult == CmdResult_Cancel){	// 命令取消
+			readStatus = 0;
+		}
+		else if(cmdResult == CmdResult_Ok){
+			// 成功，保存结果到数据库
+			readStatus = 1;
 		}
 		else{
-			meterInfo->meterReadStatus[0] = '1';	// 抄表状态： 成功
+			// 失败，写入抄表时间
+			readStatus = 2;
 		}
-		meterInfo->meterReadType[0] = '0';		// 抄表方式： 掌机抄表
-		SaveMeterReadResult(meterInfo);
+
+		if(CurrCmd == WaterCmd_ReadRealTimeData && readStatus != 0){
+			SaveMeterReadResult(meterInfo, 0, readStatus);	// 掌机抄表
+		}
 		//------------------------------------------------------
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
 		

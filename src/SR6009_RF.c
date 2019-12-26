@@ -3194,7 +3194,7 @@ void MainFuncBatchMeterReading(void)
 			_GUIRectangleFill(0, 3*16 - 8, 160, 6*16 + 8, Color_White);
 			PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n 请先下载抄表档案，\n 再进行批量操作");
 			_GUIRectangle(0, 3*16 - 8, 160, 6*16 + 8, Color_Black);
-			_Sleep(3000);
+			_Sleep(2500);
 			continue;
 		}
 
@@ -3241,8 +3241,8 @@ void MainFuncBatchMeterReading(void)
 						"<<楼栋抄表", 
 						6,
 						"1. 自动抄表",
-						"2. 已抄列表",
-						"3. 未抄列表",
+						"2. 已抄成功列表",
+						"3. 未抄失败列表",
 						"4. 抄表统计",
 						"5. 清空抄表结果",
 						"6. 重置抄表时间");
@@ -3315,7 +3315,7 @@ void MainFuncBatchMeterReading(void)
 
 								_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 								strTmp[Size_MeterReadStatus - 1] = '\0';
-								if(strTmp[0] != '1'){
+								if(strTmp[0] == '0'){
 									_Skip(1);	// 下一个数据库记录
 									continue;
 								}
@@ -3334,7 +3334,7 @@ void MainFuncBatchMeterReading(void)
 							//------------------------------------------------------------
 							_Printfxy(0, 5*16, "  抄表结果清空完成! ", Color_White);
 							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
-							_Sleep(3000);
+							_Sleep(2500);
 							break;
 
 						case 6:		// 重置抄表时间
@@ -3406,7 +3406,7 @@ void MainFuncBatchMeterReading(void)
 
 								_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 								strTmp[Size_MeterReadStatus - 1] = '\0';
-								if(strTmp[0] != '1'){
+								if(strTmp[0] == '0'){
 									_Skip(1);	// 下一个数据库记录
 									continue;
 								}
@@ -3417,7 +3417,7 @@ void MainFuncBatchMeterReading(void)
 							_Use("");		// 关闭数据库
 							//------------------------------------------------------------
 							_Printfxy(8, 6*16, "抄表时间重置完成！ ", Color_White);
-							_Sleep(3000);
+							_Sleep(2500);
 							break;
 						
 						default:
@@ -3450,7 +3450,7 @@ void MainFuncBatchMeterReading(void)
 			do{
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
-				if(strTmp[0] != '1'){
+				if(strTmp[0] == '0'){
 					_Skip(1);	// 下一个数据库记录
 					continue;
 				}
@@ -3468,7 +3468,7 @@ void MainFuncBatchMeterReading(void)
 			//-------------------------------------------------------
 			_Printfxy(0, 4*16, "  清空抄表结果完成！", Color_White);
 			_GUIRectangle(0, 4*16 - 8, 160, 5*16 + 8, Color_Black);
-			_Sleep(3000);
+			_Sleep(2500);
 			break;
 
 		case 3:		// 重置抄表时间
@@ -3525,7 +3525,7 @@ void MainFuncBatchMeterReading(void)
 			do{
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
-				if(strTmp[0] != '1'){
+				if(strTmp[0] == '0'){
 					_Skip(1);	// 下一个数据库记录
 					continue;
 				}
@@ -3535,7 +3535,7 @@ void MainFuncBatchMeterReading(void)
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
 			_Printfxy(8, 6*16, "抄表时间重置完成！", Color_White);
-			_Sleep(3000);
+			_Sleep(2500);
 			break;
 
 		case 4:		// 户表查询
@@ -3603,7 +3603,7 @@ void MainFuncBatchMeterReading(void)
 					_GUIRectangleFill(0, 4*16 - 8, 160, 5*16 + 8, Color_White);
 					_Printfxy(0, 4*16, " 查询失败，未找到 ", Color_White);
 					_GUIRectangle(0, 4*16 - 8, 160, 5*16 + 8, Color_Black);
-					_Sleep(3000);
+					_Sleep(2500);
 				}
 				
 			} // while 2 户表查询
@@ -3706,7 +3706,7 @@ void MainFuncBatchMeterReading(void)
 							_Printfxy(0, 4*16, " 选择某个楼栋时 ", Color_White);
 							_Printfxy(0, 5*16, " 必须选择所在小区! ", Color_White);
 							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
-							_Sleep(3000);
+							_Sleep(2500);
 							continue;
 						}
 
@@ -3829,7 +3829,7 @@ int main(void)
 	MainMenu.Function[3] = MainFuncSetMeterTime;
 	MainMenu.Function[4] = MainFuncOpenValve;
 	MainMenu.Function[5] = MainFuncCloseValve;
-	MainMenu.Function[6] = MainFuncEngineerDebuging;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.Function[6] = MainFuncEngineerDebuging;
 	MainMenu.Function[7] = MainFuncBatchMeterReading;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();

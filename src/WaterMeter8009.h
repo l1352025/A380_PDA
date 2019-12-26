@@ -28,8 +28,8 @@ uint8 * const FileBuf = &DispBuf[14336];	// 116k
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
 uint32 RxLen, TxLen;
-const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 地址 2019000020190000，12/16字符
-const uint8 BroadAddr[6] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 本机地址 2019000020190000，10/12/16字符
+const uint8 BroadAddr[10] = { 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0x00, 0x00};	// 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
 uint8 DstAddr[10];
 uint8 VerInfo[42];
 uint16 CurrCmd;
@@ -868,8 +868,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				u8Tmp = sprintf(&MeterInfo.meterStatusStr[0], "阀门%s,", ptr);
-				MeterInfo.meterStatusStr[u8Tmp - 1] = 0x00;
+				u8Tmp = sprintf(&MeterInfo.meterStatusStr[0], "阀门%s", ptr);
 			}
 		#endif
 
@@ -883,11 +882,16 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				u16Tmp = (uint16)(dispIdx - u32Tmp);
+				u16Tmp = (uint16)(dispIdx - u32Tmp - 2);	// 去掉后面的 “ \n”
 				if(u16Tmp + u8Tmp > Size_MeterStatusStr){
 					u16Tmp = Size_MeterStatusStr - u8Tmp;
 				}
-				strncpy(&MeterInfo.meterStatusStr[u8Tmp - 1], &dispBuf[u32Tmp], u16Tmp);
+				if(u16Tmp > 0)
+				{
+					MeterInfo.meterStatusStr[u8Tmp++] = ',';
+					strncpy(&MeterInfo.meterStatusStr[u8Tmp], &dispBuf[u32Tmp], u16Tmp);
+					MeterInfo.meterStatusStr[u8Tmp + u16Tmp] = 0x00;
+				}
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
 			}
 		#endif
@@ -1659,7 +1663,7 @@ uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 #else // Project_8009_RF
 	ackLen += 10 + addrs->itemCnt * AddrLen;
 	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
-	tryCnt = 2;
+	tryCnt = 3;
 #endif
 
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);

@@ -254,7 +254,7 @@ extern void QueryMeterList(MeterListSt *meters, DbQuerySt *query);
 extern uint8 ShowMeterReadCountInfo(MeterListSt *meters);
 extern uint8 ShowMeterList(MeterListSt *meters);
 extern uint8 ShowAutoMeterReading(MeterListSt *meters);
-extern void SaveMeterReadResult(MeterInfoSt *meterInfo);
+extern void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
 
