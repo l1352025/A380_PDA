@@ -21,7 +21,8 @@ uint8 DispBuf[14 * 1024];					// 4k ~ 14K
 #endif
 uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
 uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
-uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
+uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
 #if Upgrd_FileBuf_Enable
 uint8 * const FileBuf = &DispBuf[14336];	// 116k 
 #endif

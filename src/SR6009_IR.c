@@ -1917,7 +1917,9 @@ void MainFuncReadRealTimeData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<读取用户用量");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2037,7 +2039,9 @@ void MainFuncReadFrozenData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取冻结数据", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<读取冻结数据");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2153,7 +2157,9 @@ void MainFuncReadMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取表端时钟", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<读取表端时钟");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2250,7 +2256,9 @@ void MainFuncSetMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<设置表端时钟", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<设置表端时钟");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2378,7 +2386,9 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<清异常", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<清异常");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2478,7 +2488,9 @@ void MainFuncOpenValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<开阀", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<开阀");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2579,7 +2591,9 @@ void MainFuncCloseValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<关阀", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<关阀");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2680,7 +2694,9 @@ void MainFuncReadNbJoinNetworkInfo(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取NB入网信息", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<读取NB入网信息");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------

@@ -2130,7 +2130,9 @@ void MainFuncReadRealTimeData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<读取用户用量", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<读取用户用量");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2231,7 +2233,9 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<清异常命令", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<清异常");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2331,7 +2335,9 @@ void MainFuncOpenValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<开阀", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<开阀");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -2431,7 +2437,9 @@ void MainFuncCloseValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		_Printfxy(0, 0, "<<关阀", Color_White);
+		CurrCmdName = &ArgBuf[0];
+		sprintf(CurrCmdName, "<<关阀");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
 		//----------------------------------------------
@@ -3188,7 +3196,7 @@ int main(void)
 	MainMenu.str[1] = " 读表数据 ";
 	MainMenu.str[2] = " 开阀 ";
 	MainMenu.str[3] = " 关阀 ";
-	MainMenu.str[4] = " 清除异常 ";
+	MainMenu.str[4] = " 清异常 ";
 	MainMenu.str[5] = " 工程调试 ";
 	MainMenu.str[6] = " 版本信息 ";
 	MainMenu.key[0] = "1";

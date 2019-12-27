@@ -165,6 +165,8 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
 	char strTmp[Size_DbMaxStr];
+	char state;
+	int len;
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -226,6 +228,8 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		}else{
 			strTmp[0] = '0';			// 0 - 未抄数量
 		}
+
+		state = strTmp[0];
 		
 		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
 			if((meters->qryMeterReadStatus[0] == '1' && strTmp[0] != '1')
@@ -262,9 +266,16 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		}
 
 		// 将选择的字段信息 和 数据库索引 加入列表
-		strncpy(meters->strs[meters->cnt], strTmp, Size_ListStr);	
+		len = sprintf(meters->strs[meters->cnt], strTmp);
+		StringPadRight(meters->strs[meters->cnt], 20, ' ');
+		meters->strs[meters->cnt][18] = ' ';	
+		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
 		meters->dbIdx[meters->cnt] = (i + 1);	// 数据库索引从 1 开始编号
 		meters->cnt++;
+
+		#if LOG_ON
+			LogPrint("strTmp: %s, len: %d, state: %c\n", strTmp, len, (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F')));
+		#endif
 
 		_Skip(1);	// 下一个数据库记录
 	}
@@ -494,6 +505,7 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 	ListBox showTpList, meterList;		// 显示方式/表信息-列表
 	char *title = NULL;
 	MeterListSt *meters = meterReadList;
+	char state;
 
 	// 列表显示方式-界面
 	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
@@ -551,7 +563,10 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 				MeterInfo.strIdx = meters->idx;
 				MeterInfo.strCnt = meters->cnt;
 				QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
-				key = ShowMeterInfo(&MeterInfo);	
+				key = ShowMeterInfo(&MeterInfo);
+				state = MeterInfo.meterReadStatus[0];	
+				meters->strs[meterList.strIdx][18] = ' ';
+				meters->strs[meterList.strIdx][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
 				//------------------------------------------------------
 				if(key == KEY_LEFT){
 					if(meterList.strIdx == 0){
@@ -995,8 +1010,6 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 			SaveMeterReadResult(meterInfo, 0, readStatus);	// 掌机抄表
 		}
 		//------------------------------------------------------
-		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		
 		key = ShowScrollStr(&DispBuf, 7);
 
 	}// while 1  户表信息

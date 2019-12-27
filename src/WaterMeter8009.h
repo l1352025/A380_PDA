@@ -21,7 +21,8 @@ uint8 DispBuf[14 * 1024];					// 4k ~ 14K
 #endif
 uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
 uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
-uint8 * const BackupBuf = &DispBuf[10240];	// 4k ~ 
+uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
+uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
 #if Upgrd_FileBuf_Enable
 uint8 * const FileBuf = &DispBuf[14336];	// 116k 
 #endif
@@ -761,6 +762,12 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 		// ack flag check
 		if((buf[index + 9] & 0x80) == 0x00){
+			index += length;
+			continue;
+		}
+
+		// first node check
+		if((buf[index + 8] & 0x0F) != 0x00){
 			index += length;
 			continue;
 		}
@@ -1586,7 +1593,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		//下行/上行 信号强度
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				sprintf(MeterInfo.signalValue, "%d", buf[index + 1]);	// 保存上行
+				sprintf(MeterInfo.signalValue, "%d", (buf[index + 1] - 30) * 2);	// 保存上行
 			}
 		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");

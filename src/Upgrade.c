@@ -155,7 +155,7 @@ static uint8 ShowDocList(TList *docs, uint8 mode)
 static void DocListImport(TList *docs)
 {
 	int fp, len, dstIdx, startIdx, lastCnt;
-	uint8 *str, *buf = &DispBuf[0];
+	uint8 *str, *buf = &ArgBuf[0];
 	DocInfo *docItem;
 
 	if(_Access(Upgrd_DocFileName, 0) < 0){
@@ -178,10 +178,10 @@ static void DocListImport(TList *docs)
 		startIdx = 0;
 
 		while(dstIdx >= 0){
-			dstIdx = IndexOf(DispBuf, len, "\r\n", 2, startIdx, 25);
-			str = &DispBuf[startIdx];
+			dstIdx = IndexOf(buf, len, "\r\n", 2, startIdx, 25);
+			str = &buf[startIdx];
 			if(dstIdx >=0){
-				DispBuf[startIdx + 12] = '\0';
+				buf[startIdx + 12] = '\0';
 				if(NULL == docs->find(docs, IsMtrNoEqual, str)){
 					docItem = docs->add(docs, NULL, sizeof(DocInfo));
 					sprintf(docItem->mtrNo, "%s", str);
@@ -193,14 +193,14 @@ static void DocListImport(TList *docs)
 		}
 		
 		if(startIdx < len){
-			memcpy(&DispBuf[0], &DispBuf[startIdx], len - startIdx);
-			buf = &DispBuf[len - startIdx];
+			memcpy(&buf[0], &buf[startIdx], len - startIdx);
+			buf = &buf[len - startIdx];
 		}
 	}
 	_Fclose(fp);
 
-	sprintf(&DispBuf[0], "导入完成！新增 %d, 当前总数 %d", (docs->cnt - lastCnt), docs->cnt);
-	ShowMsg(16, 4*16, &DispBuf[0], 1000);
+	sprintf(&buf[0], "导入完成！新增 %d, 当前总数 %d", (docs->cnt - lastCnt), docs->cnt);
+	ShowMsg(16, 4*16, &buf[0], 1000);
 }
 
 /*
@@ -211,7 +211,7 @@ static void DocListImport(TList *docs)
 static void DocListExport(TList *docs)
 {
 	int fp, len;
-	uint8 *buf = &DispBuf[0];
+	uint8 *buf = &ArgBuf[0];
 	DocInfo *docItem = (DocInfo *)docs->head;
 
 	if(docs->cnt == 0) {
@@ -231,8 +231,8 @@ static void DocListExport(TList *docs)
 	}
 	_Fclose(fp);
 
-	sprintf(&DispBuf[0], "导出完成！总数 %d", docs->cnt);
-	ShowMsg(16, 4*16, &DispBuf[0], 1000);
+	sprintf(&buf[0], "导出完成！总数 %d", docs->cnt);
+	ShowMsg(16, 4*16, &buf[0], 1000);
 }
 
 // 升级档案管理
@@ -370,7 +370,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	TList *docs = &DocList;
 	DocInfo *docItem;
 	uint16 docIdx, sendIdx, pktIdx, crc16, i, u16Tmp;
-	uint8 *verNo = &DispBuf[1000], *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 *verNo = &ArgBuf[1000], *cmdName = &ArgBuf[1024], *cmdMsg = &ArgBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key, reSendPktCnt;
@@ -996,7 +996,7 @@ static void UpgradeFunc_QueryUpgradeState(uint8 upgradeMode)
 	TList *docs = &DocList;
 	DocInfo *docItem;
 	uint16 docIdx, i, u16Tmp;
-	uint8 *verNo = &DispBuf[1000], *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 *verNo = &ArgBuf[1000], *cmdName = &ArgBuf[1024], *cmdMsg = &ArgBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
@@ -1320,7 +1320,7 @@ static void UpgradeFunc_ManualNoticeUpgradeOnBoot(uint8 upgradeMode)
 	TList *docs = &DocList;
 	DocInfo *docItem;
 	uint16 docIdx, i, u16Tmp;
-	uint8 *verNo = &DispBuf[1000], *cmdName = &DispBuf[1024], *cmdMsg = &DispBuf[1060];
+	uint8 *verNo = &ArgBuf[1000], *cmdName = &ArgBuf[1024], *cmdMsg = &ArgBuf[1060];
 	uint8 cmdState = Cmd_Send;
 	uint16 ackLen, timeout, dispIdx, index;
 	uint8 tryCnt, lcdCtrl, key;
@@ -1560,7 +1560,7 @@ void UpgradeFunc(void)
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 * fileName = NULL;
-	uint8 version[20], *verNo = &DispBuf[1000];
+	uint8 version[20], *verNo = &ArgBuf[1000];
 	uint8 currUi = 0, uiRowIdx;
 	uint8 upgradeMode = 1;	// 升级模式： 1 - 单表 ， 2 - 批量
 	DocInfo *docItem;
@@ -1824,10 +1824,10 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 
 	// test -->
 	timeTick = _GetTickCount() - timeTick;
-	_DoubleToStr(&DispBuf[200], (double)timeTick / 32768, 3);
+	_DoubleToStr(&tmpBuf[200], (double)timeTick / 32768, 3);
 	PrintfXyMultiLine_VaList(0, 16 + 8, " Time Used: %s s\n read-appcrc: %4X \n calc-appcrc: %4X \n \
 	read-vercrc: %4X \n calc-vercrc: %4X \n file size: %d k \n total pkt: %d \n", 
-		&DispBuf[200],
+		&tmpBuf[200],
 		(app->crc16_all52K[0] + app->crc16_all52K[1] * 256),  crc16, 
 		(app->crc16_appVer[0] + app->crc16_appVer[1] * 256),  crc16_tmp,
 		pktInfo->fileKbSize, pktInfo->packetCnt);

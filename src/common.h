@@ -77,13 +77,13 @@ typedef unsigned char bool;
 
 
 //#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
-#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
+//#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogFileName "debug.txt" // 日志文件名
 #define LogFileSize (100*1024)  // 日志文件最大字节数
-#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件
+#define LogScom_On  0           // 日志串口开关：1- 输出到串口，0 -输出到文件 (如果日志串口和通信串口不能同时使用时，建议关闭)
 #define LogTxRx     1           // 日志输出Tx/Rx数据：0 - 不输出， 1 - 输出
 #define RxBeep_On   0           // 串口接收完成-响铃提示开关： 响一下- 解析成功， 响两下 - 解析失败
 #else
@@ -248,6 +248,7 @@ extern uint8 DispBuf[14 * 1024];					    // 4k ~ 14K
 extern uint8 * const LogBuf; // = &DispBuf[4096];     	// 4k ~ 
 extern uint8 * const TmpBuf; // = &DispBuf[8192];     	// 2K ~ 
 extern uint8 * const BackupBuf; // = &DispBuf[10240];	// 2k ~
+extern uint8 * const ArgBuf; // = &DispBuf[12288];     	// 2k ~ 
 #if Upgrd_FileBuf_Enable
 extern uint8 * const FileBuf; // = &DispBuf[14336];	    // 116k 
 #endif

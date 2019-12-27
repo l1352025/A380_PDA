@@ -1841,12 +1841,16 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 	#endif
 
 	do{
+		// 发送 
+		TxLen = FramePack(TxBuf, addrs, cmdid, args, sendCnt);
+		#if LOG_ON && LogTxRx
+			LogPrintBytes("Tx: ", TxBuf, TxLen);
+		#endif
+
 		_CloseCom();
 		_ComSetTran(CurrPort);
 		_ComSet(CurrBaud, 2);
 
-		// 发送 
-		TxLen = FramePack(TxBuf, addrs, cmdid, args, sendCnt);
 		_GetComStr(TmpBuf, 1000, 1);		// clear
 		_SendComStr(TxBuf, TxLen);
 		sendCnt++;
@@ -1862,6 +1866,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 		RxLen = 0;
 		waitTime = 0;
 		currRxLen = 0;
+		cmdResult = CmdResult_Timeout;
 		_DoubleToStr(TmpBuf, (double)(timeout / 1000), 0);
 		PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
 		
@@ -1878,6 +1883,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 			if(KEY_CANCEL == key){
 				_Printfxy(0, 9*16, "返回  <已取消>  确定", Color_White);
 				DispBuf[0] = 0x00;
+				_CloseCom();
 				return CmdResult_Cancel;
 			}
 
@@ -1891,21 +1897,27 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 					PrintfXyMultiLine_VaList(0, 9*16, "< %s 等待 %s s >", strTmp, TmpBuf);
 				}
 
-				if(RxLen > 0 && currRxLen == 0){
-					break;
+				if(RxLen > 0 && currRxLen == 0){	// 未超时的1包数据
+					#if LOG_ON && LogTxRx && !LogScom_On
+						LogPrintBytes("Rx: ", RxBuf, RxLen);
+					#endif
+					cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
+					RxLen = 0;
+					if(cmdResult == CmdResult_Ok){
+						break;
+					}
 				}
 			}
 		}while(waitTime <= timeout || currRxLen > 0);
 
-		#if LOG_ON && LogTxRx
-			LogPrintBytes("Tx: ", TxBuf, TxLen);
-			LogPrintBytes("Rx: ", RxBuf, RxLen);
-		#endif
-
 		if(IsNoAckCmd == true){
 			cmdResult = CmdResult_Ok;
 		}
-		else{
+		else if(cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError){		
+			// 超时后的1包数据	
+			#if LOG_ON && LogTxRx
+				LogPrintBytes("Rx: ", RxBuf, RxLen);
+			#endif
 			cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
 		}
 	}while(sendCnt < tryCnt && (cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError));
