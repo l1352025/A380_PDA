@@ -1591,14 +1591,29 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	if(index == startIdx + length - 4)
 	{
 		//下行/上行 信号强度
+		TmpBuf[0] = buf[index];
+		TmpBuf[1] = buf[index + 1];
+
+		if(TmpBuf[0]<31)
+        	TmpBuf[0] = 31;
+    	else if(TmpBuf[0] > 80)
+        	TmpBuf[0] = 80;
+
+		if(TmpBuf[1]<31)
+        	TmpBuf[1] = 31;
+    	else if(TmpBuf[1] > 80)
+        	TmpBuf[1] = 80;
+
+		TmpBuf[0] = (TmpBuf[0] - 30) * 2;
+		TmpBuf[1] = (TmpBuf[1] - 30) * 2;
+		
 		#ifdef Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-				sprintf(MeterInfo.signalValue, "%d", (buf[index + 1] - 30) * 2);	// 保存上行
+				sprintf(MeterInfo.signalValue, "%d", TmpBuf[1]);	// 保存上行
 			}
 		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
-		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", 
-			(buf[index] - 30) * 2,  (buf[index + 1] - 30) * 2);
+		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", TmpBuf[0],  TmpBuf[1]);
 		index += 2;
 	}
 	else{

@@ -892,29 +892,6 @@ void CenterCmdFunc(void)
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
-/**
- *  创建中继列表输入框ui，返回其ui行数
-*/
-uint8 CreateRelaysUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
-{
-	uint8 rowIdx = uiRowIdx;
-	uint8 i;
-
-#ifdef Project_6009_RF
-	for(i = 0; i < RELAY_MAX; i++){
-		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-			StrRelayAddr[i][0] = 0x00;
-			sprintf(StrRelayAddr[i], "    (可选)    ");
-		}
-	}
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], AddrLen*2, (AddrLen*2*8 + 8), true);
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], AddrLen*2, (AddrLen*2*8 + 8), true);
-#endif
-
-	return (uiRowIdx - rowIdx);
-}
-
 // 1	常用命令
 void WaterCmdFunc_CommonCmd(void)
 {
@@ -3246,6 +3223,11 @@ void MainFuncBatchMeterReading(void)
 					if(key == KEY_CANCEL){	// 返回
 						break;
 					}
+
+					// 清空路由
+					StrRelayAddr[0][0] = 0x00;
+					StrRelayAddr[1][0] = 0x00;
+					StrRelayAddr[2][0] = 0x00;
 
 					// 楼栋抄表-界面
 					//------------------------------------------------------------

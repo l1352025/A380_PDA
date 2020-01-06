@@ -62,8 +62,8 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"1.0 预览3"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-12-26"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.0"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-01-06"        // 版本日期
     #define TransType   (char *)"RF透传"                // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -77,7 +77,7 @@ typedef unsigned char bool;
 
 
 //#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
-//#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
@@ -235,6 +235,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt);
 void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
+uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx);
 void MeterNoSave(uint8 *mtrNo, uint8 type);
 void MeterNoLoad(uint8 *mtrNo, uint8 type);
 

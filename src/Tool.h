@@ -2064,6 +2064,43 @@ uint16 CheckAvalibleMemory()
 }
 
 /**
+ *  创建中继列表输入框ui
+ *  参数：
+ * 		pUi - 当前ui指针
+ * 		pUiCnt - 当前ui总数指针
+ * 		uiRowIdx - 当前ui所在行序号
+ *  返回：uint8 - 创建的ui行数
+*/
+uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
+{
+	uint8 rowIdx = uiRowIdx;
+	uint8 i;
+
+#ifdef Project_6009_RF
+	for(i = 0; i < RELAY_MAX; i++){
+		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+			StrRelayAddr[i][0] = 0x00;
+			sprintf(StrRelayAddr[i], "    (可选)    ");
+		}
+	}
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], AddrLen*2, (AddrLen*2*8 + 8), true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], AddrLen*2, (AddrLen*2*8 + 8), true);
+#elif defined(Project_8009_RF)
+	for(i = 0; i < RELAY_MAX; i++){
+		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
+			StrRelayAddr[i][0] = 0x00;
+			sprintf(StrRelayAddr[i], "    (可选)    ");
+		}
+	}
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], AddrLen*2, (AddrLen*2*8 + 8), true);
+	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
+#endif
+
+	return (uiRowIdx - rowIdx);
+}
+
+/**
  * 表号保存
  * @param mtrNo - 表号: 12/16位字符
  * @param type  - 类型: 0 - SR6009_RF表号, 1 - SR6009_IR表号, 2 - SR8009表号， 3+ - 其他

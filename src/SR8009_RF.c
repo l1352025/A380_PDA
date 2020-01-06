@@ -889,28 +889,6 @@ void CenterCmdFunc(void)
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
-/**
- *  创建中继列表输入框ui，返回其ui行数
-*/
-uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
-{
-	uint8 rowIdx = uiRowIdx;
-	uint8 i;
-
-#ifdef Project_8009_RF
-	for(i = 0; i < RELAY_MAX; i++){
-		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
-			StrRelayAddr[i][0] = 0x00;
-			sprintf(StrRelayAddr[i], "    (可选)    ");
-		}
-	}
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继1:", StrRelayAddr[0], AddrLen*2, (AddrLen*2*8 + 8), true);
-	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
-#endif
-
-	return (uiRowIdx - rowIdx);
-}
-
 // 1	常用功能
 void WaterCmdFunc_CommonCmd(void)
 {
@@ -2610,19 +2588,25 @@ void MainFuncBatchMeterReading(void)
 						break;
 					}
 
+					// 清空路由
+					StrRelayAddr[0][0] = 0x00;
+					StrRelayAddr[1][0] = 0x00;
+					StrRelayAddr[2][0] = 0x00;
+
 					// 楼栋抄表-界面
 					//------------------------------------------------------------
 					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
 					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
-					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 6, NULL,
+					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 7, NULL,
 						"<<楼栋抄表", 
-						6,
+						7,
 						"1. 自动抄表",
 						"2. 已抄成功列表",
 						"3. 未抄失败列表",
 						"4. 抄表统计",
 						"5. 清空抄表结果",
-						"6. 重置抄表时间");
+						"6. 重置抄表时间",
+						"7. 设置路由");
 					while(4){
 
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
@@ -2797,6 +2781,9 @@ void MainFuncBatchMeterReading(void)
 							_Sleep(2500);
 							break;
 						
+						case 7:		// 设置路由
+							ShowSettingRoutes();
+							break;
 						default:
 							break;
 						}

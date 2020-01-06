@@ -284,6 +284,35 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	query->dbCurrIdx = i;
 }
 
+/**
+ * 设置路由
+*/
+void ShowSettingRoutes(void)
+{
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, key;
+
+	_ClearScreen();
+
+	_Printfxy(0, 0, "<<设置路由", Color_White);
+	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+	/*---------------------------------------------*/
+	//----------------------------------------------
+	_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+
+	while(2){
+		(*pUiCnt) = 0;
+		uiRowIdx = 2;
+		uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowUI(UiList, &currUi);
+
+		if (key == KEY_CANCEL){
+			break;
+		}
+	}
+}
 
 /*
 * 描 述：显示 xx小区-xx楼栋- 自动抄表
@@ -306,7 +335,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 		return KEY_CANCEL;
 	}
 
-	// 中继清空
+	// 中继检查
 	for(i = 0; i < RELAY_MAX; i++){				
 		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 			StrRelayAddr[i][0] = 0x00;
