@@ -1073,7 +1073,7 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -1411,7 +1411,7 @@ void WaterCmdFunc_TestCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -1700,7 +1700,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -2005,7 +2005,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 				
 				key = ShowUI(UiList, &currUi);
 
@@ -2291,7 +2291,7 @@ void WaterCmdFunc_Other(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
-				uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 
 				key = ShowUI(UiList, &currUi);
 
@@ -2435,7 +2435,7 @@ void MainFuncReadRealTimeData(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2554,7 +2554,7 @@ void MainFuncReadFrozenData(void)
 				
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2653,7 +2653,7 @@ void MainFuncReadMeterTime(void)
 		}
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2785,7 +2785,7 @@ void MainFuncSetMeterTime(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2888,7 +2888,7 @@ void MainFuncClearException(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -2992,7 +2992,7 @@ void MainFuncOpenValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 			
 			key = ShowUI(UiList, &currUi);
 
@@ -3096,7 +3096,7 @@ void MainFuncCloseValve(void)
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-			uiRowIdx += CreateRelaysUi(pUi, pUiCnt, uiRowIdx);
+			uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
 
 			key = ShowUI(UiList, &currUi);
 
@@ -3255,6 +3255,7 @@ void MainFuncBatchMeterReading(void)
 						case 1:		// 自动抄表
 							Meters.selectField = Idx_MeterNum;
 							Meters.qryMeterReadStatus = "0";
+							_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 							QueryMeterList(&Meters, &DbQuery);
 							key = ShowAutoMeterReading(&Meters);
 							break;

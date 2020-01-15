@@ -81,6 +81,8 @@ void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 			query->resultCnt++;
 			if(query->resultCnt > query->reqMaxCnt){
 				query->errorCode = 1;
+				sprintf(strTmp1, " 小区数 超出最大限制 %d !", query->reqMaxCnt);
+				ShowMsg(8, 3*16, strTmp1, 3000);
 				break;
 			}
 
@@ -138,6 +140,8 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 			query->resultCnt++;
 			if(query->resultCnt > query->reqMaxCnt){
 				query->errorCode = 1;
+				sprintf(strTmp1, " 该小区楼栋数 超出最大限制 %d !", query->reqMaxCnt);
+				ShowMsg(8, 3*16, strTmp1, 3000);
 				break;
 			}
 
@@ -262,6 +266,9 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		query->resultCnt++;
 		if(query->resultCnt > query->reqMaxCnt){
 			query->errorCode = 1;
+
+			sprintf(strTmp, " 该楼表具数 超出最大限制 %d !", query->reqMaxCnt);
+			ShowMsg(8, 3*16, strTmp, 3000);
 			break;
 		}
 
@@ -321,8 +328,8 @@ void ShowSettingRoutes(void)
 */
 uint8 ShowAutoMeterReading(MeterListSt *meters)
 {
-	uint8 key, i, cnt;
-	uint16 ackLen, timeout, dispIdx;
+	uint8 key;
+	uint16 ackLen, timeout, dispIdx, i, cnt;
 	uint8 tryCnt, lcdCtrl, readStatus;
 	CmdResult cmdResult = CmdResult_Ok;
 	char *dispBuf = &DispBuf;

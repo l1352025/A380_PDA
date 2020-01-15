@@ -1632,26 +1632,33 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 void VersionInfoFunc(void)
 {
 	uint8 key;
+	uint16 dispIdx = 0;
+	char *dispBuf;
 
 	while(1){
 		_ClearScreen();
 
 		_Printfxy(0, 0, "<<版本信息", Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);
 		//--------------------------------------------------
-		PrintfXyMultiLine_VaList(0, 2*16, "  %s ", VerInfo_Name);
-		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
-		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
-		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
-		PrintfXyMultiLine_VaList(0, 6*16, "通信速率：%s", CurrBaud);
-		#ifdef VerInfo_Previwer
-		PrintfXyMultiLine_VaList(0, 7*16 + 8, "%s", VerInfo_Previwer);
+		dispBuf = &DispBuf;
+		dispIdx = 0;
+		dispIdx += sprintf(&dispBuf[dispIdx], "  %s\n", VerInfo_Name);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版 本 号：%s\n", VerInfo_RevNo);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版本日期：%s\n", VerInfo_RevDate);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信方式：%s\n", TransType);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信速率：%s\n", CurrBaud);
+		#if UseCrc16
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC16\n");
+		#else
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC8\n");
 		#endif
-		//--------------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		#ifdef VerInfo_Msg
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Msg);
+		#endif
+		//----------------------------------------------
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
-
-		key = _ReadKey();		// 任意键返回
+		key = ShowScrollStr(dispBuf,  7);
+		
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}

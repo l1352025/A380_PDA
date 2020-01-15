@@ -1768,9 +1768,9 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	uint32 fileLen;
 	uint16 crc16, crc16_tmp = 0xFFFF;
 	AppFileInfo *app;
+	uint8 *tmpBuf = &TmpBuf[0];
 	#if ! Upgrd_FileBuf_Enable
 	uint32 readLen;
-	uint8 *tmpBuf = &DispBuf[0];
 	#endif
 	volatile uint32 timeTick;
 

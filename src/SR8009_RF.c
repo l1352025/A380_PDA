@@ -2620,6 +2620,7 @@ void MainFuncBatchMeterReading(void)
 						case 1:		// 自动抄表
 							Meters.selectField = Idx_MeterNum;
 							Meters.qryMeterReadStatus = "0";
+							_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 							QueryMeterList(&Meters, &DbQuery);
 							key = ShowAutoMeterReading(&Meters);
 							break;

@@ -774,7 +774,12 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 {
 	static uint8 Fsn = 0;
 	static uint16 index = 0;
-	uint8 i, cmd , crc8;
+	uint8 i, cmd;
+	#if UseCrc16
+		uint16 crc16;
+	#else
+		uint8 crc8;
+	#endif
 
 	if(retryCnt > 0 && index > 0){
 		return index;
@@ -786,6 +791,9 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 	buf[index++] = 0x00;		// 长度： 报文标识 --> 结束符16
 	buf[index++] = 0x00;	
 	buf[index++] = 0x10;		// 报文标志 bit7 0/1 - 下行/上行， bit6 0/1 - 命令/应答， bit4 固定为1
+	#if UseCrc16
+		buf[index - 1] |= 0x01;	// crc16标识
+	#endif
 	buf[index++] = Fsn++;		// 任务号： mac fsn 发起方自累加
 	cmd = *args->items[0];
 	buf[index++] = cmd;			// 命令字
@@ -811,16 +819,27 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 		buf[index++] = 0x00;		// 上行场强
 	}
 	
-    // 长度计算
-	buf[2] = (uint8)(index & 0xFF);	
-	buf[3] = (uint8)(index >> 8);	
     
-	crc8 = GetCrc8(&buf[2], index - 2);
-	buf[index++] = crc8;		// crc8 校验
+    
+	#if UseCrc16
+		// 长度计算
+		buf[2] = (uint8)((index + 1) & 0xFF);	
+		buf[3] = (uint8)((index + 1) >> 8);	
+		// crc16 校验
+		crc16 = GetCrc16(&buf[2], index - 2, 0x8408u);
+		buf[index++] = (uint8)(crc16 & 0xFF);	
+		buf[index++] = (uint8)(crc16 >> 8);	
+	#else
+		// 长度计算
+		buf[2] = (uint8)(index & 0xFF);	
+		buf[3] = (uint8)(index >> 8);	
+		// crc8 校验
+		crc8 = GetCrc8(&buf[2], index - 2);
+		buf[index++] = crc8;		
+	#endif
+
 	buf[index++] = 0x16;		// 结束符
-
 		
-
 	if(cmd < 0x40 || cmd == 0x70 || cmd == 0x74){
 		buf[index++] = 0x1E;	// 导言长度标识
 		buf[index++] = 0x03;	// 表端APP时 发送信道
@@ -852,7 +871,7 @@ uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
 	bool ret = CmdResult_Failed;
-	uint8 crc8, addrsCnt, cmd, i, u8Tmp;
+	uint8 addrsCnt, cmd, i, u8Tmp;
 	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
 	char *ptr;
@@ -907,12 +926,21 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			continue;
 		}
 
-		// crc8 check
-		crc8 = GetCrc8(&buf[index], length - 2);
-		if(crc8 !=  buf[index + length - 2]){
-			sprintf(&dispBuf[dispIdx], "结果: 有应答,CRC错误");
-			return CmdResult_CrcError;
-		}
+		#if UseCrc16
+			// crc16 check
+			u16Tmp = GetCrc16(&buf[index], length - 3, 0x8408u);
+			if(u16Tmp !=  (buf[index + length - 3] + buf[index + length - 2] * 256)){
+				sprintf(&dispBuf[dispIdx], "结果: 有应答,CRC错误");
+				return CmdResult_CrcError;
+			}
+		#else
+			// crc8 check
+			u8Tmp = GetCrc8(&buf[index], length - 2);
+			if(u8Tmp !=  buf[index + length - 2]){
+				sprintf(&dispBuf[dispIdx], "结果: 有应答,CRC错误");
+				return CmdResult_CrcError;
+			}
+		#endif
 
 		// pass
 		break;
@@ -2647,8 +2675,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 	}
 
-
+#if UseCrc16
+	if(index == startIdx + length - 5)
+#else
 	if(index == startIdx + length - 4)
+#endif
 	{
 		//下行/上行 信号强度
 		#ifdef Project_6009_RF
@@ -2671,26 +2702,33 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 void VersionInfoFunc(void)
 {
 	uint8 key;
+	uint16 dispIdx = 0;
+	char *dispBuf;
 
 	while(1){
 		_ClearScreen();
 
 		_Printfxy(0, 0, "<<版本信息", Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);
 		//--------------------------------------------------
-		PrintfXyMultiLine_VaList(0, 2*16, "  %s ", VerInfo_Name);
-		PrintfXyMultiLine_VaList(0, 3*16, "版 本 号：%s", VerInfo_RevNo);
-		PrintfXyMultiLine_VaList(0, 4*16, "版本日期：%s", VerInfo_RevDate);
-		PrintfXyMultiLine_VaList(0, 5*16, "通信方式：%s", TransType);
-		PrintfXyMultiLine_VaList(0, 6*16, "通信速率：%s", CurrBaud);
-		#ifdef VerInfo_Previwer
-		PrintfXyMultiLine_VaList(0, 7*16 + 8, "%s", VerInfo_Previwer);
+		dispBuf = &DispBuf;
+		dispIdx = 0;
+		dispIdx += sprintf(&dispBuf[dispIdx], "  %s\n", VerInfo_Name);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版 本 号：%s\n", VerInfo_RevNo);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版本日期：%s\n", VerInfo_RevDate);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信方式：%s\n", TransType);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信速率：%s\n", CurrBaud);
+		#if UseCrc16
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC16\n");
+		#else
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC8\n");
 		#endif
-		//--------------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		#ifdef VerInfo_Msg
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Msg);
+		#endif
+		//----------------------------------------------
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
-
-		key = _ReadKey();		// 任意键返回
+		key = ShowScrollStr(dispBuf,  7);
+		
 		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}

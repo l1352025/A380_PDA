@@ -386,7 +386,7 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, u
 
 	// init value
 	va_start(ap, strCnt);
-	lbx->strCnt = strCnt;
+	lbx->strCnt = (uint16)strCnt;
 	for(i = 0; i < lbx->strCnt; i++){
 		ptr = va_arg(ap, char *);
 		if(ptr == NULL){
@@ -411,7 +411,7 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, u
 *		  strCnt	- 字符串数量
 * 返回值：void
 */
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt)
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint32 strCnt)
 {
 	uint16 i;
 	char *str = (char *)strs;
@@ -423,7 +423,7 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow,
 	lbx->totalCnt = totalCnt;
 	lbx->fillStrsFunc = fillStrsFunc;
 	lbx->title = title;
-	lbx->strCnt = strCnt;
+	lbx->strCnt = (uint16)strCnt;
 	lbx->currIdx = 0;
 	lbx->strIdx = 0;
 
@@ -2074,9 +2074,9 @@ uint16 CheckAvalibleMemory()
 uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
 {
 	uint8 rowIdx = uiRowIdx;
-	uint8 i;
-
+	
 #ifdef Project_6009_RF
+	uint8 i;
 	for(i = 0; i < RELAY_MAX; i++){
 		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 			StrRelayAddr[i][0] = 0x00;
@@ -2087,6 +2087,7 @@ uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
 	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继2:", StrRelayAddr[1], AddrLen*2, (AddrLen*2*8 + 8), true);
 	TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "中继3:", StrRelayAddr[2], AddrLen*2, (AddrLen*2*8 + 8), true);
 #elif defined(Project_8009_RF)
+	uint8 i;
 	for(i = 0; i < RELAY_MAX; i++){
 		if(StrRelayAddr[i][0] > '9' || StrRelayAddr[i][0] < '0'){
 			StrRelayAddr[i][0] = 0x00;

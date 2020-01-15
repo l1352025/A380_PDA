@@ -41,6 +41,7 @@ typedef unsigned char bool;
     #define TransType   (char *)"红外透传"              // 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     8           // 地址长度(byte)：8 
     #define VerLen      40          // 版本长度(byte)：40 
     #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
@@ -49,11 +50,12 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.7 预览1"               // 版本号
-    #define VerInfo_RevDate (char *)"2019-12-26"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.7"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
     #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     6           // 地址长度(byte)：6 
     #define VerLen      40          // 版本长度(byte)：40 
     #define ShowEMI_ON  0           // 显示磁干扰状态开关：0
@@ -62,21 +64,22 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF)
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-01-06"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.1"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
     #define TransType   (char *)"RF透传"                // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     5           // 地址长度(byte)：5 
     #define VerLen      24          // 版本长度(byte)：24 
     #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
     #define LogPort     CurrPort            // 日志输出串口
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
-    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf (默认为0)
 #endif
 
 
-//#define VerInfo_Previwer    (char *)"  <去掉D4D4抄表>"    // 预览版时,定义该宏
+//#define VerInfo_Msg    (char *)"  <去掉D4D4抄表>"    // 版本描述信息：如预览版
 #define VerInfo_Release                     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
@@ -95,7 +98,7 @@ typedef unsigned char bool;
 #define TXTBUF_MAX  20      // 文本输入缓冲区最大个数
 #define TXTBUF_LEN	20      // 文本输入缓冲区最大字符数
 #define UI_MAX      20      // 最大UI控件数
-#define ListStrMax  300     // 最大列表字符串数
+#define ListStrMax  500     // 最大列表字符串数
 #define STR_Size    50      // 默认字符串字节数
 #define CbxItem_Max 15      // 单选框最大项
 
@@ -217,7 +220,7 @@ void TextBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, char * t
 void CombBoxCreate(UI_Item *item, uint8 x, uint8 y, const char * title, uint8 * currIdx, uint32 maxCnt, ...);
 uint8 ShowUI(UI_ItemList inputList, uint8 *itemNo);
 void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, uint32 strCnt, ...);
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint8 strCnt);
+void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint32 strCnt);
 uint8 ShowListBox(ListBox *lbx);
 void ShowMsg(uint8 x, uint8 y, char *str, uint16 waitMs);
 void PrintfXyMultiLine_VaList(uint8 x, uint8 y, const char * format, ...);
