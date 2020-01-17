@@ -50,7 +50,7 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"2.7"               // 版本号
+    #define VerInfo_RevNo   (char *)"2.8"               // 版本号
     #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
     #define TransType   (char *)"Lora透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
@@ -58,7 +58,7 @@ typedef unsigned char bool;
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     6           // 地址长度(byte)：6 
     #define VerLen      40          // 版本长度(byte)：40 
-    #define ShowEMI_ON  0           // 显示磁干扰状态开关：0
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：0
     #define LogPort     CurrPort            // 日志输出串口
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
