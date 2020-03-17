@@ -42,6 +42,47 @@ void FileTestError(char *Content)
 	_MessageBox(&str);
 }
 
+typedef enum{
+    Color_White = 0,
+    Color_Black = 1
+}GUI_COLOR;
+
+/*
+* 描  述：显示提示消息框，等待 n ms后返回
+* 参  数：
+*		x ，y - 消息框在屏幕中的坐标 x, y
+*		str - 显示的字符串
+*		waitMs - 等待的毫秒数
+* 返回值：void
+*/
+void ShowMsg(uint8 x, uint8 y, char *str, uint16 waitMs)
+{
+	uint8 strTmp[20], i, j, rowCnt, colCnt;
+	uint16 len = strlen(str);	
+
+	if(x < 8) x = 8;
+	if(y < 8) y = 8;
+	
+	colCnt = ((160 - x - x) / 16) * 2;
+	rowCnt = (len + colCnt - 1) / colCnt;
+
+	if(y + rowCnt * 16 > 160){
+		rowCnt = (160 - y) / 16;
+	}
+	
+	_GUIRectangleFill(x - 8, y - 8, x + colCnt * 8 + 8, y + rowCnt * 16 + 8, Color_White);
+	_GUIRectangle(x - 8, y - 8, x + colCnt * 8 + 8, y + rowCnt * 16 + 8, Color_Black);
+	
+	for(i = 0, j = 0; i < rowCnt; i++){
+		memcpy(strTmp, &str[j], colCnt);
+		strTmp[colCnt] = 0x00;
+		j += colCnt;
+		_Printfxy(x, y + i * 16, strTmp, Color_White);
+	}
+
+	_Sleep(waitMs);
+}
+
 void ListDir(const char *dname)
 {
 	_dir *d;
@@ -89,6 +130,51 @@ void ListDir(const char *dname)
 
 		_CloseDir(dname);
 	}
+}
+
+void FileDeleteFunc(void)
+{
+	char *fileName;
+    char tmp[512];
+    int8 fp1, fp2;
+
+    _MkDir("test");
+    fp1 = _Fopen("test/1.txt", "W");
+    fp2 = _Fopen("test/2.txt", "W");
+    _Fclose(fp1);
+	_Fclose(fp2);
+
+    _Printfxy(0, 0, "开始列目录测试..？", 0);
+    _ReadKey();
+
+    ListDir("test/");
+
+    ListDir("");
+
+    _Printfxy(0, 0, "开始删除文件测试..？", 0);
+    _ReadKey();
+
+    while(1){
+
+        _ClearScreen();
+        
+        fileName = _GetFileList("选|\n择|\n要|\n删|\n除|\n的|\n文|\n件|\n  |\n  |\n", "", "");
+
+        if(fileName == 0){
+            break;
+        }
+
+        sprintf(tmp, "删除文件：%s", fileName);
+        ShowMsg(16, 3*16, tmp, 2000);
+
+        if(_Remove(fileName) == -1){
+
+        }
+    }
+
+    _Remove("test/1.txt");
+    _Remove("test/2.txt");
+    _RmDir("test");
 }
 
 void File(void)

@@ -1,0 +1,59 @@
+	Idx_Id	= 0,			// "ID",		// 	20			// ID
+	Idx_UserNum,			// "HH",		// 	32			// 户号				// 16
+	Idx_UserName,			// "HM",		// 	50			// 户名				// 40
+	Idx_UserAddrs,			// "DZ",		// 	100			// 地址				// 80
+	Idx_UserRoomNum,		// "MPH",		// 	16			// 门牌号			// 20
+	Idx_UserTelNum,			// "TEL",		// 	50			// 电话
+	Idx_UserMobileNum,		// "MOBILE",	// 	50			// 手机				// 50
+	Idx_AreaNum,			// "CBQY",		// 	100			// 抄表区域
+	Idx_CollectorNum,		// "ZDBH",		// 	12			// 采集器 编号
+	Idx_CollectorName,		// "ZDMC",		// 	50			// 采集器 名称
+	Idx_CollectorSite,		// "ZDDZ",		// 	100			// 采集器 位置
+	Idx_DistrictNum,		// "CBYJFZBH",	// 	10			// 抄表小区 编号	// 12
+	Idx_DistrictName,		// "CBYJFZMC",	// 	50			// 抄表小区 名称	// 50
+	Idx_BuildingNum,		// "CBEJFZBH",	// 	10			// 抄表楼栋 编号	// 12
+	Idx_BuildingName,		// "CBEJFZMC",	// 	50			// 抄表楼栋 名称	// 50
+	Idx_MeterNum,			// "BH",		// 	12			// 表号				// 16
+	Idx_FLXS,				// "FLXS",		// 	10 数值型	// 
+	Idx_MeterValue,			// "FLA",		// 	12			// 表读数 FL[A-J] >>	// 12
+	Idx_FLB,				// "FLB",		// 	12			// 
+	Idx_FLC,				// "FLC",		// 	12			// 
+	Idx_FLD,				// "FLD",		// 	12			// 
+	Idx_FLE,				// "FLE",		// 	12			// 
+	Idx_FLF,				// "FLF",		// 	12			// 
+	Idx_FLG,				// "FLG",		// 	12			// 
+	Idx_FLH,				// "FLH",		// 	12			// 
+	Idx_FLI,				// "FLI",		// 	12			// 
+	Idx_FLJ,				// "FLJ",		// 	12			// 表读数 FL[A-J] <<
+	Idx_LYXS,				// "LYXS",		// 	10 数值型	// 
+	Idx_LYA,				// "LYA",		// 	12			// LY[A-J] 10个 >>
+	Idx_LYB,				// "LYB",		// 	12			// 
+	Idx_LYC,				// "LYC",		// 	12			// 
+	Idx_LYD,				// "LYD",		// 	12			// 
+	Idx_LYE,				// "LYE",		// 	12			// 
+	Idx_LYF,				// "LYF",		// 	12			// 
+	Idx_LYG,				// "LYG",		// 	12			// 
+	Idx_LYH,				// "LYH",		// 	12			// 
+	Idx_LYI,				// "LYI",		// 	12			// 
+	Idx_LYJ,				// "LYJ",		// 	12			// LY[A-J] 10个 <<
+	Idx_BLXHEX,				// "BLXHEX",	// 	8			// 表类型 HEX
+	Idx_BLXSTR,				// "BLXSTR",	// 	32			// 表类型 STR
+	Idx_MeterStatusHex,		// "BZTHEX",	// 	8			// 表状态 HEX			// 8
+	Idx_MeterStatusStr,		// "BZTSTR",	// 	50			// 表状态 STR			// 40
+	Idx_BatteryVoltage,		// "DCDY",		// 	5			// 电池电压				// 6
+	Idx_MCCS,				// "MCCS",		// 	6			// 脉冲常数
+	Idx_MeterReadType,		// "SGCQ",		// 	1			// 抄表方式 0/1 - 掌机/集中器	// 2
+	Idx_QF,					// "QF",		// 	1			// 
+	Idx_SignalValue,		// "XHQD",		// 	10 数值型	// 信号强度				// 10
+	Idx_MeterReadTime,		// "CBSJ",		// 	20			// 抄表时间				// 20
+	Idx_MeterReadStatus,	// "CBZT",		// 	1			// 抄表状态				// 2
+	Idx_BLZDA,				// "BLZDA",		// 	20			// BLZD[A-J] 10个 >>
+	Idx_BLZDB,				// "BLZDB",		// 	20			// 
+	Idx_BLZDC,				// "BLZDC",		// 	20			// 集中器 编号
+	Idx_BLZDD,				// "BLZDD",		// 	20			// 集中器 名称
+	Idx_BLZDE,				// "BLZDE",		// 	20			// 
+	Idx_BLZDF,				// "BLZDF",		// 	20			// 
+	Idx_BLZDG,				// "BLZDG",		// 	20			// 
+	Idx_BLZDH,				// "BLZDH",		// 	20			// 
+	Idx_BLZDI,				// "BLZDI",		// 	20			// 
+	Idx_BLZDJ,				// "BLZDJ"		// 	20			// BLZD[A-J] 10个 <<
