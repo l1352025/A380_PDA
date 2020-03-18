@@ -35,10 +35,10 @@ typedef unsigned char bool;
 
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
-    #define VerInfo_Name    (char *)"桑锐6009手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.8.预览1"	           // 版本号
-    #define VerInfo_RevDate (char *)"2019-12-5"        // 版本日期
-    #define TransType   (char *)"红外透传"              // 通信方式	
+    #define VerInfo_Name    (char *)"桑锐N609A手持机"    // 程序名
+    #define VerInfo_RevNo   (char *)"2.8"	           	// 版本号
+    #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
+    #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
@@ -52,7 +52,7 @@ typedef unsigned char bool;
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"2.8"               // 版本号
     #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
-    #define TransType   (char *)"Lora透传"              // 通信方式	
+    #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
@@ -66,7 +66,7 @@ typedef unsigned char bool;
     #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
     #define VerInfo_RevNo   (char *)"1.1"               // 版本号
     #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
-    #define TransType   (char *)"RF透传"                // 通信方式	
+    #define TransType   (char *)"FSK透传"              	// 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
