@@ -46,7 +46,7 @@ typedef unsigned char bool;
     #define VerLen      40          // 版本长度(byte)：40 
     #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
     #define LogPort     CurrPort            // 日志输出串口
-    #define UseBroadAddr    0               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
+    #define UseBroadAddr    1               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
     #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)
     #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
