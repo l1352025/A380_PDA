@@ -17,11 +17,18 @@
 #include "List.h"
 #include "List.c"
 
+// 备份缓冲区的参数位置索引 (共享区/独立区)
+typedef enum{
+	ArgIdx_Shared	= 0,		// 参数共享缓冲区(argType args)：如 (0x11 北京水表参数), 700 byte
+	ArgIdx_Bds		= 700		// 表底数和脉冲系数 ： 40 byte
+}ArgsIndex;
 
-// 输入参数备份类型： 保存在备份缓存的第一个字节 BackupBuf[0]
+// 参数共享缓冲区-参数类型： 保存在共享备份缓存的第一个字节 BackupBuf[ArgIdx_Shared + 0]
 typedef enum{
 	Param_BeijingWMtr = 0x11	// 北京水表参数备份
+	// others
 }BackUpParamType;
+
 
 // --------------------------------  水表模块通信  -----------------------------------------
 
@@ -1425,12 +1432,12 @@ void WaterCmdFunc_WorkingParams(void)
 				/*---------------------------------------------*/
 				// UI-第1页
 				if(false == isUiFinish){
-					if(BackupBuf[0] != Param_BeijingWMtr){		
+					if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){		
 						StrBuf[0][0] = 0;
 						StrBuf[1][0] = 0;
 					}
 					else{
-						memcpy(&StrBuf[0][0], &BackupBuf[1 * 20], 2 * 20);
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_Shared + 1 * 20], 2 * 20);
 					}
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "水表类型:");
@@ -1453,11 +1460,11 @@ void WaterCmdFunc_WorkingParams(void)
 				memcpy(&TmpBuf[0], &StrBuf[1][0], 14);
 				TmpBuf[14] = 0x00;
 
-				memcpy(&BackupBuf[1 * 20], &StrBuf[0][0], 2 * 20);
+				memcpy(&BackupBuf[ArgIdx_Shared + 1 * 20], &StrBuf[0][0], 2 * 20);
 
 				// UI-第2页
 				currUi = 0;
-				if(BackupBuf[0] != Param_BeijingWMtr){	
+				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){	
 					sprintf(StrBuf[1], "40");
 					sprintf(StrBuf[2], "1");
 					sprintf(StrBuf[3], "40");
@@ -1466,7 +1473,7 @@ void WaterCmdFunc_WorkingParams(void)
 					sprintf(StrBuf[6], "14");
 				}
 				else{
-					memcpy(&StrBuf[1][0], &BackupBuf[3 * 20], 6 * 20);
+					memcpy(&StrBuf[1][0], &BackupBuf[ArgIdx_Shared + 3 * 20], 6 * 20);
 				}
 				
 				while(1){
@@ -1511,11 +1518,11 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
-				memcpy(&BackupBuf[3 * 20], &StrBuf[1][0], 6 * 20);
+				memcpy(&BackupBuf[ArgIdx_Shared + 3 * 20], &StrBuf[1][0], 6 * 20);
 
 				// UI-第3页
 				currUi = 0;
-				if(BackupBuf[0] != Param_BeijingWMtr){	
+				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){	
 					StrBuf[0][0] = 1;
 					StrBuf[0][1] = 2;
 					sprintf(StrBuf[1], "121");
@@ -1528,7 +1535,7 @@ void WaterCmdFunc_WorkingParams(void)
 					sprintf(StrBuf[7], "1");
 				}
 				else{
-					memcpy(&StrBuf[0][0], &BackupBuf[9 * 20], 8 * 20);
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_Shared + 9 * 20], 8 * 20);
 				}
 				
 				while(1){
@@ -1599,18 +1606,18 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
-				memcpy(&BackupBuf[9 * 20], &StrBuf[0][0], 8 * 20);
+				memcpy(&BackupBuf[ArgIdx_Shared + 9 * 20], &StrBuf[0][0], 8 * 20);
 
 				// UI-第4页
 				currUi = 0;
-				if(BackupBuf[0] != Param_BeijingWMtr){		
+				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){		
 					for(i = 0; i < 14; i++){
 						StrBuf[i][0] = 0x00;
 					}
 					sprintf(StrBuf[13], "24");
 				}
 				else{
-					memcpy(&StrBuf[0][0], &BackupBuf[17 * 20], 14 * 20);
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_Shared + 17 * 20], 14 * 20);
 				}
 				
 				while(1){
@@ -1680,9 +1687,9 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
-				memcpy(&BackupBuf[17 * 20], &StrBuf[0][0], 14 * 20);
+				memcpy(&BackupBuf[ArgIdx_Shared + 17 * 20], &StrBuf[0][0], 14 * 20);
 
-				BackupBuf[0] = Param_BeijingWMtr;
+				BackupBuf[ArgIdx_Shared + 0] = Param_BeijingWMtr;
 				
 				i = 0;
 				Args.buf[i++] = 0x26;		// 命令字	26
