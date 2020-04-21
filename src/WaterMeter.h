@@ -176,6 +176,7 @@ typedef enum{
 	5	路径下发
 	6	读取模块的频点
 	7	设置模块的频点
+	8	设置功能使能状态
 	*/
 	WaterCmd_ReadRxTxMgnDistbCnt		= 0x61,
 	WaterCmd_ReadRxdAndTxdChanel,
@@ -184,6 +185,7 @@ typedef enum{
 	WaterCmd_SetDefinedRoute,
 	WaterCmd_ReadModuleFrequency,
 	WaterCmd_SetModuleFrequency,
+	WaterCmd_SetFuncEnableState, 
 	/*
 	UART表端模块测试：	
 	1	读取模块运行参数
@@ -1560,6 +1562,18 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += Water6009_GetStrMeterFuncEnableState(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
+		break;
+
+	case WaterCmd_SetFuncEnableState:	// 设置功能使能状态
+		if(rxlen < index + 1 && cmd != 0x08){
+			break;
+		}
+		ret = CmdResult_Ok;
+		// 命令状态
+		ptr = (buf[index] == 0xAA ? "操作成功" : "操作失败");
+		ret = (buf[index] == 0xAA ? CmdResult_Ok : CmdResult_Failed);
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
 		break;
 
 	case WaterCmd_SetTimedUpload:		// 设置定时上传

@@ -18,16 +18,25 @@
 #include "List.c"
 
 // 备份缓冲区的参数位置索引 (共享区/独立区)
+// 位置索引前1byte为参数标识：0-未设置，1-已设置（独立区参数），其他-已设置（共享区参数）
 typedef enum{
-	ArgIdx_Shared	= 0,		// 参数共享缓冲区(argType args)：如 (0x11 北京水表参数), 700 byte
-	ArgIdx_Bds		= 700		// 表底数和脉冲系数 ： 40 byte
+	ArgIdx_Shared		= 4,		// 参数共享缓冲区：如 (0x11 北京水表参数), 31 * 20 byte
+	ArgIdx_MtrValPalse	= 700,		// 表底数和脉冲系数 ： 20*2 byte
+	ArgIdx_OverCurr		= 744,		// 过流电流和超时时间: 20*2 byte
+	ArgIdx_IpPortMode	= 788,		// 工作模式+IP+Port: 20*6 byte
+	ArgIdx_FuncEnSts	= 912,		// 功能使能状态: 20*1 byte
+	ArgIdx_ModFreqs		= 936,		// 模块频点: 20*3 byte
+	ArgIdx_FixTimeVal	= 1000,		// 定时定量间隔：20*2 byte
+	ArgIdx_RunParas		= 1044,		// 模块运行参数: 20*2 byte
 }ArgsIndex;
 
-// 参数共享缓冲区-参数类型： 保存在共享备份缓存的第一个字节 BackupBuf[ArgIdx_Shared + 0]
+// 参数标识： 保存在位置索引的前1字节：如 BackupBuf[ArgIdx_Shared -1] = 0x11
 typedef enum{
-	Param_BeijingWMtr = 0x11	// 北京水表参数备份
+	Param_None			= 0x00,		// 参数未设置
+	Param_Unique		= 0x01,		// 已设置独有参数
+	Param_BeijingWMtr 	= 0x11		// 已设置共享参数：北京水表参数
 	// others
-}BackUpParamType;
+}BackUpParamFlag;
 
 
 // --------------------------------  水表模块通信  -----------------------------------------
@@ -159,8 +168,11 @@ void WaterCmdFunc_CommonCmd(void)
 				CurrCmd = WaterCmd_SetBaseValPulseRatio;	// 设表底数脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					if(StrBuf[1][0] == 0x00){
+					if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
 						StrBuf[1][0] = 0x01;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
 					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
@@ -174,6 +186,10 @@ void WaterCmdFunc_CommonCmd(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+
+				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
 
 				Args.buf[i++] = 0x06;		// 命令字	06
 				ackLen = 7;					// 应答长度 7	
@@ -430,6 +446,9 @@ void WaterCmdFunc_TestCmd(void)
 				CurrCmd = WaterCmd_SetOverCurrentTimeout;		// " 设置阀控参数 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_OverCurr -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_OverCurr], 2 * 20);
+					}
                     _Printfxy(7*16, (uiRowIdx)*16, "mA", Color_White);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "过流电流:", StrBuf[0], 3, 5*8, true);
 					_Printfxy(7*16, (uiRowIdx)*16, "ms", Color_White);
@@ -464,6 +483,9 @@ void WaterCmdFunc_TestCmd(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				BackupBuf[ArgIdx_OverCurr -1] = Param_Unique;		
+				memcpy(&BackupBuf[ArgIdx_OverCurr], &StrBuf[0][0], 2 * 20);
 				
 				Args.buf[i++] = 0x07;		// 命令字	07
 				ackLen = 4;					// 应答长度 4	
@@ -842,19 +864,20 @@ void WaterCmdFunc_WorkingParams(void)
 		"4. 读取IMEI+ICCID",
 		"5. 清除反转计量数据",
 		"6. 读取功能使能状态",
-		"7. 设置定时上传",
-		"8. 设置定量上传",
-		"9. 设置定时定量上传",
-		"10.读表端时钟",
-		"11.校表端时钟",
-		"12.读收发磁扰阀控数",
-		"13.读取模块运行参数",		
-		"14.设置模块运行参数",
-		"15.读取NB入网信息",
-		"16.读取北京水表参数",		
-		"17.设置北京水表参数",
-		"18.读取模块的频点",		
-		"19.设置模块的频点"
+		"7. 设置功能使能状态",
+		"8. 设置定时上传",
+		"9. 设置定量上传",
+		"10.设置定时定量上传",
+		"11.读表端时钟",
+		"12.校表端时钟",
+		"13.读收发磁扰阀控数",
+		"14.读取模块运行参数",		
+		"15.设置模块运行参数",
+		"16.读取NB入网信息",
+		"17.读取北京水表参数",		
+		"18.设置北京水表参数",
+		"19.读取模块的频点",		
+		"20.设置模块的频点"
 	);
 
 	while(1){
@@ -905,6 +928,9 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetIpPortMode;			// 设IP+端口+模式
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_IpPortMode -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_IpPortMode], 6 * 20);
+					}
 					if(StrBuf[0][0] > 1){
 						StrBuf[0][0] = 0;
 					}
@@ -931,6 +957,9 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				BackupBuf[ArgIdx_IpPortMode -1] = Param_Unique;	
+				memcpy(&BackupBuf[ArgIdx_IpPortMode], &StrBuf[0][0], 6 * 20);
 
 				i = 0;
 				Args.buf[i++] = 0x0D;		// 命令字	0D
@@ -1007,8 +1036,13 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = 0x00;
 				Args.lastItemLen = i - 1;
 				break;
+
+			case 7:
+				CurrCmd = WaterCmd_SetFuncEnableState;		// 设置功能使能状态
+
+				break;
 			
-			case 7: 
+			case 8: 
 				CurrCmd = WaterCmd_SetTimedUpload;		// 设置定时上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1030,7 +1064,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-            case 8: 
+            case 9: 
 				CurrCmd = WaterCmd_SetFixedValUpload;		// 设置定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1053,10 +1087,13 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 9: 
+			case 10: 
 				CurrCmd = WaterCmd_SetTimedAndFixedValUpload;	// 设置定时定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_FixTimeVal -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FixTimeVal], 2 * 20);
+					}
 					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时间隔:", StrBuf[0], 2, 3*8, true);
 					_Printfxy(7*16, (uiRowIdx)*16, "立方米", Color_White);
@@ -1076,6 +1113,10 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				memcpy(&BackupBuf[ArgIdx_FixTimeVal], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_FixTimeVal - 1] = Param_Unique;
+
 				Args.buf[i++] = 0x0C;		// 命令字	0C
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
@@ -1085,7 +1126,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 10: 
+			case 11: 
 				CurrCmd = WaterCmd_ReadMeterTime;			// 读表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1098,7 +1139,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 11: 
+			case 12: 
 				CurrCmd = WaterCmd_SetMeterTime;			// 校表端时钟
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1139,7 +1180,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-            case 12: 
+            case 13: 
 				CurrCmd = WaterCmd_ReadRxTxMgnDistbCnt;		// 读收/发/磁扰次数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1152,7 +1193,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 13: 
+			case 14: 
 				CurrCmd = WaterCmd_ReadModuleRunningParams;		// 读取模块运行参数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1163,14 +1204,20 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1; 
 				break;
 
-			case 14: 
+			case 15: 
 				CurrCmd = WaterCmd_SetModuleRunningParams;		// 设置模块运行参数
 				/*---------------------------------------------*/
 				// UI-第1页
 				if(false == isUiFinish){
-					StrBuf[0][0] = 0;
-					StrBuf[0][1] = 0;
-					StrBuf[0][2] = 1;
+					if(BackupBuf[ArgIdx_RunParas -1] != Param_Unique){		
+						StrBuf[0][0] = 0;
+						StrBuf[0][1] = 0;
+						StrBuf[0][2] = 1;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_RunParas], 1 * 20);
+					}
+					
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
                     CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "类型:", &StrBuf[0][0], 9, 
 						"RF冷水表", "GPRS冷水表", "NB冷水表", 
@@ -1187,15 +1234,24 @@ void WaterCmdFunc_WorkingParams(void)
 						"三川无磁");
 					break;
 				}
+
+				memcpy(&BackupBuf[ArgIdx_RunParas], &StrBuf[0][0], 1 * 20);
+
 				// UI-第2页
 				currUi = 0;
-				StrBuf[0][3] = 1;
-				StrBuf[0][4] = 1;
-				sprintf(StrBuf[1], "121");
-				sprintf(StrBuf[2], "43");
-				sprintf(StrBuf[3], "175");
-				sprintf(StrBuf[4], "222");
-				sprintf(StrBuf[5], "5683");
+				if(BackupBuf[ArgIdx_RunParas -1] != Param_Unique){		
+					StrBuf[0][3] = 1;
+					StrBuf[0][4] = 1;
+					sprintf(StrBuf[1], "121");
+					sprintf(StrBuf[2], "43");
+					sprintf(StrBuf[3], "175");
+					sprintf(StrBuf[4], "222");
+					sprintf(StrBuf[5], "5683");
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_RunParas], 6 * 20);
+				}
+				
 				while(1){
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					(*pUiCnt) = 0;
@@ -1251,14 +1307,22 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
+				memcpy(&BackupBuf[ArgIdx_RunParas], &StrBuf[0][0], 6 * 20);
+
 				// UI-第3页
 				currUi = 0;
-				StrBuf[0][5] = 0;
-				StrBuf[0][6] = 0;
-				StrBuf[0][7] = 1;
-				StrBuf[0][8] = 1;
-				StrBuf[0][9] = 0;
-				StrBuf[0][10] = 0;
+				if(BackupBuf[ArgIdx_RunParas -1] != Param_Unique){		
+					StrBuf[0][5] = 0;
+					StrBuf[0][6] = 0;
+					StrBuf[0][7] = 1;
+					StrBuf[0][8] = 1;
+					StrBuf[0][9] = 0;
+					StrBuf[0][10] = 0;
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_RunParas], 1 * 20);
+				}
+				
 				while(1){
 					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
 					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
@@ -1302,6 +1366,9 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 				
+				memcpy(&BackupBuf[ArgIdx_RunParas], &StrBuf[0][0], 6 * 20);
+				BackupBuf[ArgIdx_RunParas - 1] = Param_Unique;
+
 				i = 0;
 				Args.buf[i++] = 0x3F;		// 命令字	3F
 				ackLen = 1;					// 应答长度 1	
@@ -1402,7 +1469,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 15: 
+			case 16: 
 				CurrCmd = WaterCmd_ReadNbJoinNetworkInfo;		// 读取NB入网信息
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1414,7 +1481,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 16: 
+			case 17: 
 				CurrCmd = WaterCmd_ReadBeiJingWaterMeterParams;		// 读取北京水表参数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1427,12 +1494,12 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1; 
 				break;
 
-			case 17: 
+			case 18: 
 				CurrCmd = WaterCmd_SetBeiJingWaterMeterParams;		// 设置北京水表参数
 				/*---------------------------------------------*/
 				// UI-第1页
 				if(false == isUiFinish){
-					if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){		
+					if(BackupBuf[ArgIdx_Shared -1] != Param_BeijingWMtr){		
 						StrBuf[0][0] = 0;
 						StrBuf[1][0] = 0;
 					}
@@ -1464,7 +1531,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 				// UI-第2页
 				currUi = 0;
-				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){	
+				if(BackupBuf[ArgIdx_Shared -1] != Param_BeijingWMtr){	
 					sprintf(StrBuf[1], "40");
 					sprintf(StrBuf[2], "1");
 					sprintf(StrBuf[3], "40");
@@ -1522,7 +1589,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 				// UI-第3页
 				currUi = 0;
-				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){	
+				if(BackupBuf[ArgIdx_Shared -1] != Param_BeijingWMtr){	
 					StrBuf[0][0] = 1;
 					StrBuf[0][1] = 2;
 					sprintf(StrBuf[1], "121");
@@ -1610,7 +1677,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 				// UI-第4页
 				currUi = 0;
-				if(BackupBuf[ArgIdx_Shared + 0] != Param_BeijingWMtr){		
+				if(BackupBuf[ArgIdx_Shared -1] != Param_BeijingWMtr){		
 					for(i = 0; i < 14; i++){
 						StrBuf[i][0] = 0x00;
 					}
@@ -1689,7 +1756,7 @@ void WaterCmdFunc_WorkingParams(void)
 
 				memcpy(&BackupBuf[ArgIdx_Shared + 17 * 20], &StrBuf[0][0], 14 * 20);
 
-				BackupBuf[ArgIdx_Shared + 0] = Param_BeijingWMtr;
+				BackupBuf[ArgIdx_Shared -1] = Param_BeijingWMtr;
 				
 				i = 0;
 				Args.buf[i++] = 0x26;		// 命令字	26
@@ -1756,7 +1823,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 18: 
+			case 19: 
 				CurrCmd = WaterCmd_ReadModuleFrequency;		// 读取模块的频点
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
@@ -1769,10 +1836,13 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
-			case 19: 
+			case 20: 
 				CurrCmd = WaterCmd_SetModuleFrequency;		// 设置模块的频点
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_ModFreqs -1] == Param_Unique){		
+						memcpy(&StrBuf[1][0], &BackupBuf[ArgIdx_ModFreqs], 3 * 20);
+					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点1:", StrBuf[1], 5, 6*8, true);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点2:", StrBuf[2], 5, 6*8, true);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "频点3:", StrBuf[3], 5, 6*8, true);
@@ -1799,6 +1869,9 @@ void WaterCmdFunc_WorkingParams(void)
 					continue;
 				}
 
+				BackupBuf[ArgIdx_ModFreqs -1] = Param_Unique;	
+				memcpy(&BackupBuf[ArgIdx_ModFreqs], &StrBuf[1][0], 3 * 20);
+				
 				i = 0;
 				Args.buf[i++] = 0x1B;		// 命令字	1B
 				ackLen = 1;					// 应答长度 1	

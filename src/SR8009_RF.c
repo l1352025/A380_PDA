@@ -1294,8 +1294,8 @@ void WaterCmdFunc_FunctionConfig(void)
 				isSendReady = true;
 				break;
 
-			case WaterCmd_ReadFuncEnableStateOld:		// 读功能使能状态old
-			case WaterCmd_ReadFuncEnableStateNew:		// 读功能使能状态new
+			case WaterCmd_ReadFuncEnableStateOld:		// 读功能状态old
+			case WaterCmd_ReadFuncEnableStateNew:		// 读功能状态new
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
@@ -1307,7 +1307,7 @@ void WaterCmdFunc_FunctionConfig(void)
 				isSendReady = true;
 				break;
 
-			case WaterCmd_SetFuncEnableState:		// 设置功能使能状态
+			case WaterCmd_SetFuncEnableState:		// 设置功能状态
 				/*---------------------------------------------*/
 				if(uiPage == 1){
 					if(false == isUiFinish){
