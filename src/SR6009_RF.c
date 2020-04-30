@@ -3794,11 +3794,15 @@ int main(void)
 	
 	#ifdef Project_6009_RF
 	MeterNoLoad(StrDstAddr, 0);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#elif defined Project_6009_IR
 	MeterNoLoad(StrDstAddr, 1);
 	#else // Project_8009_RF
 	MeterNoLoad(StrDstAddr, 2);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#endif
+
+	SysCfgLoad();
 	
 	MainMenu.left=0;
 	MainMenu.top=0;
@@ -3831,6 +3835,16 @@ int main(void)
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
+
+	#ifdef Project_6009_RF
+	MeterNoSave(StrDstAddr, 0);
+	#elif defined Project_6009_IR
+	MeterNoSave(StrDstAddr, 1);
+	#else // Project_8009_RF
+	MeterNoSave(StrDstAddr, 2);
+	#endif
+
+	SysCfgSave();
 	
 }
 

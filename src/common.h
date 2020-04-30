@@ -36,8 +36,8 @@ typedef unsigned char bool;
 // 当前透传模块使用的通信端口 和 波特率
 #if defined(Project_6009_IR)
     #define VerInfo_Name    (char *)"桑锐N609A手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.8"	           	// 版本号
-    #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
+    #define VerInfo_RevNo   (char *)"2.9.预览1"	           	// 版本号
+    #define VerInfo_RevDate (char *)"2020-04-22"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR                
 	#define CurrBaud    (uint8 *)"9600,E,8,1"
@@ -241,6 +241,8 @@ void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
 uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx);
 void MeterNoSave(uint8 *mtrNo, uint8 type);
 void MeterNoLoad(uint8 *mtrNo, uint8 type);
+void SysCfgLoad(void);
+void SysCfgSave(void);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 

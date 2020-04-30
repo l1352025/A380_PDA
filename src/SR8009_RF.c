@@ -3171,6 +3171,8 @@ int main(void)
 	MeterNoLoad(StrDstAddr, 2);
 	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#endif
+
+	SysCfgLoad();
 	
 	#if LOG_ON
 		LogPrint("抄表程序 已进入 \n");
@@ -3204,6 +3206,16 @@ int main(void)
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
+
+	#ifdef Project_6009_RF
+	MeterNoSave(StrDstAddr, 0);
+	#elif defined Project_6009_IR
+	MeterNoSave(StrDstAddr, 1);
+	#else // Project_8009_RF
+	MeterNoSave(StrDstAddr, 2);
+	#endif
+
+	SysCfgSave();
 
 	#if LOG_ON
 		LogPrint("抄表程序 已退出！\n\n\n");

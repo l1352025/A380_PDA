@@ -27,7 +27,7 @@ typedef enum{
 	ArgIdx_FuncEnSts	= 912,		// 功能使能状态: 20*1 byte
 	ArgIdx_ModFreqs		= 936,		// 模块频点: 20*3 byte
 	ArgIdx_FixTimeVal	= 1000,		// 定时定量间隔：20*2 byte
-	ArgIdx_RunParas		= 1044,		// 模块运行参数: 20*2 byte
+	ArgIdx_RunParas		= 1044		// 模块运行参数: 20*2 byte
 }ArgsIndex;
 
 // 参数标识： 保存在位置索引的前1字节：如 BackupBuf[ArgIdx_Shared -1] = 0x11
@@ -855,9 +855,9 @@ void WaterCmdFunc_WorkingParams(void)
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 19, NULL,		
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 20, NULL,		
 		"<<工作参数",
-		19,
+		20,
 		"1. 设置IP+端口+模式",
 		"2. 读取IP+端口+模式",
 		"3. 读取运营商编号",
@@ -1039,13 +1039,121 @@ void WaterCmdFunc_WorkingParams(void)
 
 			case 7:
 				CurrCmd = WaterCmd_SetFuncEnableState;		// 设置功能使能状态
+				// UI-第1页
+				if(false == isUiFinish){
+					memset(&StrBuf[0][0], 0x00, 20);
+					if(BackupBuf[ArgIdx_FuncEnSts -1] != Param_Unique){		
+						StrBuf[0][7] = 1;
+						StrBuf[0][8] = 1;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FuncEnSts], 1 * 20);
+					}
+					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "磁扰关阀功能:", &StrBuf[0][0], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报数据加密:", &StrBuf[0][1], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "防拆检测功能:", &StrBuf[0][2], 2, 
+						"关", "开");
+					
+					break;
+				}
+				
+				memcpy(&BackupBuf[ArgIdx_FuncEnSts], &StrBuf[0][0], 1 * 20);
 
+				// UI-第2页
+				while(1){
+					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
+					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
+					(*pUiCnt) = 0;
+					uiRowIdx = 2;
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "欠费蜂鸣器  :", &StrBuf[0][3], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警    :", &StrBuf[0][4], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报冻结数据:", &StrBuf[0][5], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "透支关阀功能:", &StrBuf[0][6], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "预付费功能  :", &StrBuf[0][7], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "自动信道分配:", &StrBuf[0][8], 2, 
+						"关", "开");
+
+					key = ShowUI(UiList, &currUi);
+					
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+
+					if(isUiFinish){
+						break;
+					}
+				}
+				if (key == KEY_CANCEL){
+					break;
+				}
+				
+				memcpy(&BackupBuf[ArgIdx_FuncEnSts], &StrBuf[0][0], 1 * 20);
+
+				// UI-第3页
+				while(1){
+					_GUIRectangleFill(0, 2*16, 160, 8*16, Color_White);
+					_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+					(*pUiCnt) = 0;
+					uiRowIdx = 2;
+					
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "防锈功能    :", &StrBuf[0][9], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "掉电关阀功能:", &StrBuf[0][10], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "RF休眠策略  :", &StrBuf[0][11], 2, 
+						"关", "开");
+					StrBuf[0][12] = 0X00;  // 保留
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "煤气泄漏检测:", &StrBuf[0][13], 2, 
+						"关", "开");
+					StrBuf[0][14] = 0X00;  // 保留
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "流速控制功能:", &StrBuf[0][15], 2, 
+						"关", "开");
+					
+					key = ShowUI(UiList, &currUi);
+					
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+
+					if(isUiFinish){
+						break;
+					}
+				}
+				if (key == KEY_CANCEL){
+					break;
+				}
+				
+				memcpy(&BackupBuf[ArgIdx_FuncEnSts], &StrBuf[0][0], 1 * 20);
+				BackupBuf[ArgIdx_FuncEnSts - 1] = Param_Unique;
+
+				i = 0;
+				Args.buf[i++] = 0x08;		// 命令字	08
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				// 功能使能状态 ：0~15
+				for(u8Tmp = 0; u8Tmp < 16; u8Tmp++){
+					Args.buf[i++] = StrBuf[0][u8Tmp];
+				}
+				Args.lastItemLen = i - 1;
 				break;
 			
 			case 8: 
 				CurrCmd = WaterCmd_SetTimedUpload;		// 设置定时上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_FixTimeVal -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FixTimeVal], 2 * 20);
+					}
 					_Printfxy(7*16, (uiRowIdx)*16, "小时", Color_White);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定时间隔:", StrBuf[0], 2, 3*8, true);
 					break;
@@ -1056,6 +1164,9 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
+				memcpy(&BackupBuf[ArgIdx_FixTimeVal], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_FixTimeVal - 1] = Param_Unique;
+
 				Args.buf[i++] = 0x0C;		// 命令字	0C
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
@@ -1068,22 +1179,28 @@ void WaterCmdFunc_WorkingParams(void)
 				CurrCmd = WaterCmd_SetFixedValUpload;		// 设置定量上传
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_FixTimeVal -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FixTimeVal], 2 * 20);
+					}
 					_Printfxy(7*16, (uiRowIdx)*16, "立方米", Color_White);
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定量间隔:", StrBuf[0], 3, 4*8, true);
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "定量间隔:", StrBuf[1], 3, 4*8, true);
 					break;
 				}
-				if((StrBuf[0][0] > '9' || StrBuf[0][0] < '0') 
-					|| _atof(StrBuf[0]) > 255){
-					sprintf(StrBuf[0], "   ");
+				if((StrBuf[1][0] > '9' || StrBuf[1][0] < '0') 
+					|| _atof(StrBuf[1]) > 255){
+					sprintf(StrBuf[1], "   ");
 					currUi = uiRowIdx - 2 - 1;
 					isUiFinish = false;
 					continue;
 				}
+				memcpy(&BackupBuf[ArgIdx_FixTimeVal], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_FixTimeVal - 1] = Param_Unique;
+
 				Args.buf[i++] = 0x0C;		// 命令字	0C
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x01;		// 类别：定量间隔
-				Args.buf[i++] = (uint8) _atof(StrBuf[0]);	// 定量间隔数量
+				Args.buf[i++] = (uint8) _atof(StrBuf[1]);	// 定量间隔数量
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1308,10 +1425,11 @@ void WaterCmdFunc_WorkingParams(void)
 				}
 
 				memcpy(&BackupBuf[ArgIdx_RunParas], &StrBuf[0][0], 6 * 20);
+				BackupBuf[ArgIdx_RunParas - 1] = Param_Unique;
 
 				// UI-第3页
 				currUi = 0;
-				if(BackupBuf[ArgIdx_RunParas -1] != Param_Unique){		
+				if(BackupBuf[ArgIdx_FuncEnSts -1] != Param_Unique){		
 					StrBuf[0][5] = 0;
 					StrBuf[0][6] = 0;
 					StrBuf[0][7] = 1;
@@ -1320,7 +1438,7 @@ void WaterCmdFunc_WorkingParams(void)
 					StrBuf[0][10] = 0;
 				}
 				else{
-					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_RunParas], 1 * 20);
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FuncEnSts], 1 * 20);
 				}
 				
 				while(1){
@@ -1329,17 +1447,17 @@ void WaterCmdFunc_WorkingParams(void)
 					(*pUiCnt) = 0;
 					uiRowIdx = 2;
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "磁扰关阀:", &StrBuf[0][5], 2, 
-						"关闭", "开启");
+						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "防拆检测:", &StrBuf[0][6], 2, 
-						"关闭", "开启");
+						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警:", &StrBuf[0][7], 2, 
-						"关闭", "开启");
+						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "冻结上报:", &StrBuf[0][8], 2, 
-						"关闭", "开启");
+						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "阀门防锈:", &StrBuf[0][9], 2, 
-						"关闭", "开启");
+						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "掉电关阀:", &StrBuf[0][10], 2, 
-						"关闭", "开启");
+						"关", "开");
 					
 					key = ShowUI(UiList, &currUi);
 					
@@ -1351,7 +1469,7 @@ void WaterCmdFunc_WorkingParams(void)
 					// 使能状态
 					enableStatus = 0;
 					enableStatus |= (StrBuf[0][5] == 0 ? 0x0000 : 0x0001);	// 磁扰关阀
-					enableStatus |= (StrBuf[0][6] == 0 ? 0x0000 : 0x0002);	// 防拆检测
+					enableStatus |= (StrBuf[0][6] == 0 ? 0x0000 : 0x0004);	// 防拆检测
 					enableStatus |= (StrBuf[0][7] == 0 ? 0x0000 : 0x0010);	// 主动告警
 					enableStatus |= (StrBuf[0][8] == 0 ? 0x0000 : 0x0020);	// 冻结上报
 					enableStatus |= (StrBuf[0][9] == 0 ? 0x0000 : 0x0200);	// 阀门防锈
@@ -1366,8 +1484,8 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 				
-				memcpy(&BackupBuf[ArgIdx_RunParas], &StrBuf[0][0], 6 * 20);
-				BackupBuf[ArgIdx_RunParas - 1] = Param_Unique;
+				memcpy(&BackupBuf[ArgIdx_FuncEnSts], &StrBuf[0][0], 1 * 20);
+				BackupBuf[ArgIdx_FuncEnSts - 1] = Param_Unique;
 
 				i = 0;
 				Args.buf[i++] = 0x3F;		// 命令字	3F
@@ -2872,12 +2990,16 @@ int main(void)
 	
 	#ifdef Project_6009_RF
 	MeterNoLoad(StrDstAddr, 0);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#elif defined Project_6009_IR
 	MeterNoLoad(StrDstAddr, 1);
 	#else // Project_8009_RF
 	MeterNoLoad(StrDstAddr, 2);
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 	#endif
-	
+
+	SysCfgLoad();
+
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=7;
@@ -2906,5 +3028,15 @@ int main(void)
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
+
+	#ifdef Project_6009_RF
+	MeterNoSave(StrDstAddr, 0);
+	#elif defined Project_6009_IR
+	MeterNoSave(StrDstAddr, 1);
+	#else // Project_8009_RF
+	MeterNoSave(StrDstAddr, 2);
+	#endif
+
+	SysCfgSave();
 }
 

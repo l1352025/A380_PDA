@@ -1949,14 +1949,6 @@ CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args
 	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
 		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
 		MeterNoSave(StrDstAddr, 3);
-	}else{
-		#ifdef Project_6009_RF
-		MeterNoSave(StrDstAddr, 0);
-		#elif defined Project_6009_IR
-		MeterNoSave(StrDstAddr, 1);
-		#else // Project_8009_RF
-		MeterNoSave(StrDstAddr, 2);
-		#endif
 	}
 
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
@@ -2163,6 +2155,36 @@ void MeterNoLoad(uint8 *mtrNo, uint8 type)
 		break;
 	}
 	_Fread(mtrNo, TXTBUF_LEN, fp);
+	_Fclose(fp);
+}
+
+void SysCfgLoad(void)
+{
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		return;
+	}else{
+		fp = _Fopen("system.cfg", "R");
+	}
+	
+	_Lseek(fp, 1024, 0);		// @1024 BackupBuf 2K 
+	_Fread(BackupBuf, 2048, fp);
+	_Fclose(fp);
+}
+
+void SysCfgSave(void)
+{
+	int fp;
+
+	if(_Access("system.cfg", 0) < 0){
+		fp = _Fopen("system.cfg", "W");
+	}else{
+		fp = _Fopen("system.cfg", "RW");
+	}
+	
+	_Lseek(fp, 1024, 0);		// @1024 BackupBuf 2K 
+	_Fwrite(BackupBuf, 2048, fp);
 	_Fclose(fp);
 }
 
