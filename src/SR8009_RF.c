@@ -9,8 +9,8 @@
 #include "string.h"
 #include "stdio.h"
 
-#include "Common.h"
-#include "Tool.h"
+#include "common.h"
+#include "common.c"
 #include "WaterMeter8009.h"
 #include "MeterDocDBF.h"
 #include "MeterDocDBF.c"
@@ -73,7 +73,7 @@ void CenterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -343,7 +343,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -527,7 +527,7 @@ void CenterCmdFunc_RouteSetting(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -676,7 +676,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -933,7 +933,7 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -975,11 +975,17 @@ void WaterCmdFunc_CommonCmd(void)
 			case WaterCmd_SetBaseValPulseRatio:	// 设表底数 和 脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
+						StrBuf[1][0] = 0x01;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
+					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][1], 2, 
 						"小", "大");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 3, 
 						"1", "10", "100");
 					break;
 				}
@@ -989,6 +995,9 @@ void WaterCmdFunc_CommonCmd(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
 
 				Args.buf[i++] = 0x04;		// 命令字	04
 				ackLen = 5;					// 应答长度 5	
@@ -1004,7 +1013,7 @@ void WaterCmdFunc_CommonCmd(void)
 				case 2: u8Tmp = 100; break;
 				default: u8Tmp = 10; break;
 				}
-				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 脉冲系数	
+				Args.buf[i++] = (uint8)((StrBuf[1][1] << 7) | u8Tmp);	// 表口径|脉冲系数	
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -1240,7 +1249,7 @@ void WaterCmdFunc_FunctionConfig(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1341,7 +1350,7 @@ void WaterCmdFunc_FunctionConfig(void)
 							uiPage--;
 							continue;
 						}
-						CurrCmdName = menuList_2.str[menuList_2.strIdx];
+						sprintf(CurrCmdName, menuList_2.str[menuList_2.strIdx]);
 						sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 						_Printfxy(0, 0, TmpBuf, Color_White);
 						isUiFinish = true;
@@ -1378,7 +1387,7 @@ void WaterCmdFunc_FunctionConfig(void)
 					break;
 				}
 				else if(uiPage == 3){
-					CurrCmdName = menuList_2.str[menuList_2.strIdx];
+					sprintf(CurrCmdName, menuList_2.str[menuList_2.strIdx]);
 					sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 					_Printfxy(0, 0, TmpBuf, Color_White);
 					if(false == isUiFinish){
@@ -1637,7 +1646,7 @@ void WaterCmdFunc_DmaProjectCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1895,7 +1904,7 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2108,7 +2117,6 @@ void MainFuncReadRealTimeData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取用户用量");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2211,7 +2219,6 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<清异常");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2313,7 +2320,6 @@ void MainFuncOpenValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<开阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2415,7 +2421,6 @@ void MainFuncCloseValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<关阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2505,7 +2510,7 @@ void MainFuncBatchMeterReading(void)
 {
 	uint8 key;
 	ListBox menuList, menuList_2, menuList_3;
-	ListBox XqList, LdList;				// 小区/楼栋列表
+	ListBoxEx XqList, LdList;				// 小区/楼栋列表
 	_GuiInputBoxStru inputSt;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
@@ -2517,6 +2522,8 @@ void MainFuncBatchMeterReading(void)
 	uint8 qryTypeXq, qryTypeLd;
 	uint16 qryIndexXq, qryIndexLd;
 	uint32 recCnt;
+
+	FixDbfRecCnt();	// 修复记录总数
 
 	// 菜单
 	//------------------------------------------------------------
@@ -2565,7 +2572,7 @@ void MainFuncBatchMeterReading(void)
 			while(2){
 				
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
-				key = ShowListBox(&XqList);
+				key = ShowListBoxEx(&XqList);
 				//------------------------------------------------------------
 				if (key == KEY_CANCEL){	// 返回
 					break;
@@ -2582,7 +2589,7 @@ void MainFuncBatchMeterReading(void)
 				while(3){
 	
 					_Printfxy(0, 9*16, "返回            确定", Color_White);
-					key = ShowListBox(&LdList);
+					key = ShowListBoxEx(&LdList);
 					//------------------------------------------------------------
 					if(key == KEY_CANCEL){	// 返回
 						break;
@@ -2812,7 +2819,7 @@ void MainFuncBatchMeterReading(void)
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
-			do{
+			for(i = 0; i < recCnt; i++){
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
 				if(strTmp[0] == '0'){
@@ -2828,7 +2835,7 @@ void MainFuncBatchMeterReading(void)
 				_Replace(Idx_BatteryVoltage, "");
 				_Replace(Idx_SignalValue, "");
 				_Skip(1);		// 下一个数据库记录
-			}while(_Eof() == false);
+			}
 			_Use("");			// 关闭数据库
 			//-------------------------------------------------------
 			_Printfxy(0, 4*16, "  清空抄表结果完成！", Color_White);
@@ -2887,7 +2894,7 @@ void MainFuncBatchMeterReading(void)
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
-			do{
+			for(i = 0; i < recCnt; i++){
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
 				if(strTmp[0] == '0'){
@@ -2896,7 +2903,7 @@ void MainFuncBatchMeterReading(void)
 				}
 				_Replace(Idx_MeterReadTime, time);
 				_Skip(1);
-			}while(_Eof() == false);
+			}
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
 			_Printfxy(8, 6*16, "抄表时间重置完成！", Color_White);
@@ -3031,7 +3038,7 @@ void MainFuncBatchMeterReading(void)
 						ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
 							"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						key = ShowListBox(&XqList);
+						key = ShowListBoxEx(&XqList);
 						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
@@ -3084,7 +3091,7 @@ void MainFuncBatchMeterReading(void)
 							"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
 
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						key = ShowListBox(&LdList);
+						key = ShowListBoxEx(&LdList);
 						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
@@ -3126,6 +3133,7 @@ void MainFuncBatchMeterReading(void)
 
 	} // while 1 批量抄表
 
+	FixDbfRecCnt();	// 修复记录总数
 	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 }
 
@@ -3133,28 +3141,6 @@ void MainFuncBatchMeterReading(void)
 void MainFuncEngineerDebuging(void)
 {
 	WaterCmdFunc();		// 工程调试 --> 即原来的 表端操作
-
-	/*
-	#if CenterCmd_Enable
-	_GuiMenuStru menu;
-
-	menu.top = 0;
-	menu.left = 0;
-	menu.no = 3;
-	menu.title = "<<工程调试";
-	menu.str[0] = "表端操作";
-	menu.str[1] = "集中器操作";
-	menu.str[2] = "版本信息";
-	menu.key[0] = "1";
-	menu.key[1] = "2";
-	menu.key[2] = "3";
-	menu.Function[0] = WaterCmdFunc;
-	menu.Function[1] = CenterCmdFunc;
-	menu.Function[2] = VersionInfoFunc;
-	menu.FunctionEx = 0;
-	_Menu(&menu);
-	#endif
-	*/
 }
 
 // --------------------------------   主函数   -----------------------------------------------

@@ -106,7 +106,7 @@ static uint8 ShowDocList(TList *docs, uint8 mode)
 	uint8 **strs = MetersStrs;
 	uint8 strSize = 20, *ptr, *pList;
 	uint16 currIdx = 0;
-	ListBox docList;
+	ListBoxEx docList;
 	DocInfo *docItem;
 
 	if(docs->cnt > Upgrd_MeterMax) return KEY_CANCEL;
@@ -133,7 +133,7 @@ static uint8 ShowDocList(TList *docs, uint8 mode)
 		}
 		
 		docList.currIdx = currIdx;
-		key = ShowListBox(&docList);
+		key = ShowListBoxEx(&docList);
 		currIdx = docList.currIdx;
 
 		if(key == KEY_ENTER && mode == 1){

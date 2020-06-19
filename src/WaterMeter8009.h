@@ -12,37 +12,6 @@ extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 extern uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
 extern uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
-// --------------------------------  全局变量  -----------------------------------------
-//char Screenbuff[160*(160/3+1)*2]; 
-#if Upgrd_FileBuf_Enable
-uint8 DispBuf[128 * 1024];					// 4k ~ 128K
-#else
-uint8 DispBuf[14 * 1024];					// 4k ~ 14K
-#endif
-uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
-uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
-uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
-uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
-#if Upgrd_FileBuf_Enable
-uint8 * const FileBuf = &DispBuf[14336];	// 116k 
-#endif
-uint8 TxBuf[1024];
-uint8 RxBuf[1024];
-uint32 RxLen, TxLen;
-const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 本机地址 2019000020190000，10/12/16字符
-const uint8 BroadAddr[10] = { 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0x00, 0x00};	// 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
-uint8 DstAddr[10];
-uint8 VerInfo[42];
-uint16 CurrCmd;
-char * CurrCmdName;
-ParamsBuf Addrs;		
-ParamsBuf Args;
-char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
-char StrDstAddr[TXTBUF_LEN];
-char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
-UI_ItemList UiList;
-bool LcdOpened;
-bool IsNoAckCmd;
 FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
 FuncCmdFramePack FramePack = PackWater8009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater8009ResponseFrame;
@@ -205,9 +174,10 @@ void Water8009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 	uint8 i;
 	#endif
 
+	addrs->itemCnt = 0;
+	
 	#ifdef Project_8009_RF
 	// 中继地址
-	addrs->itemCnt = 0;
 	for(i = 0; i < RELAY_MAX; i++){
 		if(strRelayAddrs[i][0] >= '0' && strRelayAddrs[i][0] <= '9'){
 			addrs->items[addrs->itemCnt] = &addrs->buf[i*AddrLen];

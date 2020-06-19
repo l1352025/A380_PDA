@@ -162,26 +162,20 @@ const char *Fields[] = {
 };
 
 //---------------	dbf 查询结构
+#ifndef DbQueryOptimize_H
 typedef struct {
-	// uint8 queryType;	// 查询类型：0-小区列表， 1-楼栋列表； 2-抄表情况列表 , 3 - 户表信息
-	// char *districNum;	// 小区编号
-	// char *buildingNum;	// 楼栋编号
-	// char *meterReadStatus;	// 抄表状态
-	// char *meterNum;		// 表号
-	// char *userNum;		// 户号
-	// char *roomNum;		// 门牌号
-	// uint32 dbSelectIdx;	// 选择的数据库记录索引
 
 	uint32	dbCurrIdx;	// 数据库当前位置
 	uint32	reqMaxCnt;	// 最大请求数
 	uint32	resultCnt;	// 查询的结果记录数
 	uint16	errorCode;	// 0 - ok,  其他 - 出错
 }DbQuerySt;
+#endif
 
 //---------------	小区列表
 typedef struct{
-	char 	nums[District_Max][Size_ListStr];	// 列表项字符串：楼栋编号
-	char 	names[District_Max][Size_ListStr];	// 列表项字符串：楼栋名称
+	char 	nums[District_Max][Size_ListStr];	// 列表项字符串：小区编号
+	char 	names[District_Max][Size_ListStr];	// 列表项字符串：小区名称
 	uint8 	idx;			// 列表项索引
 	uint8	cnt;			// 列表项总数
 }DistrictListSt;
@@ -258,5 +252,6 @@ extern uint8 ShowAutoMeterReading(MeterListSt *meters);
 extern void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
+extern void FixDbfRecCnt(void);
 
 #endif

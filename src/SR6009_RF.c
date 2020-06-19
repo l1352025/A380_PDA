@@ -9,8 +9,8 @@
 #include "string.h"
 #include "stdio.h"
 
-#include "Common.h"
-#include "Tool.h"
+#include "common.h"
+#include "common.c"
 #include "WaterMeter.h"
 #include "MeterDocDBF.h"
 #include "MeterDocDBF.c"
@@ -76,7 +76,7 @@ void CenterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -346,7 +346,7 @@ void CenterCmdFunc_DocumentOperation(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -530,7 +530,7 @@ void CenterCmdFunc_RouteSetting(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -679,7 +679,7 @@ void CenterCmdFunc_CommandTransfer(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -935,7 +935,7 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1162,7 +1162,7 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1265,6 +1265,9 @@ void WaterCmdFunc_TestCmd(void)
             case WaterCmd_SetOverCurrentTimeout:		// " 设置过流超时 ";
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
+					if(BackupBuf[ArgIdx_OverCurr -1] == Param_Unique){		
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_OverCurr], 2 * 20);
+					}
                     _Printfxy(7*16, (uiRowIdx)*16, "mA", Color_White);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "过流电流:", StrBuf[0], 3, 8*8, true);
 					_Printfxy(7*16, (uiRowIdx)*16, "ms", Color_White);
@@ -1299,6 +1302,9 @@ void WaterCmdFunc_TestCmd(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				BackupBuf[ArgIdx_OverCurr -1] = Param_Unique;		
+				memcpy(&BackupBuf[ArgIdx_OverCurr], &StrBuf[0][0], 2 * 20);
 				
 				Args.buf[i++] = 0x07;		// 命令字	07
 				ackLen = 4;					// 应答长度 4	
@@ -1504,7 +1510,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1788,7 +1794,7 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -1818,8 +1824,11 @@ void WaterCmdFunc_WorkingParams(void)
 			case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
-					if(StrBuf[1][0] == 0x00){
+					if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
 						StrBuf[1][0] = 0x01;
+					}
+					else{
+						memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
 					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
@@ -1833,6 +1842,9 @@ void WaterCmdFunc_WorkingParams(void)
 					isUiFinish = false;
 					continue;
 				}
+
+				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
 
 				Args.buf[i++] = 0x06;		// 命令字	06
 				ackLen = 7;					// 应答长度 7	
@@ -2088,7 +2100,7 @@ void WaterCmdFunc_Other(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2388,7 +2400,6 @@ void MainFuncReadRealTimeData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取用户用量");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2492,7 +2503,6 @@ void MainFuncReadFrozenData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取冻结数据");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2611,7 +2621,6 @@ void MainFuncReadMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取表端时钟");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2711,7 +2720,6 @@ void MainFuncSetMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<设置表端时钟");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2842,7 +2850,6 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<清异常");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2945,7 +2952,6 @@ void MainFuncOpenValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<开阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -3049,7 +3055,6 @@ void MainFuncCloseValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<关阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -3141,7 +3146,7 @@ void MainFuncBatchMeterReading(void)
 {
 	uint8 key;
 	ListBox menuList, menuList_2, menuList_3;
-	ListBox XqList, LdList;				// 小区/楼栋列表
+	ListBoxEx XqList, LdList;				// 小区/楼栋列表
 	_GuiInputBoxStru inputSt;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
@@ -3153,6 +3158,8 @@ void MainFuncBatchMeterReading(void)
 	uint8 qryTypeXq, qryTypeLd;
 	uint16 qryIndexXq, qryIndexLd;
 	uint32 recCnt;
+
+	FixDbfRecCnt();	// 修复记录总数
 
 	// 菜单
 	//------------------------------------------------------------
@@ -3201,7 +3208,7 @@ void MainFuncBatchMeterReading(void)
 			while(2){
 				
 				_Printfxy(0, 9*16, "返回            确定", Color_White);
-				key = ShowListBox(&XqList);
+				key = ShowListBoxEx(&XqList);
 				//------------------------------------------------------------
 				if (key == KEY_CANCEL){	// 返回
 					break;
@@ -3218,7 +3225,7 @@ void MainFuncBatchMeterReading(void)
 				while(3){
 	
 					_Printfxy(0, 9*16, "返回            确定", Color_White);
-					key = ShowListBox(&LdList);
+					key = ShowListBoxEx(&LdList);
 					//------------------------------------------------------------
 					if(key == KEY_CANCEL){	// 返回
 						break;
@@ -3444,7 +3451,7 @@ void MainFuncBatchMeterReading(void)
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
-			do{
+			for(i = 0; i < recCnt; i++){
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
 				if(strTmp[0] == '0'){
@@ -3460,7 +3467,7 @@ void MainFuncBatchMeterReading(void)
 				_Replace(Idx_BatteryVoltage, "");
 				_Replace(Idx_SignalValue, "");
 				_Skip(1);		// 下一个数据库记录
-			}while(_Eof() == false);
+			}
 			_Use("");			// 关闭数据库
 			//-------------------------------------------------------
 			_Printfxy(0, 4*16, "  清空抄表结果完成！", Color_White);
@@ -3519,7 +3526,7 @@ void MainFuncBatchMeterReading(void)
 			_Select(1);
 			_Use(MeterDocDB);	// 打开数据库
 			_Go(0);
-			do{
+			for(i = 0; i < recCnt; i++){
 				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
 				strTmp[Size_MeterReadStatus - 1] = '\0';
 				if(strTmp[0] == '0'){
@@ -3528,7 +3535,7 @@ void MainFuncBatchMeterReading(void)
 				}
 				_Replace(Idx_MeterReadTime, time);
 				_Skip(1);
-			}while(_Eof() == false);
+			}
 			_Use("");		// 关闭数据库
 			//------------------------------------------------------------
 			_Printfxy(8, 6*16, "抄表时间重置完成！", Color_White);
@@ -3663,7 +3670,7 @@ void MainFuncBatchMeterReading(void)
 						ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
 							"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						key = ShowListBox(&XqList);
+						key = ShowListBoxEx(&XqList);
 						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
@@ -3716,7 +3723,7 @@ void MainFuncBatchMeterReading(void)
 							"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
 
 						_Printfxy(0, 9*16, "返回            确定", Color_White);
-						key = ShowListBox(&LdList);
+						key = ShowListBoxEx(&LdList);
 						//------------------------------------------------------------
 						if (key == KEY_CANCEL){		// 未选择列表项
 							continue;
@@ -3757,6 +3764,9 @@ void MainFuncBatchMeterReading(void)
 		}
 
 	} // while 1 批量抄表
+
+	FixDbfRecCnt();	// 修复记录总数
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 }
 
 // 工程调试		------------------------------

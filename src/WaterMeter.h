@@ -12,37 +12,6 @@ extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 extern uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
 extern uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
-// --------------------------------  全局变量  -----------------------------------------
-//char Screenbuff[160*(160/3+1)*2]; 
-#if Upgrd_FileBuf_Enable
-uint8 DispBuf[128 * 1024];					// 4k ~ 128K
-#else
-uint8 DispBuf[14 * 1024];					// 4k ~ 14K
-#endif
-uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
-uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
-uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
-uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
-#if Upgrd_FileBuf_Enable
-uint8 * const FileBuf = &DispBuf[14336];	// 116k 
-#endif
-uint8 TxBuf[1024];
-uint8 RxBuf[1024];
-uint32 RxLen, TxLen;
-const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 本机地址 2019000020190000，10/12/16字符
-const uint8 BroadAddr[10] = { 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0x00, 0x00};	// 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
-uint8 DstAddr[10];
-uint8 VerInfo[42];
-uint16 CurrCmd;
-char * CurrCmdName;
-ParamsBuf Addrs;		
-ParamsBuf Args;
-char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
-char StrDstAddr[TXTBUF_LEN];
-char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
-UI_ItemList UiList;
-bool LcdOpened;
-bool IsNoAckCmd;
 FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
 FuncCmdFramePack FramePack = PackWater6009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater6009ResponseFrame;
@@ -165,7 +134,7 @@ typedef enum{
 	WaterCmd_ReadImeiAndCcid,
 	WaterCmd_ReadNbJoinNetworkInfo,
 	WaterCmd_ReadBeiJingWaterMeterParams,
-	WaterCmd_SetBeiJingWaterMeterParams,
+	WaterCmd_SetBeiJingWaterMeterParams	= 0x5F,
 
 	/*
 	其他操作：	
@@ -192,7 +161,14 @@ typedef enum{
 	2	设置模块运行参数
 	*/
 	WaterCmd_ReadModuleRunningParams,
-	WaterCmd_SetModuleRunningParams
+	WaterCmd_SetModuleRunningParams,
+
+	/*
+	其他新增命令:
+	1	NB立即上报实时数据
+	*/
+	WaterCmd_NbReportRealTimeDataNow	= 0x71
+
 }WaterCmdDef;
 
 
@@ -1001,7 +977,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//----------------------------------------		读取用户用量		-------------
 	case WaterCmd_ReadRealTimeData:	// 读取用户用量
 	case CenterCmd_ReadRealTimeData:
-		if(rxlen < index + 21 && cmd != 0x01){
+		if(rxlen < index + 21 || cmd != 0x01){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1083,7 +1059,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//----------------------------------------		读取冻结数据	---------------------
 	case WaterCmd_ReadFrozenData:	// 读取冻结数据
-		if(rxlen < index + 88 && cmd != 0x02){
+		if(rxlen < index + 88 || cmd != 0x02){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1186,7 +1162,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	case WaterCmd_CloseValveForce:	// 强制关阀
 	case CenterCmd_OpenValve:
 	case CenterCmd_CloseValve:
-		if(rxlen < index + 3 && cmd != 0x03){
+		if(rxlen < index + 3 || cmd != 0x03){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1205,7 +1181,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//----------------------------------------		读取表端配置信息		-------------
 	case WaterCmd_ReadMeterCfgInfo:	// 读取表端配置信息
 
-		if(rxlen < index + 124 && cmd != 0x04){
+		if(rxlen < index + 124 || cmd != 0x04){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1219,7 +1195,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//---------------------------------------		清异常命令		---------------------
 	case WaterCmd_ClearException:	// 清异常命令 
 	case CenterCmd_ClearException:
-		if(rxlen < index + 1 && cmd != 0x05){
+		if(rxlen < index + 1 || cmd != 0x05){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1231,7 +1207,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//---------------------------------------		测试命令	---------------------
 	case WaterCmd_RebootDevice:	// 表端重启
-		if(rxlen < index + 2 && cmd != 0x07){
+		if(rxlen < index + 2 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1243,7 +1219,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadTemperature:	// 读表温度
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1255,7 +1231,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadVoltage:	// 读表电压
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1266,7 +1242,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ClearPrepaidRefVal:	// 清预缴参考量
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1278,7 +1254,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetOverCurrentTimeout:	// 设置过流超时
-		if(rxlen < index + 3 && cmd != 0x07){
+		if(rxlen < index + 3 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1302,7 +1278,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadOperatorNumber:	// 读运营商编号
-		if(rxlen < index + 4 && cmd != 0x07){
+		if(rxlen < index + 4 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1314,7 +1290,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadReportRoute:	// 读上报路径
-		if(rxlen < index + 63 && cmd != 0x07){
+		if(rxlen < index + 63 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1349,7 +1325,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetMeterNumber:	// 设置表号
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1370,7 +1346,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadDebugInfo:		// 读debug信息
-		if(rxlen < index + 58 && cmd != 0x07){
+		if(rxlen < index + 58 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1429,7 +1405,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ClearDebugInfo:		// 清debug信息
-		if(rxlen < index + 1 && cmd != 0x07){
+		if(rxlen < index + 1 || cmd != 0x07){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1443,7 +1419,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		预缴用量、参考用量-读取/设置	---------------------
 	case WaterCmd_ReadPrepaidRefVal:	// 读预缴参考用量
-		if(rxlen < index + 12 && cmd != 0x15){
+		if(rxlen < index + 12 || cmd != 0x15){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1462,7 +1438,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetPrepaidRefVal:		// 设预缴参考用量
-		if(rxlen < index + 2 && cmd != 0x16){
+		if(rxlen < index + 2 || cmd != 0x16){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1484,7 +1460,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadAlarmLimitOverdraft:		// 读报警关阀限值
-		if(rxlen < index + 1 && cmd != 0x17){
+		if(rxlen < index + 1 || cmd != 0x17){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1507,7 +1483,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	case WaterCmd_SetAlarmLimit:				// 设报警限值
 	case WaterCmd_SetCloseValveLimit:			// 设关阀限值
 	case WaterCmd_SetAlarmAndCloseValveLimit:	// 设报警关阀限值
-		if(rxlen < index + 2 && cmd != 0x18){
+		if(rxlen < index + 2 || cmd != 0x18){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1521,7 +1497,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		工作参数	---------------------
 	case WaterCmd_SetBaseValPulseRatio:	// 设表底数脉冲系数
-		if(rxlen < index + 7 && cmd != 0x06){
+		if(rxlen < index + 7 || cmd != 0x06){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1544,7 +1520,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ClearReverseMeasureData:	// 清除反转计量数据
-		if(rxlen < index + 6 && cmd != 0x0A){
+		if(rxlen < index + 6 || cmd != 0x0A){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1558,7 +1534,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	case WaterCmd_ReadFuncEnableState:	// 读取功能使能状态
 	case CenterCmd_ReadEnableState:
-		if(rxlen < index + 2 && cmd != 0x0B){
+		if(rxlen < index + 2 || cmd != 0x0B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1569,7 +1545,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetFuncEnableState:	// 设置功能使能状态
-		if(rxlen < index + 1 && cmd != 0x08){
+		if(rxlen < index + 1 || cmd != 0x08){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1583,7 +1559,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	case WaterCmd_SetTimedUpload:		// 设置定时上传
 	case WaterCmd_SetFixedValUpload:	// 设置定量上传
 	case WaterCmd_SetTimedAndFixedValUpload:	// 设置定时定量上传
-		if(rxlen < index + 2 && cmd != 0x0C){
+		if(rxlen < index + 2 || cmd != 0x0C){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1600,7 +1576,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadMeterTime:	// 读表端时钟
-		if(rxlen < index + 7 && cmd != 0x13){
+		if(rxlen < index + 7 || cmd != 0x13){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1611,7 +1587,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetMeterTime:		// 校表端时钟
-		if(rxlen < index + 1 && cmd != 0x14){
+		if(rxlen < index + 1 || cmd != 0x14){
 			break;
 		}
 		// 命令状态
@@ -1622,7 +1598,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetIpPortMode:		// 设IP+端口+模式
-		if(rxlen < index + 2 && cmd != 0x0D){
+		if(rxlen < index + 2 || cmd != 0x0D){
 			break;
 		}
 		// 命令选项跳过
@@ -1635,7 +1611,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadIpPortMode:		// 读IP+端口+模式
-		if(rxlen < index + 9 && cmd != 0x0D){
+		if(rxlen < index + 9 || cmd != 0x0D){
 			break;
 		}
 		// 命令选项跳过
@@ -1663,7 +1639,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadModuleFrequency:		// 读取模块的频点
-		if(rxlen < index + 8 && cmd != 0x1B){
+		if(rxlen < index + 8 || cmd != 0x1B){
 			break;
 		}
 		// 命令选项跳过
@@ -1685,7 +1661,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetModuleFrequency:		// 设置模块的频点
-		if(rxlen < index + 1 && cmd != 0x1B){
+		if(rxlen < index + 1 || cmd != 0x1B){
 			break;
 		}
 		// 命令状态
@@ -1696,7 +1672,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadNbOperaterNumber: // 读NB运营商编号
-		if(rxlen < index + 7 && cmd != 0x0E){
+		if(rxlen < index + 7 || cmd != 0x0E){
 			break;
 		}
 		// 命令选项跳过
@@ -1724,7 +1700,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadImeiAndCcid:		// 读IMEI+ICCID
-		if(rxlen < index + 22 && cmd != 0x0F){
+		if(rxlen < index + 22 || cmd != 0x0F){
 			break;
 		}
 		// 命令选项跳过
@@ -1747,7 +1723,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadNbJoinNetworkInfo:		// 读取NB入网信息
-		if(rxlen < index + 34 && cmd != 0x10){
+		if(rxlen < index + 34 || cmd != 0x10){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1808,7 +1784,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadBeiJingWaterMeterParams:		// 读取北京水表参数
-		if(rxlen < index + 69 && cmd != 0x26){
+		if(rxlen < index + 69 || cmd != 0x26){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1907,7 +1883,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetBeiJingWaterMeterParams:		// 设置北京水表参数
-		if(rxlen < index + 2 && cmd != 0x26){
+		if(rxlen < index + 2 || cmd != 0x26){
 			break;
 		}
 		// 命令状态
@@ -1919,7 +1895,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		其他操作		---------------------
 	case WaterCmd_ReadRxTxMgnDistbCnt:		// 读收发磁扰阀控数
-		if(rxlen < index + 7 && cmd != 0x09){
+		if(rxlen < index + 7 || cmd != 0x09){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1934,7 +1910,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_ReadRxdAndTxdChanel:	// 读取RXD和TXD信道
-		if(rxlen < index + 2 && cmd != 0x1B){
+		if(rxlen < index + 2 || cmd != 0x1B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1955,7 +1931,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetRxdAndTxdChanel:	// 设置RXD和TXD信道
-		if(rxlen < index + 2 && cmd != 0x1B){
+		if(rxlen < index + 2 || cmd != 0x1B){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -1976,7 +1952,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetOperatorNumber:		// 设置运营商编号
-		if(rxlen < index + 1 && cmd != 0x21){
+		if(rxlen < index + 1 || cmd != 0x21){
 			break;
 		}
 		// 命令状态
@@ -1990,7 +1966,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetDefinedRoute:	// 路径下发
-		if(rxlen < index + 1 && cmd != 0x22){
+		if(rxlen < index + 1 || cmd != 0x22){
 			break;
 		}
 		// 命令状态
@@ -2007,7 +1983,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//--------------------------------------		程序升级		---------------------
 	case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
 	case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
-		if(rxlen < index + 41 && cmd != 0x70 && cmd != 0x71){
+		if(rxlen < index + 41 || cmd != 0x70 || cmd != 0x71){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2018,7 +1994,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SendUpgradePacket:			// 发送升级数据
-		if(rxlen < index + 12 && cmd != 0x72){
+		if(rxlen < index + 12 || cmd != 0x72){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2026,7 +2002,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
 	case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
-		if(rxlen < index + 12 && cmd != 0x73 && cmd != 0x74){
+		if(rxlen < index + 12 || cmd != 0x73 || cmd != 0x74){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2042,7 +2018,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//-------------------------------------------------------------------------------------------------
 	//--------------------------------------		常用操作		-------------------------------------
 	case CenterCmd_ReadCenterNo:	// 读集中器号
-		if(rxlen < index + 6 && cmd != 0x41){
+		if(rxlen < index + 6 || cmd != 0x41){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2053,7 +2029,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterVer:		// 读集中器版本
-		if(rxlen < index + 6 && cmd != 0x40){
+		if(rxlen < index + 6 || cmd != 0x40){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2069,7 +2045,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterTime:		// 读集中器时钟
-		if(rxlen < index + 7 && cmd != 0x43){
+		if(rxlen < index + 7 || cmd != 0x43){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2081,7 +2057,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetCenterTime:		// 设集中器时钟
-		if(rxlen < index + 1 && cmd != 0x44){
+		if(rxlen < index + 1 || cmd != 0x44){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2092,7 +2068,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsParam:		// 读GPRS参数
-		if(rxlen < index + 16 && cmd != 0x45){
+		if(rxlen < index + 16 || cmd != 0x45){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2131,7 +2107,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetGprsParam:		// 设GPRS参数
-		if(rxlen < index + 1 && cmd != 0x46){
+		if(rxlen < index + 1 || cmd != 0x46){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2142,7 +2118,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadGprsSignal:		// 读GPRS信号强度
-		if(rxlen < index + 4 && cmd != 0x47){
+		if(rxlen < index + 4 || cmd != 0x47){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2181,7 +2157,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_InitCenter:		// 集中器初始化
-		if(rxlen < index + 2 && cmd != 0x48){
+		if(rxlen < index + 2 || cmd != 0x48){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2196,7 +2172,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadCenterWorkMode:		// 读集中器工作模式
-		if(rxlen < index + 7 && cmd != 0x49){
+		if(rxlen < index + 7 || cmd != 0x49){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2227,7 +2203,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		档案操作：		-------------------------------------
 	case CenterCmd_ReadDocCount:		// 读档案数量
-		if(rxlen < index + 3 && cmd != 0x50){
+		if(rxlen < index + 3 || cmd != 0x50){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2240,7 +2216,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadDocInfo:			// 读档案信息
-		if(rxlen < index + 3 && cmd != 0x51){
+		if(rxlen < index + 3 || cmd != 0x51){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2267,7 +2243,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_AddDocInfo:			// 添加档案信息
-		if(rxlen < index + 1 && cmd != 0x52){
+		if(rxlen < index + 1 || cmd != 0x52){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2288,7 +2264,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_DeleteDocInfo:			// 删除档案信息
-		if(rxlen < index + 7 && cmd != 0x53){
+		if(rxlen < index + 7 || cmd != 0x53){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2306,7 +2282,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ModifyDocInfo:			// 修改档案信息
-		if(rxlen < index + 1 && cmd != 0x54){
+		if(rxlen < index + 1 || cmd != 0x54){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2318,7 +2294,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		路径设置：		-------------------------------------
 	case CenterCmd_ReadDefinedRoute:		// 读自定义路由
-		if(rxlen < index + 10 && cmd != 0x55){
+		if(rxlen < index + 10 || cmd != 0x55){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2360,7 +2336,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_SetDefinedRoute:			// 设自定义路由
-		if(rxlen < index + 7 && cmd != 0x56){
+		if(rxlen < index + 7 || cmd != 0x56){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2377,7 +2353,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		命令转发：		-------------------------------------
 	case CenterCmd_ReadFixedTimeData:			// 读定时定量数据
-		if(rxlen < index + 28 && cmd != 0x63){
+		if(rxlen < index + 28 || cmd != 0x63){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2439,7 +2415,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case CenterCmd_ReadFrozenData:			// 读冻结数据
-		if(rxlen < index + 7 && cmd != 0x64){
+		if(rxlen < index + 7 || cmd != 0x64){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2546,7 +2522,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	//--------------------------------------		UART表端模块测试：		---------------------
 	case WaterCmd_ReadModuleRunningParams:		// 读取模块运行参数
-		if(rxlen < index + 124 && cmd != 0x3A){
+		if(rxlen < index + 124 || cmd != 0x3A){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2675,7 +2651,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		break;
 
 	case WaterCmd_SetModuleRunningParams:		// 设置模块运行参数
-		if(rxlen < index + 1 && cmd != 0x3F){
+		if(rxlen < index + 1 || cmd != 0x3F){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2686,6 +2662,33 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		break;
 
+	case WaterCmd_NbReportRealTimeDataNow:		// NB立即上报实时数据
+		if(rxlen < index + 1 || cmd != 0x21){
+			break;
+		}
+		ret = CmdResult_Ok;
+		// 命令状态
+		switch (buf[index])
+		{
+		case 0xAA:
+			ptr = "操作成功";
+			ret = CmdResult_Ok;
+			break;
+
+		case 0xCE:
+			ptr = "NB正在上报";
+			ret = CmdResult_Ok;
+			break;
+
+		case 0xAB:
+		default:
+			ptr = "操作失败";
+			ret = CmdResult_Ok;
+			break;
+		}
+		dispIdx += sprintf(&dispBuf[dispIdx], "结果: %s\n", ptr);
+		index += 1;
+		break;
 
 	default:
 		ret = CmdResult_Ok;
@@ -2708,6 +2711,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
 		index += 2;
+	}
+
+	if(ret == CmdResult_Failed){
+		dispIdx += sprintf(&dispBuf[dispIdx], "Error: Bad Response!\n");
 	}
 
 	dispBuf[dispIdx] = '\0';

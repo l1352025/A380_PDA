@@ -9,34 +9,13 @@
 #include "string.h"
 #include "stdio.h"
 
-#include "Common.h"
-#include "Tool.h"
+#include "common.h"
+#include "common.c"
 #include "WaterMeter.h"
 #include "Upgrade.h"
 #include "Upgrade.c"
 #include "List.h"
 #include "List.c"
-
-// 备份缓冲区的参数位置索引 (共享区/独立区)
-// 位置索引前1byte为参数标识：0-未设置，1-已设置（独立区参数），其他-已设置（共享区参数）
-typedef enum{
-	ArgIdx_Shared		= 4,		// 参数共享缓冲区：如 (0x11 北京水表参数), 31 * 20 byte
-	ArgIdx_MtrValPalse	= 700,		// 表底数和脉冲系数 ： 20*2 byte
-	ArgIdx_OverCurr		= 744,		// 过流电流和超时时间: 20*2 byte
-	ArgIdx_IpPortMode	= 788,		// 工作模式+IP+Port: 20*6 byte
-	ArgIdx_FuncEnSts	= 912,		// 功能使能状态: 20*1 byte
-	ArgIdx_ModFreqs		= 936,		// 模块频点: 20*3 byte
-	ArgIdx_FixTimeVal	= 1000,		// 定时定量间隔：20*2 byte
-	ArgIdx_RunParas		= 1044		// 模块运行参数: 20*2 byte
-}ArgsIndex;
-
-// 参数标识： 保存在位置索引的前1字节：如 BackupBuf[ArgIdx_Shared -1] = 0x11
-typedef enum{
-	Param_None			= 0x00,		// 参数未设置
-	Param_Unique		= 0x01,		// 已设置独有参数
-	Param_BeijingWMtr 	= 0x11		// 已设置共享参数：北京水表参数
-	// others
-}BackUpParamFlag;
 
 
 // --------------------------------  水表模块通信  -----------------------------------------
@@ -51,9 +30,6 @@ void WaterCmdFunc_CommonCmd(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
-	#if UseBroadAddr
-	char strDstAddrBak[20];
-	#endif
 
 	_ClearScreen();
 
@@ -87,7 +63,7 @@ void WaterCmdFunc_CommonCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -99,13 +75,6 @@ void WaterCmdFunc_CommonCmd(void)
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
-
-				#if UseBroadAddr
-				if(menuItemNo == 1){ // 读用量时
-					memcpy(strDstAddrBak, StrDstAddr, 20);
-					sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
-				}
-				#endif
 
 				#if (AddrLen == 6)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
@@ -188,7 +157,6 @@ void WaterCmdFunc_CommonCmd(void)
 				}
 
 				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
-
 				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
 
 				Args.buf[i++] = 0x06;		// 命令字	06
@@ -260,8 +228,7 @@ void WaterCmdFunc_CommonCmd(void)
 					break;
 				}
 
-				if( strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 
-					&& (StrDstAddr[0] < '0' || StrDstAddr[0] > '9'))
+				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
 				{
 					sprintf(StrDstAddr, " 请输入");
 					currUi = 0;
@@ -283,12 +250,6 @@ void WaterCmdFunc_CommonCmd(void)
 			// 发送、接收、结果显示
 			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
-			#if UseBroadAddr
-			if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
-				memcpy(StrDstAddr, strDstAddrBak, 20);
-			}
-			#endif
-			
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
 				break;
@@ -297,12 +258,7 @@ void WaterCmdFunc_CommonCmd(void)
 				continue;
 			}
 		}
-		
-		#if UseBroadAddr
-		if(menuItemNo == 1 && StrDstAddr[0] == 'D'){
-			memcpy(StrDstAddr, strDstAddrBak, 20);
-		}
-		#endif
+	
 	}
 }
 
@@ -350,7 +306,7 @@ void WaterCmdFunc_TestCmd(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -601,7 +557,7 @@ void WaterCmdFunc_PrepaiedVal(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -852,12 +808,15 @@ void WaterCmdFunc_WorkingParams(void)
 	uint16 ackLen = 0, timeout, enableStatus, u16Tmp;
 	uint32 port, u32Tmp, u32Args[20];
 	uint8 ip[4], u8Tmp;
+	#if UseBroadAddr
+	char strDstAddrBak[20];
+	#endif
 
 	_ClearScreen();
 
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 20, NULL,		
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 21, NULL,		
 		"<<工作参数",
-		20,
+		21,
 		"1. 设置IP+端口+模式",
 		"2. 读取IP+端口+模式",
 		"3. 读取运营商编号",
@@ -877,7 +836,8 @@ void WaterCmdFunc_WorkingParams(void)
 		"17.读取北京水表参数",		
 		"18.设置北京水表参数",
 		"19.读取模块的频点",		
-		"20.设置模块的频点"
+		"20.设置模块的频点",
+		"21.NB上报实时数据"
 	);
 
 	while(1){
@@ -898,7 +858,7 @@ void WaterCmdFunc_WorkingParams(void)
 			_ClearScreen();
 
 			// 公共部分 :  界面显示
-			CurrCmdName = menuList.str[menuItemNo - 1];
+			sprintf(CurrCmdName, menuList.str[menuItemNo - 1]);
 			sprintf(TmpBuf, "<<%s",&CurrCmdName[3]);
 			_Printfxy(0, 0, TmpBuf, Color_White);
 			_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -909,6 +869,14 @@ void WaterCmdFunc_WorkingParams(void)
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
+
+				#if UseBroadAddr
+				if(menuItemNo == 4){ // 读取IMEI+ICCID 时，使用D4D4...地址
+					memcpy(strDstAddrBak, StrDstAddr, 20);
+					sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
+				}
+				#endif
+
 				#if (AddrLen == 6)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
@@ -1008,7 +976,7 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.buf[i++] = 0x0F;		// 命令字	0F
 				ackLen = 22;				// 应答长度 12	
 				// 数据域
-				Args.buf[i++] = 0;			// 脉冲系数	0-读取IMEI+ICCID，1-设置IMEI， 2-设置ICCID
+				Args.buf[i++] = 0;			// 命令选项	0-读取IMEI+ICCID，1-设置IMEI， 2-设置ICCID
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -2004,6 +1972,19 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
+			case 21:
+				CurrCmd = WaterCmd_NbReportRealTimeDataNow;		// NB立即上报实时数据
+				if(false == isUiFinish){
+					break;
+				}
+				i = 0;
+				Args.buf[i++] = 0x21;		// 命令字	21
+				ackLen = 1;					// 应答长度 1	
+				// 数据域
+				Args.buf[i++] = 0x01;		// 命令选项：1-上报实时数据
+				Args.lastItemLen = i - 1;
+				break;
+
 			default: 
 				break;
 			}
@@ -2021,7 +2002,12 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
-				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
+				if( 
+					#if UseBroadAddr
+					strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 && 
+					#endif
+					(StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
+				){
 					sprintf(StrDstAddr, " 请输入");
 					currUi = 0;
 					continue;
@@ -2042,7 +2028,12 @@ void WaterCmdFunc_WorkingParams(void)
 			// 发送、接收、结果显示
 			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
-			
+			#if UseBroadAddr
+			if(menuItemNo == 4 && StrDstAddr[0] == 'D'){
+				memcpy(StrDstAddr, strDstAddrBak, 20);
+			}
+			#endif
+
 			// 继续 / 返回
 			if (key == KEY_CANCEL){
 				break;
@@ -2052,6 +2043,12 @@ void WaterCmdFunc_WorkingParams(void)
 			}
 		}
 		
+		#if UseBroadAddr
+		if(menuItemNo == 4 && StrDstAddr[0] == 'D'){
+			memcpy(StrDstAddr, strDstAddrBak, 20);
+		}
+		#endif
+
 	}
 }
 
@@ -2095,8 +2092,8 @@ void WaterCmdFunc(void)
 }
 
 //-----------------------------------	主菜单	---------------------------
-// 读取用户用量
-void MainFuncReadRealTimeData(void)
+// 读IMEI+ICCID
+void MainFuncReadImeiAndCcid(void)
 {
 	uint8 key, tryCnt = 0, i;
 	UI_Item * pUi = &UiList.items[0];
@@ -2115,8 +2112,7 @@ void MainFuncReadRealTimeData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
-		sprintf(CurrCmdName, "<<读取用户用量");
+		sprintf(CurrCmdName, "<<读取IMEI+ICCID");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
@@ -2129,9 +2125,128 @@ void MainFuncReadRealTimeData(void)
 			uiRowIdx = 2;
 
 			#if UseBroadAddr
+			// 读取IMEI+ICCID 时，使用D4D4...地址
 			memcpy(strDstAddrBak, StrDstAddr, 20);
 			sprintf(StrDstAddr, "D4D4D4D4D4D4D4D4");	// 初始值为广播地址
 			#endif
+
+			#if (AddrLen == 6)
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
+			#else
+			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
+			#endif
+		}
+			
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_ReadImeiAndCcid;	// "读取IMEI+ICCID"
+
+		
+		switch(CurrCmd){
+		case WaterCmd_ReadImeiAndCcid:		// "读取IMEI+ICCID"
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x0F;		// 命令字	0F
+			ackLen = 22;				// 应答长度 12	
+			// 数据域
+			Args.buf[i++] = 0;			// 命令选项	0-读取IMEI+ICCID，1-设置IMEI， 2-设置ICCID
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+		
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if( 
+				#if UseBroadAddr
+				strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 && 
+				#endif
+				(StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
+			){
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 0;
+				continue;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#if (AddrLen == 6)
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+		#else
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
+		#endif
+
+		// 发送、接收、结果显示
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+	
+		#if UseBroadAddr
+		if(StrDstAddr[0] == 'D'){
+			memcpy(StrDstAddr, strDstAddrBak, 20);
+		}
+		#endif
+
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+	#if UseBroadAddr
+	if(StrDstAddr[0] == 'D'){
+		memcpy(StrDstAddr, strDstAddrBak, 20);
+	}
+	#endif
+}
+
+// 读取用户用量
+void MainFuncReadRealTimeData(void)
+{
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<读取用户用量");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
 
 			#if (AddrLen == 6)
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
@@ -2175,8 +2290,7 @@ void MainFuncReadRealTimeData(void)
 				break;
 			}
 
-			if( strcmp(StrDstAddr, "D4D4D4D4D4D4D4D4") != 0 
-				&& (StrDstAddr[0] < '0' || StrDstAddr[0] > '9'))
+			if( StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
 			{
 				sprintf(StrDstAddr, " 请输入");
 				currUi = 0;
@@ -2197,13 +2311,7 @@ void MainFuncReadRealTimeData(void)
 
 		// 发送、接收、结果显示
 		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-		
-		#if UseBroadAddr
-		if(StrDstAddr[0] == 'D'){
-			memcpy(StrDstAddr, strDstAddrBak, 20);
-		}
-		#endif
-
+	
 		// 继续 / 返回
 		if (key == KEY_CANCEL){
 			break;
@@ -2212,12 +2320,6 @@ void MainFuncReadRealTimeData(void)
 			continue;
 		}
 	}
-
-	#if UseBroadAddr
-	if(StrDstAddr[0] == 'D'){
-		memcpy(StrDstAddr, strDstAddrBak, 20);
-	}
-	#endif
 }
 
 // 读取冻结数据
@@ -2237,7 +2339,6 @@ void MainFuncReadFrozenData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取冻结数据");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2355,7 +2456,6 @@ void MainFuncReadMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取表端时钟");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2454,7 +2554,6 @@ void MainFuncSetMeterTime(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<设置表端时钟");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2584,7 +2683,6 @@ void MainFuncClearException(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<清异常");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2686,7 +2784,6 @@ void MainFuncOpenValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<开阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2789,7 +2886,6 @@ void MainFuncCloseValve(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<关阀");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -2892,7 +2988,6 @@ void MainFuncReadNbJoinNetworkInfo(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		CurrCmdName = &ArgBuf[0];
 		sprintf(CurrCmdName, "<<读取NB入网信息");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
@@ -3002,15 +3097,16 @@ int main(void)
 
 	MainMenu.left=0;
 	MainMenu.top=0;
-	MainMenu.no=7;
+	MainMenu.no=8;
 	MainMenu.title =  "     桑锐手持机    ";
-	MainMenu.str[0] = " 读取用户用量 ";
-	MainMenu.str[1] = " 读取冻结数据 ";
-	MainMenu.str[2] = " 开阀 ";
-	MainMenu.str[3] = " 关阀 ";
-    MainMenu.str[4] = " 清异常 ";
-	MainMenu.str[5] = " 读取NB入网信息 ";
-	MainMenu.str[6] = " 工程调试 ";
+	MainMenu.str[0] = " 读取IMEI+ICCID";
+	MainMenu.str[1] = " 读取用户用量 ";
+	MainMenu.str[2] = " 读取冻结数据 ";
+	MainMenu.str[3] = " 开阀 ";
+	MainMenu.str[4] = " 关阀 ";
+    MainMenu.str[5] = " 清异常 ";
+	MainMenu.str[6] = " 读取NB入网信息 ";
+	MainMenu.str[7] = " 工程调试 ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -3018,13 +3114,15 @@ int main(void)
 	MainMenu.key[4] = "5";
 	MainMenu.key[5] = "6";
 	MainMenu.key[6] = "7";
-	MainMenu.Function[0] = MainFuncReadRealTimeData;
-	MainMenu.Function[1] = MainFuncReadFrozenData;
-	MainMenu.Function[2] = MainFuncOpenValve;
-	MainMenu.Function[3] = MainFuncCloseValve;
-    MainMenu.Function[4] = MainFuncClearException;
-	MainMenu.Function[5] = MainFuncReadNbJoinNetworkInfo;
-	MainMenu.Function[6] = MainFuncEngineerDebuging;	// 工程调试 --> 即原来的 表端操作
+	MainMenu.key[7] = "8";
+	MainMenu.Function[0] = MainFuncReadImeiAndCcid;
+	MainMenu.Function[1] = MainFuncReadRealTimeData;
+	MainMenu.Function[2] = MainFuncReadFrozenData;
+	MainMenu.Function[3] = MainFuncOpenValve;
+	MainMenu.Function[4] = MainFuncCloseValve;
+    MainMenu.Function[5] = MainFuncClearException;
+	MainMenu.Function[6] = MainFuncReadNbJoinNetworkInfo;
+	MainMenu.Function[7] = MainFuncEngineerDebuging;	// 工程调试 --> 即原来的 表端操作
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	

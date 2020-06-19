@@ -2,14 +2,32 @@
 #include "string.h"
 #include "dbf.h"
 #include "stdio.h"
+
+
 //A350 ÓÃµÄ
 //uint8 Screenbuff[5000];
 //A3480
 
-#include "common.h"
+//#include "common.h"
 
+#include "stdarg.h"
+
+typedef unsigned char bool;
+#define true 1
+#define false 0
+
+typedef enum{
+    Color_White = 0,
+    Color_Black = 1
+}GUI_COLOR;
+
+#define LogFileName "log.txt"
+#define LogFileSize 1024 * 4
+#define Log_On 1
+unsigned char LogBuf[LogFileSize];
 
 char Screenbuff[160 * (160 / 3 + 1) * 2];
+
 /*
 extern int8   _Fopen(char *filename, char *mode);
 extern void   _Fclose(int hdl);
@@ -33,6 +51,48 @@ extern  char *  _GetFileList(char * ,char *,char *);
 extern uint8  _MessageBox(_GuiStrStru *stru);
 */
 
+
+void LogWrite(void *buf, uint32 len)
+{
+#if Log_On
+	int fp;
+
+	if(_Access(LogFileName, 0) < 0){
+		fp = _Fopen(LogFileName, "W");
+	}else{
+		fp = _Fopen(LogFileName, "RW");
+	}
+	
+	_Lseek(fp, 0, 2);
+	_Fwrite(buf, len, fp);
+	_Fclose(fp);
+#endif
+}
+
+void LogPrint(const char * format, ...)
+{
+#if Log_On
+	uint32 len = 0; 
+	va_list ap;
+	uint8 *buf;
+	char time[24];
+
+	// buf = (uint8 *) _malloc(2048);	// 1.Ê¹ÓÃ¶¯Ì¬ÄÚ´æÊ±
+	buf = &LogBuf[0];					// 2.¾²Ì¬ÄÚ´æ
+
+	_GetDateTime(time, '-', ':');
+	len += sprintf(&buf[len], "[%s] ", time);
+	va_start(ap, format);
+	len += vsprintf(&buf[len], format, ap);
+	buf[len++] = '\n';
+	va_end(ap);
+	
+	LogWrite(buf, len);
+
+	//_free(buf);						// Ê¹ÓÃ¶¯Ì¬ÄÚ´æÊ±
+#endif
+}
+
 void FileTestError(char *Content)
 {
 	_GuiStrStru str;
@@ -41,11 +101,6 @@ void FileTestError(char *Content)
 	str.itype = 0;
 	_MessageBox(&str);
 }
-
-typedef enum{
-    Color_White = 0,
-    Color_Black = 1
-}GUI_COLOR;
 
 /*
 * Ãè  Êö£ºÏÔÊ¾ÌáÊ¾ÏûÏ¢¿ò£¬µÈ´ý n msºó·µ»Ø
@@ -136,23 +191,10 @@ void FileDeleteFunc(void)
 {
 	char *fileName;
     char tmp[512];
-    int8 fp1, fp2;
+    int8 fp;
 
-    _MkDir("test");
-    fp1 = _Fopen("test/1.txt", "W");
-    fp2 = _Fopen("test/2.txt", "W");
-    _Fclose(fp1);
-	_Fclose(fp2);
+	fp = _Fopen("deleted.txt", "W");
 
-    _Printfxy(0, 0, "¿ªÊ¼ÁÐÄ¿Â¼²âÊÔ..£¿", 0);
-    _ReadKey();
-
-    ListDir("test/");
-
-    ListDir("");
-
-    _Printfxy(0, 0, "¿ªÊ¼É¾³ýÎÄ¼þ²âÊÔ..£¿", 0);
-    _ReadKey();
 
     while(1){
 
@@ -164,17 +206,172 @@ void FileDeleteFunc(void)
             break;
         }
 
-        sprintf(tmp, "É¾³ýÎÄ¼þ£º%s", fileName);
-        ShowMsg(16, 3*16, tmp, 2000);
-
         if(_Remove(fileName) == -1){
-
+			sprintf(tmp, "É¾³ýÊ§°Ü£º%s", fileName);
+			continue;
         }
+		
+		_Fwrite(fileName, strlen(fileName), fp);
+		_Fwrite("\r\n", 2, fp);
+
+		sprintf(tmp, "ÒÑÉ¾³ý£º%s", fileName);
+        ShowMsg(16, 3*16, tmp, 1500);
     }
 
-    _Remove("test/1.txt");
-    _Remove("test/2.txt");
-    _RmDir("test");
+	_Fclose(fp);
+}
+
+void DeleteAll(const char * dirname)
+{
+	_dir *d;
+	_dirent *de;
+	_stat s;
+	char str[256];
+	char fileName[256];
+	char dname[256];
+	char *ptr;
+	char *logBuf = &LogBuf[0];
+	int8 dirLevel = 0;
+	bool isDir = false;
+	int len = 0;
+	int fp;
+	int8 ret;
+
+	_ClearScreen();
+
+	strcpy(dname, dirname);
+
+	while(1)
+	{
+		d = _OpenDir(dname);
+
+		ptr = d != 0 ? "³É¹¦" : "Ê§°Ü";
+		len += sprintf(&logBuf[len], "½øÈëÄ¿Â¼£º%s    %s \r\n", dname, ptr);
+
+		while ( d != 0 && ((de = _ReadDir(d)) != NULL))
+		{
+			_ClearScreen();
+
+			sprintf(fileName, "%s/%s", dname, de->d_name);
+
+			if(fileName[0] == '/' && fileName[1] == '/'){
+				sprintf(fileName, "%s", &fileName[1]);
+			}
+			//if(strcmp("/DEL.HEX", fileName) == 0) continue;
+			if(strncmp("/lost+", fileName, 6) == 0) continue;
+
+			_GetFileAtt(fileName, &s);
+
+			_Printfxy(0, 0, de->d_name, 0);
+			sprintf(str, "³¤¶È:%d ", s.yst_size);
+			_Printfxy(0, 16, str, 0);
+
+			switch (s.yst_mode & S_IFMT)
+			{
+			case S_IFREG:
+				_Printfxy(0, 32, "ÊôÐÔ£ºÎÄ¼þ", 0);
+				isDir = false;
+				break;
+			case S_IFDIR:
+				_Printfxy(0, 32, "ÊôÐÔ£ºÄ¿Â¼", 0);
+				isDir = true;
+				break;
+
+			default:
+				_Printfxy(0, 32, "unknown", 0);
+				isDir = false;
+				break;
+			}
+
+			if(isDir) break;
+
+			_CloseDir(d);
+			ret = _Remove(fileName);
+
+			ptr = ret == 1 ? "³É¹¦" : "Ê§°Ü";
+			sprintf(str, "É¾³ýÎÄ¼þ£º%s", fileName);
+			ShowMsg(16, 4*16, str, 1000);
+			len += sprintf(&logBuf[len], "É¾³ýÎÄ¼þ: %s    %s\r\n", fileName, ptr);
+
+			d = _OpenDir(dname);
+		}
+
+		// close curr dir
+		_CloseDir(d);
+
+		_ClearScreen();
+
+		if(isDir) {
+			// go to sub dir
+			dirLevel++;
+			sprintf(dname, "%s", fileName);
+
+			isDir = false;
+		}
+		else{
+			// delete curr dir
+			ret = _RmDir(dname);
+
+			ptr = ret == 0 ? "³É¹¦" : "Ê§°Ü";
+			sprintf(str, "É¾³ýÄ¿Â¼£º%s", dname);
+			ShowMsg(16, 4*16, str, 1500);
+			len += sprintf(&logBuf[len], "É¾³ýÄ¿Â¼: %s    %s \r\n", dname, ptr);
+			
+
+			// back to parent dir 
+			dirLevel--;
+			if(dirLevel < 0) break;
+
+			ptr = strrchr(dname, '/');
+			if(!ptr){
+				dname[0] = '/';
+				dname[1] = '\0';
+			}
+			else{
+				*ptr = '\0';
+			}
+
+			if(dname[0] == '\0'){
+				dname[0] = '/';
+				dname[1] = '\0';
+			}
+		}
+	}
+
+
+	if(_Access("DEL.log", 0) < 0){
+		fp = _Fopen("DEL.log", "W");
+	}else{
+		fp = _Fopen("DEL.log", "RW");
+	}
+	
+	_Lseek(fp, 0, 2);
+	_Fwrite(logBuf, len, fp);
+	_Fclose(fp);
+
+	_ClearScreen();
+	_Printfxy(0, 16*4, "    É¾³ýÍê³É£¡ ", 0);
+	_Printfxy(0, 16*9, "<< °´ÈÎÒâ¼ü·µ»Ø", 0);
+
+    _ReadKey();
+}
+
+void FileDeleteAllFunc(void)
+{
+	uint8 key;
+
+	_ClearScreen();
+
+	_Printfxy(0, 16*3, "     È·¶¨ÒªÉ¾³ý    ", 0);
+	_Printfxy(0, 16*4, "  ËùÓÐÎÄ¼þºÍÄ¿Â¼Âð? ", 0);
+
+	_Printfxy(0, 16*6, "½«Éú³ÉÈÕÖ¾£ºDEL.LOG ", 0);
+
+	key = _ReadKey();
+
+	if(key != KEY_ENTER) return;
+
+	DeleteAll("/");
 }
 
 void File(void)
@@ -206,12 +403,12 @@ void File(void)
 		return;
 	}
 
-	if (_MkDir("test/sbutest") == -1)
-	{
+	//if (_MkDir("test/subtest") == -1)
+	//{
+	//	FileTestError("build subtest folder error!");
+	//	return;
+	//}
 
-		FileTestError("build sbutest folder error!");
-		return;
-	}
 	//ÎÄ¼þ´ò¿ª
 	hdl = _Fopen("test/1.tmp", "W");
 	if (hdl == -1)
@@ -257,8 +454,8 @@ void File(void)
 	}
 	else
 
-		//ÎÄ¼þÉ¾³ý/ÖØÃüÃû
-		_Printfxy(0, 4 * 16, "remove/rename/access", 0);
+	//ÎÄ¼þÉ¾³ý/ÖØÃüÃû
+	_Printfxy(0, 4 * 16, "remove/rename/access", 0);
 
 	_Remove("test/1.tmp");
 
@@ -359,6 +556,9 @@ int DispOneFiled(int row, int col, char *FieldTile, int8 fieldNum) //ÏÔÊ¾Ò»¸öÌõ¼
 
 	return (_strlen(FieldTile) + _strlen(Field) + 2);
 }
+
+#define TEST_ID 0
+#define TEST_Name 1
 
 void dbf(void)
 {
@@ -1364,7 +1564,8 @@ int main(void)
 	MainMenu.str[4] = " ÏµÍ³Àà ";
 	MainMenu.str[5] = " ¶Ë¿ÚÀà ";
 	MainMenu.str[6] = " Òº¾§Àà ";
-	MainMenu.str[7] = " RFIC ";
+	//MainMenu.str[7] = " RFIC ";
+	MainMenu.str[7] = " É¾³ýËùÓÐÎÄ¼þ ";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -1380,7 +1581,8 @@ int main(void)
 	MainMenu.Function[4] = GetSys;
 	MainMenu.Function[5] = COMTEST;
 	MainMenu.Function[6] = dispbase;
-	MainMenu.Function[7] = RFIC;
+	//MainMenu.Function[7] = RFIC;
+	MainMenu.Function[7] = FileDeleteAllFunc;
 	MainMenu.FunctionEx = 0;
 
 	_Menu(&MainMenu);

@@ -3,7 +3,40 @@
 
 #include "HJLIB.H"
 #include "stdarg.h"
-#include "Common.h"
+#include "string.h"
+#include "common.h"
+
+// --------------------------------  全局变量  -----------------------------------------
+//char Screenbuff[160*(160/3+1)*2]; 
+#if Upgrd_FileBuf_Enable
+uint8 DispBuf[128 * 1024];					// 4k ~ 128K
+#else
+uint8 DispBuf[14 * 1024];					// 4k ~ 14K
+#endif
+uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
+uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
+uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
+uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
+#if Upgrd_FileBuf_Enable
+uint8 * const FileBuf = &DispBuf[14336];	// 116k 
+#endif
+uint8 TxBuf[1024];
+uint8 RxBuf[1024];
+uint32 RxLen, TxLen;
+const uint8 LocalAddr[10] = { 0x20, 0x19, 0x00, 0x00, 0x20, 0x19, 0x00, 0x00, 0x00, 0x00};	// 本机地址 2019000020190000，10/12/16字符
+const uint8 BroadAddr[10] = { 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0x00, 0x00};	// 广播地址 D4D4D4D4D4D4D4D4，10/12/16字符
+uint8 DstAddr[10];
+uint8 VerInfo[42];
+uint16 CurrCmd;
+char CurrCmdName[64];
+ParamsBuf Addrs;		
+ParamsBuf Args;
+char StrBuf[TXTBUF_MAX][TXTBUF_LEN];    // extend input buffer
+char StrDstAddr[TXTBUF_LEN];
+char StrRelayAddr[RELAY_MAX][TXTBUF_LEN];
+UI_ItemList UiList;
+bool LcdOpened;
+bool IsNoAckCmd;
 
 //---------------------------------  通用方法  -------------------------------------
 //
@@ -199,7 +232,7 @@ static uint8 GetInputNumStr(UI_Item *uiItem)
 	memcpy(keyBuf, uiItem->text, TXTBUF_LEN);
 	_Printfxy(x, y, keyBuf, Color_White);
 	
-	if((uiItem->ui.txtbox.dataLen == 12 || uiItem->ui.txtbox.dataLen == 16)
+	if((uiItem->ui.txtbox.dataLen == AddrLen * 2)
 		&&(uiItem->text[0] >= '0' && uiItem->text[0] <= '9')){
 		idx = strlen(uiItem->text);
 		idx = (idx > 0 ? idx - 1 : idx);
@@ -411,7 +444,7 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, u
 *		  strCnt	- 字符串数量
 * 返回值：void
 */
-void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint32 strCnt)
+void ListBoxCreateEx(ListBoxEx *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint32 strCnt)
 {
 	uint16 i;
 	char *str = (char *)strs;
@@ -434,11 +467,144 @@ void ListBoxCreateEx(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow,
 }
 
 /*
-* 描  述：获取列表视图当前选项
+* 描  述：显示列表并获取当前选项
 * 参  数：lbx	- 列表视图结构指针
 * 返回值：uint8  - 界面退出时的按键值：确认键，取消键
 */
 uint8 ShowListBox(ListBox *lbx)
+{
+	uint16 dstIndex, srcIndex, currIndex;
+	uint8 key, i;
+	int16 x1, y1, recX, recY, recX1, recY1, fillX, fillY, fillX1, fillY1;
+	uint8 **lines = lbx->str;
+	uint16 fillMax = (lbx->strCnt >= lbx->totalCnt ? lbx->totalCnt : (lbx->strCnt - lbx->strCnt % lbx->maxRow));
+	uint16 fillCnt = 0;
+	char title[21], temp[15];
+
+	lbx->currIdx = (lbx->currIdx >= lbx->totalCnt ? 0 : lbx->currIdx);
+	lbx->strCnt = (lbx->totalCnt < fillMax ? lbx->totalCnt : fillMax);
+	lbx->strIdx = (lbx->currIdx % fillMax);
+	lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->maxRow);
+
+
+	recX = lbx->x - 4;
+	recY = lbx->y - 4;
+	x1 = lbx->x + lbx->maxCol * 8;
+	y1 = lbx->y + (lbx->maxRow + 2) * 16;
+	recX1 = x1 + 4;
+	recY1 = y1 - 4;
+	fillX = (recX <= 0 ? 0 : recX);
+	fillY = (recY <= 0 ? 0 : recY);
+	fillX1 = (recX1 >= 160 ? 160 : recX1);
+	fillY1 = recY1 + 4;
+	
+	// 上/下滚动显示   ▲ ▼  △ ▽
+	while(1){
+	
+		_GUIRectangleFill(fillX, fillY, fillX1, fillY1, Color_White);	// 清空区域
+		_GUIRectangle(recX, recY, recX1, recY1, Color_Black);			// 绘制方框
+
+		// 显示标题：lbx->title  n/m
+		//-------------------------------------------------
+		currIndex = (lbx->totalCnt == 0 ? 0 : lbx->currIdx + 1);
+		sprintf(temp, "%d/%d", currIndex, lbx->totalCnt);
+		StringPadLeft(temp, (lbx->maxCol - strlen(lbx->title)), ' ');
+		sprintf(title, "%s%s", lbx->title, temp);	
+		_Printfxy(lbx->x, lbx->y, title, Color_White);
+		_GUIHLine(lbx->x, lbx->y + 16 + 4, x1, Color_Black);	
+		//--------------------------------------------▼---
+		if(lbx->totalCnt == 0){
+			_Printfxy(lbx->x, lbx->y + 16 + 8, "列表为空！", Color_White);
+		}
+		else{
+			for(i = 0; i < lbx->maxRow && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
+				_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+			}
+			_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
+		}
+		//--------------------------------------------▲---
+		_GUIHLine(lbx->x, recY1, x1, Color_Black);	
+
+		key = _ReadKey();
+
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+
+		if(key == KEY_UP && lbx->totalCnt > 0){
+			lbx->strIdx--;
+			lbx->currIdx--;
+		}
+		else if(key == KEY_DOWN && lbx->totalCnt > 0){
+			lbx->strIdx++;
+			lbx->currIdx++;
+		}
+		else if(key == KEY_LEFT && lbx->totalCnt > 0){
+			lbx->strIdx -= lbx->maxRow;
+			lbx->currIdx -= lbx->maxRow;
+		}
+		else if(key == KEY_RIGHT && lbx->totalCnt > 0){
+			lbx->strIdx += lbx->maxRow;
+			lbx->currIdx += lbx->maxRow;
+		}
+		else{
+			continue;
+		}
+
+		// record index check
+		lbx->isCircle = 1;
+		if(lbx->currIdx < 0){
+			lbx->currIdx = (lbx->isCircle ? lbx->totalCnt - 1 : 0);
+		}
+		else if(lbx->currIdx > lbx->totalCnt - 1){
+			lbx->currIdx = (lbx->isCircle ? 0 : lbx->totalCnt - 1);
+		}
+
+		// disp index check 	and 	re-fill strs
+		if(lbx->strIdx < 0){
+
+			if(lbx->totalCnt > fillMax){
+				fillCnt = (lbx->currIdx % fillMax) + 1;
+				srcIndex = lbx->currIdx + 1 - fillCnt;
+				dstIndex = 0;
+				lbx->strCnt = fillCnt;
+			}
+			lbx->strIdx = lbx->strCnt - 1;
+			
+			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
+				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
+				fillCnt = 0;
+			}
+		}
+		else if(lbx->strIdx > lbx->strCnt - 1){
+
+			if(lbx->totalCnt > fillMax){
+				fillCnt = (lbx->totalCnt - lbx->currIdx >= fillMax ? fillMax : (lbx->totalCnt - lbx->currIdx));
+				srcIndex = lbx->currIdx;
+				dstIndex = 0;
+				lbx->strCnt = fillCnt;
+			}
+			lbx->strIdx = 0;
+			
+			if(lbx->fillStrsFunc != NULL && fillCnt > 0){
+				(*lbx->fillStrsFunc)(lbx->str, dstIndex, srcIndex, fillCnt);
+				fillCnt = 0;
+			}
+		}
+
+		lbx->dispStartIdx = lbx->strIdx - (lbx->strIdx % lbx->maxRow);
+
+	}
+
+	return key;
+}
+
+/*
+* 描  述：显示列表并获取当前选项 - 扩展
+* 参  数：lbx	- 列表视图结构指针
+* 返回值：uint8  - 界面退出时的按键值：确认键，取消键
+*/
+uint8 ShowListBoxEx(ListBoxEx *lbx)
 {
 	uint16 dstIndex, srcIndex, currIndex;
 	uint8 key, i;
@@ -1253,6 +1419,35 @@ bool StringToDecimal(const char *doubleStr, uint8 decCnt, bool *isNegative, uint
 }
 
 /*
+* 描  述：double字符串 设置小数位数
+* 参  数：doubleStr - double字符串地址，注意该缓冲区长度必须可容纳将设置的小数位数
+*		  fracCnt - 小数位数
+* 返回值：void
+*/
+void DoubleStrSetFracCnt(const char * doubleStr, uint8 fractionCnt)
+{
+	char *p = doubleStr;
+
+	while(*p++){
+		if(*p == '.'){
+			if(fractionCnt == 0){
+				*p = '\0';
+				break;
+			}
+			p++;
+			while(fractionCnt--){
+				if(*p == '\0'){
+					*p = '0';
+				}
+				p++;
+			}
+			*p = '\0';
+			break;
+		}
+	}
+}
+
+/*
 * 描  述：字符串头部裁剪
 * 参  数：srcStr - 字符串起始地址
 *		  trimChar - 裁剪的字符
@@ -1313,6 +1508,43 @@ int StringTrimEnd(const char * srcStr, char trimChar)
 	pr[i + 1] = 0x00;
 
 	return (srcStrLen - i);
+}
+
+/**
+ * 描  述：从字符串尾部复制指定长度的字符到新字符串，并且把头部是不完整的GBK字符裁剪掉
+ * 参  数：dstStr - 目的字符串,  srcStr - 源字符串,  len - 要复制字符串长度
+ * 返回值：int 实际复制的字符长度
+*/
+int StringCopyFromTail(char * dstStr, const char * srcStr, uint8 len)
+{
+	int retLen = strlen(srcStr);
+	uint8 *pw = dstStr;
+	uint8 *pr;
+	uint8 cnt = 0;
+
+	if(retLen < len){
+		strcpy(dstStr, srcStr);
+	}
+	else{
+		pr = &srcStr[retLen - len];
+		while(cnt < len){
+			if(pr[cnt] < 0x80){
+				break;
+			}
+			cnt++;
+		}
+		if(cnt % 2 == 1){
+			pr++;
+			len--;
+		}
+
+		while(len--){
+			*pw++ = *pr++;
+		}
+		*pw = '\0';
+	}
+
+	return retLen;
 }
 
 /*
@@ -1903,7 +2135,7 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 					#endif
 					cmdResult = FrameExplain(RxBuf, RxLen, LocalAddr, cmdid, ackLen, DispBuf);
 					RxLen = 0;
-					if(cmdResult == CmdResult_Ok){
+					if(cmdResult == CmdResult_Ok || cmdResult == CmdResult_Failed){
 						break;
 					}
 				}
@@ -1914,7 +2146,8 @@ CmdResult CommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint
 			cmdResult = CmdResult_Ok;
 		}
 		else if(cmdResult == CmdResult_Timeout || cmdResult == CmdResult_CrcError){		
-			// 超时后的1包数据	
+			// 超时后的1包数据
+			RxLen += _GetComStr(&RxBuf[RxLen], 80, 8);	
 			#if LOG_ON && LogTxRx
 				LogPrintBytes("Rx: ", RxBuf, RxLen);
 			#endif
