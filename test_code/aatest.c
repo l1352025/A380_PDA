@@ -1,4 +1,4 @@
-// #include <stdio.h>
+ #include <stdio.h>
 
 // int main()
 // {
@@ -18,8 +18,6 @@
 //     return 0;
 // }
 
-#include <stdio.h>
-
 
 void foo(int *a,int *b){
 	printf("*a=%d,*b=%d",*a,*b);
@@ -29,16 +27,22 @@ void foo2(int c){
 	printf(" c=%d",c);
 }
 
-void main() {
+// void main() {
+// 	int x=1,y=2, z=3;
+// 	void *p = NULL;
 	
-     	
-	int x=1,y=2, z=3;
-	void *p = NULL;
-	
-    p = foo;
-    ((void (*)(void*, void*))p)(&x,&y);
+//     p = foo;
+//     ((void (*)(void*, void*))p)(&x,&y);
 
-    p = foo2;
-    ((void (*)(int c))p)(z);
-	
+//     p = foo2;
+//     ((void (*)(int c))p)(z);
+// }
+
+
+void main(){
+    char chars[10];
+
+    sprintf(chars, "12345678987");
+    printf("chars[10] size: %d \n", sizeof(chars));
+    printf("chars[10] str : %s \n", chars);
 }
