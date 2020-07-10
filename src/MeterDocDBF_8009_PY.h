@@ -1,3 +1,6 @@
+/**
+ * 	DBF数据库文件操作 - 8009濮阳定制版 
+*/
 #ifndef MeterDocDBF_8009_PY_H
 #define MeterDocDBF_8009_PY_H
 
@@ -5,17 +8,13 @@
 
 //----------------------	宏定义		------------------------
 #define	MeterDocDB			"MRDATA.DBF"	// 表档案数据库文件名
-
-#define Invalid_dbIdx		0				// 无效索引, 数据库记录序号从1开始
+#define Use_DBF
 
 #define Sect_Max			50				// 最大抄表册数量
-#define Meter_Max			ListItemEx_Max	// 单个抄表册-最大表数
-#define	Size_ListStr		21				// 列表字符串长度
-#define	Size_DbMaxStr		255				// 数据库字段最大长度
+#define Meter_Max			1600			// 单个抄表册-最大表数
 
-
-//----------------------	数据库信息
-// MRDATA.DBF 表字段索引
+//----------------------	数据库信息 - MRDATA.DBF 表字段
+// 字段索引
 typedef enum _db_field_index{
 	Idx_MtrReadId = 0,	// 抄表数据标识	"MR_ID"		char(16) 
 	Idx_AppNum,			// app请求编号	"APP_NO"	char(16) 
@@ -38,9 +37,9 @@ typedef enum _db_field_index{
 	Idx_LastReadVal,	// 上次读数		"LAST_READ"		number(15,6)
 	Idx_LastGasVol,		// 上次气量		"LAST_MR_GQ"	number(15,6)
 	Idx_AvgGasVol,		// 平均气量		"AVG_MR_GQ"		number(15,6)
-	Idx_MtrReadStatus,		// 抄表状态		"MR_STATUS"		char(8)			// set
-	Idx_MtrReadType,		// 抄表性质		"MR_TYPE"		char(8)			// set
-	Idx_MtrReadDate,		// 实际抄表日期	"THIS_YMD"		char(8)			// set
+	Idx_MeterReadStatus,	// 抄表状态		"MR_STATUS"		char(8)			// set
+	Idx_MeterReadType,		// 抄表性质		"MR_TYPE"		char(8)			// set
+	Idx_MeterReadDate,		// 实际抄表日期	"THIS_YMD"		char(8)			// set
 	Idx_CurrReadVal,		// 本次读数		"THIS_READ"		number(15,6)	// set
 	Idx_CurrGasVol,			// 本次气量		"THIS_GQ"		number(15,6)	// set
 	Idx_MrExcepType,		// 读数异常类型	"EXCP_TYPE"		char(8)			// set
@@ -63,7 +62,7 @@ typedef enum _db_field_index{
 	Idx_Invalid	= 0xFF	// 无效字段	
 }DB_Field_Index;
 
-// MRDATA.DBF 表字段大小
+// 字段大小
 #define Size_MtrReadId		17		// 抄表数据标识	"MR_ID"		char(16) 
 #define Size_AppNum			17		// app请求编号	"APP_NO"	char(16) 
 #define Size_SectNum		17		// 抄表册编号	"SECT_NO"	char(16) 
@@ -80,23 +79,23 @@ typedef enum _db_field_index{
 #define Size_MeterType		9		// 燃气表类型	"APPLY_TYPE"	char(8)
 #define Size_MeterNum		33		// 出厂编号		"FAC_NUMBER"	char(32)
 #define Size_PriceCode		17		// 气价码		"PRC_CODE"		char(16)
-#define Size_TempFactor		23		// 温度补偿系数	"TP_FACTOR"		number(15,6)
+#define Size_TempFactor		16		// 温度补偿系数	"TP_FACTOR"		number(15,6)
 #define Size_LastMrDate		9		// 上次抄表日期	"LAST_DATE"		char(8)
-#define Size_LastReadVal	23		// 上次读数		"LAST_READ"		number(15,6)
-#define Size_LastGasVol		23		// 上次气量		"LAST_MR_GQ"	number(15,6)
-#define Size_AvgGasVol		23		// 平均气量		"AVG_MR_GQ"		number(15,6)
-#define Size_MtrReadStatus		9	// 抄表状态		"MR_STATUS"		char(8)			// set
-#define Size_MtrReadType		9	// 抄表性质		"MR_TYPE"		char(8)			// set
-#define Size_MtrReadDate		9	// 实际抄表日期	"THIS_YMD"		char(8)			// set
-#define Size_CurrReadVal		23	// 本次读数		"THIS_READ"		number(15,6)	// set
-#define Size_CurrGasVol			23	// 本次气量		"THIS_GQ"		number(15,6)	// set
+#define Size_LastReadVal	16		// 上次读数		"LAST_READ"		number(15,6)
+#define Size_LastGasVol		16		// 上次气量		"LAST_MR_GQ"	number(15,6)
+#define Size_AvgGasVol		16		// 平均气量		"AVG_MR_GQ"		number(15,6)
+#define Size_MeterReadStatus	9	// 抄表状态		"MR_STATUS"		char(8)			// set
+#define Size_MeterReadType		9	// 抄表性质		"MR_TYPE"		char(8)			// set
+#define Size_MeterReadDate		9	// 实际抄表日期	"THIS_YMD"		char(8)			// set
+#define Size_CurrReadVal		16	// 本次读数		"THIS_READ"		number(15,6)	// set
+#define Size_CurrGasVol			16	// 本次气量		"THIS_GQ"		number(15,6)	// set
 #define Size_MrExcepType		9	// 读数异常类型	"EXCP_TYPE"		char(8)			// set
-#define Size_LastElecReadVal	23	// 上次电子读数	"LEM_READ"		number(15,6)
-#define Size_CurrElecReadVal	23	// 本次电子读数	"EM_READ"		number(15,6)	// set	
-#define Size_LastRemainGasVol	23	// 上次剩余气量	"LR_GAS"		number(15,6)
-#define Size_CurrRemainGasVol	23	// 本次剩余气量	"REMAIN_GAS"	number(15,6)	// set
-#define Size_MeterDigit		16		// 表位数		"MR_DIGIT"	number(12,2)
-#define Size_UserBalance	23		// 用户余额		"BLA"		number(15,6)
+#define Size_LastElecReadVal	16	// 上次电子读数	"LEM_READ"		number(15,6)
+#define Size_CurrElecReadVal	16	// 本次电子读数	"EM_READ"		number(15,6)	// set	
+#define Size_LastRemainGasVol	16	// 上次剩余气量	"LR_GAS"		number(15,6)
+#define Size_CurrRemainGasVol	16	// 本次剩余气量	"REMAIN_GAS"	number(15,6)	// set
+#define Size_MeterDigit		13		// 表位数		"MR_DIGIT"	number(12,2)
+#define Size_UserBalance	16		// 用户余额		"BLA"		number(15,6)
 #define Size_RemarkA		33		// 扩展字段A	"REMARK_A"		char(32)
 #define Size_RemarkA_V		129		// 扩展字段A_V	"REMARK_A_V"	char(128)
 #define Size_RemarkB		33		// 扩展字段B	"REMARK_B"		char(32)
@@ -134,8 +133,9 @@ typedef struct{
 	uint16 	selectField;	// 要显示的字段：表号/户号/地址/户名/地址
 	char 	*qrySectNum;			// 抄表册编号：空值表示所有
 	char 	*qryMeterReadStatus;	// 抄表状态
+	char	*qryKeyWord;			// 查询的关键字
 	char 	sectNum[Size_SectNum];			// 抄表册编号
-	//char 	sectName[Size_SectName];		// 抄表册名称
+	char 	sectName[Size_SectName];		// 抄表册名称
 	uint16 	meterCnt;		// 当前表总数：未抄+成功+失败
 	uint16 	readOkCnt;		// 成功数量
 	uint16 	readNgCnt;		// 失败数量
@@ -157,9 +157,9 @@ typedef struct
 	char	userName[Size_UserName];	// 用户名称
 	char	userAddr[Size_UserAddr];	// 用户地址
 	char	meterNum[Size_MeterNum];	// 表号
-	char	meterReadStatus[Size_MtrReadStatus];	// 抄表状态
-	char	meterReadTime[Size_MtrReadDate];		// 抄表日期
-	char	meterReadType[Size_MtrReadType];		// 抄表性质
+	char	meterReadStatus[Size_MeterReadStatus];	// 抄表状态
+	char	meterReadTime[Size_MeterReadDate];		// 抄表日期
+	char	meterReadType[Size_MeterReadType];		// 抄表性质
 	char	meterExcpType[Size_MrExcepType];		// 读数异常类型
 	char	currGasVol[Size_CurrGasVol];				// 本次气量
 	char	currRemainGasVol[Size_CurrRemainGasVol];	// 本次剩余气量
@@ -213,6 +213,7 @@ extern uint8 **MetersStrs;
 
 extern void QuerySectList(SectListSt *districts, DbQuerySt *query);
 extern void QueryMeterList(MeterListSt *meters, DbQuerySt *query);
+extern void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query);
 extern uint8 ShowMeterReadCountInfo(MeterListSt *meters);
 extern uint8 ShowMeterList(MeterListSt *meters);
 extern void ShowSettingRoutes(void);
@@ -220,6 +221,6 @@ extern uint8 ShowAutoMeterReading(MeterListSt *meters);
 extern void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
-extern void FixDbfRecCnt(void);
+extern uint32 FixDbfRecCnt(void);
 
 #endif

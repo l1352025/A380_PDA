@@ -4,8 +4,10 @@
 #include "stdio.h"
 #include "Common.h"
 
-#ifdef Project_8009_RF
+#if defined Project_6009_RF || defined Project_8009_RF
 #include "MeterDocDBF.h"
+#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
+#include "MeterDocDBF_HL.h"
 #endif
 
 extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
@@ -819,7 +821,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = buf[index + 3];
 		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
 		index += 4;
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterValue, "%d.%02d", u32Tmp, u8Tmp);
 			}
@@ -834,7 +836,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = _DoubleToStr(TmpBuf, f64Tmp, 2);
 		dispIdx += sprintf(&dispBuf[dispIdx], "电池电压: %s v\n", ptr);
 		index += 1;
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				strcpy(MeterInfo.batteryVoltage, ptr);
 			}
@@ -843,26 +845,32 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water8009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门状态: %s\n", ptr);
 		index += 1;
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
+			#if defined Project_6009_RF || defined Project_8009_RF
 				u8Tmp = sprintf(&MeterInfo.meterStatusStr[0], "阀门%s", ptr);
+			#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
+				sprintf(MeterInfo.valveStatus, "%d", (buf[index - 1] & 0x20) > 0 ? 0 : 1);	// 状态转换 0x20/0x40 --> 0/1 （关/开）
+				u8Tmp = 0;
+			#endif
 			}
 		#endif
 
 		//告警状态字
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
 			u32Tmp = dispIdx + 10;
 		#endif
 		u16Tmp = GetUint16(&buf[index], 2, true);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警状态: ");
 		dispIdx += Water8009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				u16Tmp = (uint16)(dispIdx - u32Tmp - 2);	// 去掉后面的 “ \n”
 				if(u16Tmp + u8Tmp > Size_MeterStatusStr){
 					u16Tmp = Size_MeterStatusStr - u8Tmp;
 				}
+			#if defined Project_6009_RF || defined Project_8009_RF
 				if(u16Tmp > 0)
 				{
 					MeterInfo.meterStatusStr[u8Tmp++] = ',';
@@ -870,6 +878,14 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 					MeterInfo.meterStatusStr[u8Tmp + u16Tmp] = 0x00;
 				}
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
+			#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
+				if(u16Tmp > 0)
+				{
+					strncpy(&MeterInfo.meterStatusStr[0], &dispBuf[u32Tmp], u16Tmp);
+					MeterInfo.meterStatusStr[0 + u16Tmp] = 0x00;
+				}
+				sprintf(MeterInfo.meterStatusHex, "%02X%02X", buf[index - 3], buf[index - 2]);
+			#endif
 			}
 		#endif
 		break;
@@ -1577,10 +1593,12 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		TmpBuf[0] = (TmpBuf[0] - 30) * 2;
 		TmpBuf[1] = (TmpBuf[1] - 30) * 2;
 		
-		#ifdef Project_8009_RF
+		#ifdef Use_DBF
+		#if defined Project_6009_RF || defined Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.signalValue, "%d", TmpBuf[1]);	// 保存上行
 			}
+		#endif
 		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", TmpBuf[0],  TmpBuf[1]);
@@ -1596,43 +1614,6 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	
 	
 	return ret;
-}
-
-//----------------------------------	版本信息		--------------------------
-void VersionInfoFunc(void)
-{
-	uint8 key;
-	uint16 dispIdx = 0;
-	char *dispBuf;
-
-	while(1){
-		_ClearScreen();
-
-		_Printfxy(0, 0, "<<版本信息", Color_White);
-		//--------------------------------------------------
-		dispBuf = &DispBuf;
-		dispIdx = 0;
-		dispIdx += sprintf(&dispBuf[dispIdx], "  %s\n", VerInfo_Name);
-		dispIdx += sprintf(&dispBuf[dispIdx], "版 本 号：%s\n", VerInfo_RevNo);
-		dispIdx += sprintf(&dispBuf[dispIdx], "版本日期：%s\n", VerInfo_RevDate);
-		dispIdx += sprintf(&dispBuf[dispIdx], "通信方式：%s\n", TransType);
-		dispIdx += sprintf(&dispBuf[dispIdx], "通信速率：%s\n", CurrBaud);
-		#if UseCrc16
-		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC16\n");
-		#else
-		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC8\n");
-		#endif
-		#ifdef VerInfo_Msg
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Msg);
-		#endif
-		//----------------------------------------------
-		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		key = ShowScrollStr(dispBuf,  7);
-		
-		if(key == KEY_CANCEL || key == KEY_ENTER){
-			break;
-		}
-	}
 }
 
 //--------------------------------------	8009水表命令 发送、接收、结果显示	----------------------------

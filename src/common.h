@@ -33,15 +33,16 @@ typedef unsigned char bool;
 #define Trans_IR            2   // 普通红外 
 #define Trans_IR_Quick      3   // 高速红外
 
-// 当前透传模块使用的通信端口 和 波特率
+// 各项目差分定义：版本信息、资源配置
 #if defined(Project_6009_IR)        // 6009-红外
-    #define VerInfo_Name    (char *)"桑锐N609A手持机"    // 程序名
-    #define VerInfo_RevNo   (char *)"2.9.预览4"	           	// 版本号
-    #define VerInfo_RevDate (char *)"2020-06-08"        // 版本日期
+    #define VerInfo_Name    (char *)"  桑锐N609A抄表程序"  // 程序名
+    #define VerInfo_RevNo   (char *)"2.9.预览5"	        // 版本号
+    #define VerInfo_RevDate (char *)"2020-06-22"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
-	#define CurrPort    Trans_IR                
-	#define CurrBaud    (uint8 *)"9600,E,8,1"
-    //#define VerInfo_Msg    (char *)"        "         // 版本备注信息
+	#define CurrPort    Trans_IR    
+    #define CurrBaud    (uint8 *)"9600,E,8,1"            
+	//#define CurrBaud    (uint8 *)"2400,N,8,1"
+    #define VerInfo_Msg    (char *)"        "         // 版本备注信息
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     8           // 地址长度(byte)：8 
     #define VerLen      40          // 版本长度(byte)：40 
@@ -50,13 +51,28 @@ typedef unsigned char bool;
     #define UseBroadAddr    1               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
     #define Upgrd_FileBuf_Enable    1       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)      // 6009-Lora
-    #define VerInfo_Name    (char *)"桑锐6009手持机"     // 程序名
+    #define VerInfo_Name    (char *)"  桑锐6009抄表程序"   // 程序名
     #define VerInfo_RevNo   (char *)"2.8"               // 版本号
     #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
     #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
-    //#define VerInfo_Msg    (char *)"        "         // 版本备注信息
+    #define VerInfo_Msg    (char *)"        "         // 版本备注信息
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
+    #define AddrLen     6           // 地址长度(byte)：6 
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：0
+    #define LogPort     CurrPort            // 日志输出串口
+    #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
+#elif defined(Project_6009_RF_HL)   // 6009-Lora-和龙定制版
+    #define VerInfo_Name    (char *)"  桑锐6009抄表程序"    // 程序名
+    #define VerInfo_RevNo   (char *)"1.0 预览1"            // 版本号
+    #define VerInfo_RevDate (char *)"2020-07-10"        // 版本日期
+    #define TransType   (char *)"LoRa透传"              // 通信方式	
+	#define CurrPort    Trans_IR_Quick          
+	#define CurrBaud    (uint8 *)"9600,E,8,1" 
+    #define VerInfo_Msg    (char *)"    <和龙定制>    "         // 版本备注信息
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     6           // 地址长度(byte)：6 
     #define VerLen      40          // 版本长度(byte)：40 
@@ -65,13 +81,13 @@ typedef unsigned char bool;
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_8009_RF)      // 8009-RF
-    #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
+    #define VerInfo_Name    (char *)"  桑锐8009抄表程序"   // 程序名
     #define VerInfo_RevNo   (char *)"1.1"               // 版本号
     #define VerInfo_RevDate (char *)"2020-01-15"        // 版本日期
     #define TransType   (char *)"FSK透传"              	// 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
-    //#define VerInfo_Msg    (char *)"        "         // 版本备注信息
+    #define VerInfo_Msg    (char *)"        "         // 版本备注信息
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
     #define AddrLen     5           // 地址长度(byte)：5 
     #define VerLen      24          // 版本长度(byte)：24 
@@ -79,10 +95,25 @@ typedef unsigned char bool;
     #define LogPort     CurrPort            // 日志输出串口
     #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf (默认为0)
+#elif defined(Project_8009_RF_HL)   // 8009-RF-和龙定制版
+    #define VerInfo_Name    (char *)"  桑锐8009抄表程序"   // 程序名
+    #define VerInfo_RevNo   (char *)"1.0 预览1"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-07-10"        // 版本日期
+    #define TransType   (char *)"FSK透传"               // 通信方式	
+	#define CurrPort    Trans_IR_Quick          
+	#define CurrBaud    (uint8 *)"9600,E,8,1" 
+    #define VerInfo_Msg    (char *)"    <和龙定制>    "         // 版本备注信息
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
+    #define AddrLen     5           // 地址长度(byte)：6 
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：0
+    #define LogPort     CurrPort            // 日志输出串口
+    #define CenterCmd_Enable        0       // 集中器命令可使用：目前不可用
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #else // defined(Project_8009_RF_PY)   // 8009-RF-濮阳定制版
-    #define VerInfo_Name    (char *)"桑锐8009手持机"     // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-06-10"        // 版本日期
+    #define VerInfo_Name    (char *)"  桑锐8009抄表程序"   // 程序名
+    #define VerInfo_RevNo   (char *)"1.0 预览1"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-07-10"        // 版本日期
     #define TransType   (char *)"FSK透传"              	// 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -99,7 +130,7 @@ typedef unsigned char bool;
 
 #define VerInfo_Release     // 发布时必须定义该宏， 调试时注释
 
-
+// 发布时，关闭log 并 打开蜂鸣器
 #ifndef VerInfo_Release
 #define LOG_ON      1           // 调试日志开关
 #define LogFileName "debug.txt" // 日志文件名
@@ -116,9 +147,12 @@ typedef unsigned char bool;
 #define TXTBUF_MAX      20      // 文本输入缓冲区最大个数
 #define TXTBUF_LEN	    20      // 文本输入缓冲区最大字符数
 #define UI_MAX          20      // 最大UI控件数
-#define ListItem_Max    40      // 列表的最大条数  ： 用于显示菜单列表
-#define ListItemEx_Max  1600    // 扩展-列表的最大条数 : 用于显示数据列表
+#define ListItem_Max    40      // 列表的最大条数： 用于显示菜单列表
 #define CbxItem_Max     15      // 单选框最大项
+
+#define Invalid_dbIdx	0	    // 无效数据库记录索引, 数据库记录序号从1开始
+#define	Size_ListStr    21		// 列表字符串最大长度
+#define	Size_DbStr      256		// 数据库字段最大长度
 
 typedef enum{
     Color_White = 0,
@@ -184,9 +218,9 @@ typedef struct{
     uint16 totalCnt;    // 数据库记录总数
     int16 currIdx;      // 数据库当前记录的位置
     char *title;
-    char *str[ListItem_Max];  // 字符串列表
-    uint16 strCnt;          // 字符串列表中记录总数
-    int16 strIdx;          // 字符串列表中当前位置        确认键/取消键退出列表时的位置  
+    char *str[ListItem_Max];    // 字符串列表
+    uint16 strCnt;              // 字符串列表中记录总数
+    int16 strIdx;               // 字符串列表中当前位置        确认键/取消键退出列表时的位置  
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBox;
@@ -201,9 +235,10 @@ typedef struct{
     uint16 totalCnt;    // 数据库记录总数
     int16 currIdx;      // 数据库当前记录的位置
     char *title;
-    char *str[ListItemEx_Max];  // 字符串列表
+    char **str;             // 字符串列表
+    uint16 strLen;          // 单个字符串长度
     uint16 strCnt;          // 字符串列表中记录总数
-    int16 strIdx;          // 字符串列表中当前位置        确认键/取消键退出列表时的位置  
+    int16 strIdx;           // 字符串列表中当前位置        确认键/取消键退出列表时的位置  
     FillListFunc fillStrsFunc;      // 翻页时回调函数
 
 }ListBoxEx;
@@ -277,10 +312,11 @@ CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args
 void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 void LcdLightCycleCtrl(uint8 *lcdCtrl, uint8 closeCnt);
 uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx);
-void MeterNoSave(uint8 *mtrNo, uint8 type);
-void MeterNoLoad(uint8 *mtrNo, uint8 type);
+void MeterNoSave(uint8 *mtrNo);
+void MeterNoLoad(uint8 *mtrNo);
 void SysCfgLoad(void);
 void SysCfgSave(void);
+void VersionInfoFunc(void);
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 

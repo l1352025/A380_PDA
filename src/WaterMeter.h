@@ -4,8 +4,10 @@
 #include "stdio.h"
 #include "Common.h"
 
-#ifdef Project_6009_RF
+#if defined Project_6009_RF || defined Project_8009_RF
 #include "MeterDocDBF.h"
+#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
+#include "MeterDocDBF_HL.h"
 #endif
 
 extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
@@ -262,7 +264,7 @@ void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 	参数传递方式2：const char (*strRelayAddrs)[20]
 	参数传递方式3：const char **strRelayAddrs, uint addrLen
 	 */
-	#ifdef Project_6009_RF
+	#if defined Project_6009_RF || defined Project_6009_RF_HL
 	uint8 i;
 	#endif
 
@@ -272,7 +274,7 @@ void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 	memcpy(addrs->items[addrs->itemCnt], LocalAddr, AddrLen);
 	addrs->itemCnt++;
 
-	#ifdef Project_6009_RF
+	#if defined Project_6009_RF || defined Project_6009_RF_HL
 	// 中继地址
 	for(i = 0; i < RELAY_MAX; i++){
 		if(strRelayAddrs[i][0] >= '0' && strRelayAddrs[i][0] <= '9'){
@@ -465,7 +467,7 @@ char * Water6009_GetStrValveStatus(uint8 status)
 {
 	char * str = NULL;
 	
-	switch(status){
+	switch(status & 0x03){
 	case 0:	str = "故障";	break;
 	case 1:	str = "开";	break;
 	case 2:	str = "关";	break;
@@ -614,7 +616,7 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
-	#ifdef Project_6009_RF
+	#if defined Project_6009_RF || defined Project_6009_RF_HL
 		len += sprintf(&buf[len], "LoRaWan状态   :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
 	#else // Project_6009_IR
 		len += sprintf(&buf[len], "欠费蜂鸣器      :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
@@ -992,7 +994,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u16Tmp = ((buf[index + 1] << 8) + buf[index]);
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "正转: %d.%03d\n", u32Tmp, u16Tmp);
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.meterValue, "%d.%03d", u32Tmp, u16Tmp);
 			}
@@ -1004,14 +1006,14 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		dispIdx += sprintf(&dispBuf[dispIdx], "反转: %d.%03d\n", u32Tmp, u16Tmp);
 		//告警状态字
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
 			u32Tmp = dispIdx + 6;
 		#endif
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += sprintf(&dispBuf[dispIdx], "告警: ");
 		dispIdx += Water6009_GetStrAlarmStatus(u16Tmp, &dispBuf[dispIdx]);
 		index += 2;
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				u16Tmp = (uint16)(dispIdx - u32Tmp - 2);	// 去掉后面的 “ \n”
 				if(u16Tmp + 9 > Size_MeterStatusStr){
@@ -1028,16 +1030,22 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrValveStatus(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "阀门: %s  ", ptr);
 		index += 1;
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
+			#if defined Project_6009_RF || defined Project_8009_RF
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
 				sprintf(&MeterInfo.meterStatusStr[u16Tmp], "阀门%s", ptr);
+			#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
+				sprintf(MeterInfo.meterStatusHex, "%02X%02X", buf[index - 3], buf[index - 2]);
+				sprintf(MeterInfo.valveStatus, "%d", buf[index - 1] == 2 ? 0 : 1 );		// 状态转换 2/1 --> 0/1 （关/开）
+				MeterInfo.meterStatusStr[u16Tmp - 1] = '\0';
+			#endif
 			}
 		#endif
 		//电池电压
 		dispIdx += sprintf(&dispBuf[dispIdx], "电池: %c.%c\n", (buf[index] / 10) + '0', (buf[index] % 10) + '0');
 		index += 1;
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				strncpy(MeterInfo.batteryVoltage, &dispBuf[dispIdx - 4], 3);
 			}
@@ -2703,10 +2711,12 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 #endif
 	{
 		//下行/上行 信号强度
-		#ifdef Project_6009_RF
+		#ifdef Use_DBF
+		#if defined Project_6009_RF || defined Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.signalValue, "%d", buf[index + 1]);	// 保存上行
 			}
+		#endif
 		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", buf[index], buf[index + 1]);
@@ -2721,43 +2731,6 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	
 	
 	return ret;
-}
-
-//----------------------------------	版本信息		--------------------------
-void VersionInfoFunc(void)
-{
-	uint8 key;
-	uint16 dispIdx = 0;
-	char *dispBuf;
-
-	while(1){
-		_ClearScreen();
-
-		_Printfxy(0, 0, "<<版本信息", Color_White);
-		//--------------------------------------------------
-		dispBuf = &DispBuf;
-		dispIdx = 0;
-		dispIdx += sprintf(&dispBuf[dispIdx], "  %s\n", VerInfo_Name);
-		dispIdx += sprintf(&dispBuf[dispIdx], "版 本 号：%s\n", VerInfo_RevNo);
-		dispIdx += sprintf(&dispBuf[dispIdx], "版本日期：%s\n", VerInfo_RevDate);
-		dispIdx += sprintf(&dispBuf[dispIdx], "通信方式：%s\n", TransType);
-		dispIdx += sprintf(&dispBuf[dispIdx], "通信速率：%s\n", CurrBaud);
-		#if UseCrc16
-		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC16\n");
-		#else
-		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC8\n");
-		#endif
-		#ifdef VerInfo_Msg
-		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Msg);
-		#endif
-		//----------------------------------------------
-		_Printfxy(0, 9*16, "返回            确定", Color_White);
-		key = ShowScrollStr(dispBuf,  7);
-		
-		if(key == KEY_CANCEL || key == KEY_ENTER){
-			break;
-		}
-	}
 }
 
 //--------------------------------------	6009水表命令 发送、接收、结果显示	----------------------------
@@ -2781,7 +2754,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
-#elif defined(Project_6009_RF)
+#elif defined Project_6009_RF || defined Project_6009_RF_HL
 	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;

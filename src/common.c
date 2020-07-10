@@ -1,6 +1,3 @@
-#ifndef Tool_H
-#define Tool_H
-
 #include "HJLIB.H"
 #include "stdarg.h"
 #include "string.h"
@@ -446,9 +443,6 @@ void ListBoxCreate(ListBox *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, u
 */
 void ListBoxCreateEx(ListBoxEx *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRow, uint16 totalCnt, FillListFunc fillStrsFunc, const char *title, char **strs, uint8 strLen, uint32 strCnt)
 {
-	uint16 i;
-	char *str = (char *)strs;
-
 	lbx->x = x;		// 默认 0
 	lbx->y = y;		// 默认 0
 	lbx->maxCol = maxCol;	// 默认 20
@@ -456,14 +450,11 @@ void ListBoxCreateEx(ListBoxEx *lbx, uint8 x, uint8 y, uint8 maxCol, uint8 maxRo
 	lbx->totalCnt = totalCnt;
 	lbx->fillStrsFunc = fillStrsFunc;
 	lbx->title = title;
+	lbx->str = strs;
+	lbx->strLen = strLen;
 	lbx->strCnt = (uint16)strCnt;
 	lbx->currIdx = 0;
 	lbx->strIdx = 0;
-
-	for(i = 0; i < lbx->strCnt; i++){
-		lbx->str[i] = str;
-		str += strLen;
-	}
 }
 
 /*
@@ -609,7 +600,7 @@ uint8 ShowListBoxEx(ListBoxEx *lbx)
 	uint16 dstIndex, srcIndex, currIndex;
 	uint8 key, i;
 	int16 x1, y1, recX, recY, recX1, recY1, fillX, fillY, fillX1, fillY1;
-	uint8 **lines = lbx->str;
+	char *lines = (char *)lbx->str;
 	uint16 fillMax = (lbx->strCnt >= lbx->totalCnt ? lbx->totalCnt : (lbx->strCnt - lbx->strCnt % lbx->maxRow));
 	uint16 fillCnt = 0;
 	char title[21], temp[15];
@@ -651,9 +642,11 @@ uint8 ShowListBoxEx(ListBoxEx *lbx)
 		}
 		else{
 			for(i = 0; i < lbx->maxRow && (lbx->dispStartIdx + i) < lbx->strCnt; i++){
-				_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8, lines[lbx->dispStartIdx + i], Color_White);
+				_Printfxy(lbx->x, i * 16 + lbx->y + 16 + 8,
+					lines + (lbx->dispStartIdx + i) * lbx->strLen, Color_White);
 			}
-			_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8, lines[lbx->strIdx], Color_Black);
+			_Printfxy(lbx->x, (lbx->strIdx - lbx->dispStartIdx) * 16 + lbx->y + 16 + 8,
+				lines + lbx->strIdx * lbx->strLen, Color_Black);
 		}
 		//--------------------------------------------▲---
 		_GUIHLine(lbx->x, recY1, x1, Color_Black);	
@@ -1538,6 +1531,8 @@ int StringCopyFromTail(char * dstStr, const char * srcStr, uint8 len)
 			len--;
 		}
 
+		retLen = len;
+
 		while(len--){
 			*pw++ = *pr++;
 		}
@@ -2179,10 +2174,10 @@ CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args
 {
 	CmdResult cmdResult;
 
-	if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
-		|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
-		MeterNoSave(StrDstAddr, 3);
-	}
+	// if((args->buf[0] >= 0x40 && args->buf[0] <= 0x66) 
+	// 	|| (args->buf[0] >= 0xF1 && args->buf[0] <= 0xF3)){
+	// 	// CenterNoSave(StrDstAddr);
+	// }
 
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
 #if (AddrLen <= 6)
@@ -2328,11 +2323,10 @@ uint8 CreateRelayAddrsUi(UI_Item *pUi, int8 *pUiCnt, uint8 uiRowIdx)
 
 /**
  * 表号保存
- * @param mtrNo - 表号: 12/16位字符
- * @param type  - 类型: 0 - SR6009_RF表号, 1 - SR6009_IR表号, 2 - SR8009表号， 3+ - 其他
+ * @param mtrNo - 表号: 根据项目宏定义来确定是10/12/16位字符, 并定位到不同的存储位置
  * @return void
 */
-void MeterNoSave(uint8 *mtrNo, uint8 type)
+void MeterNoSave(uint8 *mtrNo)
 {
 	int fp;
 
@@ -2341,30 +2335,27 @@ void MeterNoSave(uint8 *mtrNo, uint8 type)
 	}else{
 		fp = _Fopen("system.cfg", "RW");
 	}
-	
-	switch (type)
-	{
-	case 0: _Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-		break;
-	case 1: _Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
-		break;
-	case 2: _Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
-		break;
-	default:
-		_Lseek(fp, 20, 0);		// 其他
-		break;
-	}
+
+#if defined Project_6009_RF || defined Project_6009_RF_HL
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+#elif defined Project_6009_IR
+	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+#elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
+	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+#else
+	_Lseek(fp, 20, 0);	// byte [20 ~ 39] 其他
+#endif
+
 	_Fwrite(mtrNo, TXTBUF_LEN, fp);
 	_Fclose(fp);
 }
 
 /**
  * 表号载入
- * @param mtrNo - 表号: 12/16位字符
- * @param type  - 类型: 0 - SR6009_RF表号, 1 - SR6009_IR表号, 2 - SR8009表号， 3+ - 其他
+ * @param mtrNo - 表号: 根据项目宏定义来确定是10/12/16位字符, 并定位到不同的存储位置
  * @return void
 */
-void MeterNoLoad(uint8 *mtrNo, uint8 type)
+void MeterNoLoad(uint8 *mtrNo)
 {
 	int fp;
 
@@ -2375,18 +2366,16 @@ void MeterNoLoad(uint8 *mtrNo, uint8 type)
 		fp = _Fopen("system.cfg", "R");
 	}
 	
-	switch (type)
-	{
-	case 0: _Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-		break;
-	case 1: _Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
-		break;
-	case 2: _Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
-		break;
-	default:
-		_Lseek(fp, 20, 0);		// 其他
-		break;
-	}
+#if defined Project_6009_RF || defined Project_6009_RF_HL
+	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
+#elif defined Project_6009_IR
+	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
+#elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
+	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
+#else
+	_Lseek(fp, 20, 0);	// byte [20 ~ 39] 其他
+#endif
+
 	_Fread(mtrNo, TXTBUF_LEN, fp);
 	_Fclose(fp);
 }
@@ -2421,4 +2410,39 @@ void SysCfgSave(void)
 	_Fclose(fp);
 }
 
-#endif
+//----------------------------------	版本信息		--------------------------
+void VersionInfoFunc(void)
+{
+	uint8 key;
+	uint16 dispIdx = 0;
+	char *dispBuf;
+
+	while(1){
+		_ClearScreen();
+
+		_Printfxy(0, 0, "<<版本信息", Color_White);
+		//--------------------------------------------------
+		dispBuf = &DispBuf;
+		dispIdx = 0;
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Name);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版 本 号：%s\n", VerInfo_RevNo);
+		dispIdx += sprintf(&dispBuf[dispIdx], "版本日期：%s\n", VerInfo_RevDate);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信方式：%s\n", TransType);
+		dispIdx += sprintf(&dispBuf[dispIdx], "通信速率：%s\n", CurrBaud);
+		#if UseCrc16
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC16\n");
+		#else
+		dispIdx += sprintf(&dispBuf[dispIdx], "校验算法：CRC8\n");
+		#endif
+		#ifdef VerInfo_Msg
+		dispIdx += sprintf(&dispBuf[dispIdx], "%s\n", VerInfo_Msg);
+		#endif
+		//----------------------------------------------
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowScrollStr(dispBuf,  7);
+		
+		if(key == KEY_CANCEL || key == KEY_ENTER){
+			break;
+		}
+	}
+}

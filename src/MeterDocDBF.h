@@ -1,17 +1,18 @@
+/**
+ * 	DBF数据库文件操作 - 6009/8009 桑锐通用版 
+*/
 #ifndef MeterDocDBF_H
 #define MeterDocDBF_H
 
+#include "common.h"
+
 //----------------------	宏定义		------------------------
 #define	MeterDocDB 		"jk.dbf"		// 表档案数据库文件名
-
-#define Invalid_dbIdx	0				// 无效索引, 数据库记录序号从1开始
+#define Use_DBF
 
 #define District_Max				50	// 最大小区数
 #define Building_Max				100	// 一个小区-最大楼栋数
 #define Meter_Max					500	// 一栋楼-最大表数
-
-#define	Size_ListStr				21	// 列表字符串长度
-#define	Size_DbMaxStr				200	// 数据库字段最大长度
 
 #define	Size_DistrictNum			16	// 小区编号 长度	10
 #define	Size_DistrictName			50	// 小区名称 长度	50
@@ -23,7 +24,7 @@
 #define Size_RoomNum              	20	//门牌号长度	16
 #define Size_MeterReadStatus        2	//抄表状态长度	1   : 0 - 未抄  1 - 成功，2 - 失败 
 #define	Size_UserName               40	//户名长度		50
-#define Size_MobileNum           	12	//手机号长度	50
+#define Size_UserMobileNum          12	//手机号长度	50
 #define	Size_UserAddr               80	//地址长度 		100 
 #define Size_MeterReadType			2	//抄表方式长度	1	
 #define Size_MeterReadTime          20	//抄表时间长度	20
@@ -39,7 +40,7 @@ typedef enum{
 	Idx_Id	= 0,		// "ID",		// ID
 	Idx_UserNum,		// "HH",		// 户号
 	Idx_UserName,		// "HM",		// 户名
-	Idx_UserAddrs,		// "DZ",		// 地址
+	Idx_UserAddr,		// "DZ",		// 地址
 	Idx_UserRoomNum,	// "MPH",		// 门牌号
 	Idx_UserTelNum,		// "TEL",		// 电话
 	Idx_UserMobileNum,	// "MOBILE",	// 手机
@@ -53,7 +54,7 @@ typedef enum{
 	Idx_BuildingName,		// "CBEJFZMC",		// 抄表楼栋 名称
 	Idx_MeterNum,			// "BH",		// 表号
 	Idx_FLXS,				// "FLXS",		// 
-	Idx_MeterValue,			// "FLA",		// 表读数 FL[A-J] 10个 》》
+	Idx_MeterValue,			// "FLA",		// FL[A->] 表读数	// set
 	Idx_FLB,				// "FLB",		// 
 	Idx_FLC,				// "FLC",		// 
 	Idx_FLD,				// "FLD",		// 
@@ -62,9 +63,9 @@ typedef enum{
 	Idx_FLG,				// "FLG",		// 
 	Idx_FLH,				// "FLH",		// 
 	Idx_FLI,				// "FLI",		// 
-	Idx_FLJ,				// "FLJ",		// 表读数 FL[A-J] 10个 《《
+	Idx_FLJ,				// "FLJ",		// FL[->J] 
 	Idx_LYXS,				// "LYXS",		// 
-	Idx_LYA,				// "LYA",		// LY[A-J] 10个 >>
+	Idx_LYA,				// "LYA",		// LY[A->]
 	Idx_LYB,				// "LYB",		// 
 	Idx_LYC,				// "LYC",		// 
 	Idx_LYD,				// "LYD",		// 
@@ -73,19 +74,19 @@ typedef enum{
 	Idx_LYG,				// "LYG",		// 
 	Idx_LYH,				// "LYH",		// 
 	Idx_LYI,				// "LYI",		// 
-	Idx_LYJ,				// "LYJ",		// LY[A-J] 10个 <<
-	Idx_BLXHEX,				// "BLXHEX",	// 表类型 HEX
-	Idx_BLXSTR,				// "BLXSTR",	// 表类型 STR
-	Idx_MeterStatusHex,		// "BZTHEX",	// 表状态 HEX
-	Idx_MeterStatusStr,		// "BZTSTR",	// 表状态 STR
-	Idx_BatteryVoltage,		// "DCDY",		// 电池电压
+	Idx_LYJ,				// "LYJ",		// LY[->J] 
+	Idx_BLXHEX,				// "BLXHEX",	// 表类型 HEX		
+	Idx_BLXSTR,				// "BLXSTR",	// 表类型 STR		
+	Idx_MeterStatusHex,		// "BZTHEX",	// 表状态 HEX		// set
+	Idx_MeterStatusStr,		// "BZTSTR",	// 表状态 STR		// set
+	Idx_BatteryVoltage,		// "DCDY",		// 电池电压			// set
 	Idx_MCCS,				// "MCCS",		// 脉冲常数
-	Idx_MeterReadType,		// "SGCQ",		// 抄表方式 0 - 掌机抄表 ， 1 - 集中器抄表
+	Idx_MeterReadType,		// "SGCQ",		// 抄表方式 0/1/2 - 掌机/集中器/手输	// set
 	Idx_QF,					// "QF",		// 
-	Idx_SignalValue,		// "XHQD",		// 信号强度
-	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间
-	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0 - 未抄， 1 - 成功， 2 - 失败
-	Idx_BLZDA,				// "BLZDA",		// BLZD[A-J] 10个 》》
+	Idx_SignalValue,		// "XHQD",		// 信号强度			// set
+	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间			// set
+	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0/1/2 - 未抄/成功/失败	// set
+	Idx_BLZDA,				// "BLZDA",		// BLZD[A->]
 	Idx_BLZDB,				// "BLZDB",		// 
 	Idx_BLZDC,				// "BLZDC",		// 集中器 编号
 	Idx_BLZDD,				// "BLZDD",		// 集中器 名称
@@ -94,7 +95,7 @@ typedef enum{
 	Idx_BLZDG,				// "BLZDG",		// 
 	Idx_BLZDH,				// "BLZDH",		// 
 	Idx_BLZDI,				// "BLZDI",		// 
-	Idx_BLZDJ,				// "BLZDJ"		// BLZD[A-J] 10个 《《
+	Idx_BLZDJ,				// "BLZDJ"		// BLZD[->J]
 	Idx_Invalid	= 0xFF	// 无效字段	
 }DB_Field_Index;
 
@@ -199,6 +200,7 @@ typedef struct{
 	char 	*qryDistricNum;			// 小区编号：空值表示所有
 	char 	*qryBuildingNum;		// 楼栋编号：空值表示所有
 	char 	*qryMeterReadStatus;	// 抄表状态
+	char	*qryKeyWord;			// 查询的关键字
 	char 	districName[Size_DistrictName];		// 小区名
 	char 	buildingName[Size_BuildingName];	// 楼栋名
 	uint16 	meterCnt;		// 当前表总数：未抄+成功+失败
@@ -221,7 +223,7 @@ typedef struct
 	char	roomNum[Size_RoomNum];
 	char	meterReadStatus[Size_MeterReadStatus];
 	char	userName[Size_UserName];
-	char	mobileNum[Size_MobileNum];
+	char	mobileNum[Size_UserMobileNum];
 	char	userAddr[Size_UserAddr];
 	char	meterReadType[Size_MeterReadType];
 	char	meterReadTime[Size_MeterReadTime];
@@ -230,7 +232,6 @@ typedef struct
 	char	meterStatusStr[Size_MeterStatusStr];
 	char	batteryVoltage[Size_BatteryVoltage];
 	char	signalValue[Size_SignalValue];
-
 }MeterInfoSt;
 
 
@@ -245,6 +246,7 @@ extern uint8 **MetersStrs;
 extern void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query);
 extern void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query);
 extern void QueryMeterList(MeterListSt *meters, DbQuerySt *query);
+extern void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query);
 extern uint8 ShowMeterReadCountInfo(MeterListSt *meters);
 extern uint8 ShowMeterList(MeterListSt *meters);
 extern void ShowSettingRoutes(void);
@@ -252,6 +254,8 @@ extern uint8 ShowAutoMeterReading(MeterListSt *meters);
 extern void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
-extern void FixDbfRecCnt(void);
+extern uint32 FixDbfRecCnt(void);
+
+extern void MainFuncBatchMeterReading(void);
 
 #endif

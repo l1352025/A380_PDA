@@ -7,7 +7,7 @@
 #include "WaterMeter.h"
 #include "List.h"
 
-#ifdef MeterDocDBF_H
+#ifdef Use_DBF
 extern uint8 **MetersStrs;		// import from "MeterDocDBF.h"
 #else
 uint8 **MetersStrs = &DispBuf;
@@ -1648,13 +1648,7 @@ void UpgradeFunc(void)
 					memcpy(docItem->mtrNo, StrDstAddr, 20);
 					docItem->state = UpgrdState_Unknow;
 
-					#ifdef Project_6009_RF
-					MeterNoSave(StrDstAddr, 0);
-					#elif defined Project_6009_IR
-					MeterNoSave(StrDstAddr, 1);
-					#else // Project_8009_RF
-					MeterNoSave(StrDstAddr, 2);
-					#endif
+					MeterNoSave(StrDstAddr);
 				}
 			}
 		}

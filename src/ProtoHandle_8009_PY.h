@@ -5,7 +5,7 @@
 #include "string.h"
 #include "Common.h"
 
-#ifdef Project_8009_RF_PY
+#if defined Project_8009_RF_PY 
 #include "MeterDocDBF_8009_PY.h"
 #endif
 
@@ -393,15 +393,17 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = buf[index + 3];
 		dispIdx += sprintf(&dispBuf[dispIdx], "表读数: %d.%02d\n", u32Tmp, u8Tmp);
 		index += 4;
-		
-		// 批量抄表时
-		if(MeterInfo.dbIdx != Invalid_dbIdx){	
-			// 写入DBF文件
-			sprintf(MeterInfo.currReadVal, "%d.%02d", u32Tmp, u8Tmp);
-			// 跳过其他字段解析
-			index += 5;
-			break;
-		}
+
+		#ifdef Use_DBF
+			// 批量抄表时
+			if(MeterInfo.dbIdx != Invalid_dbIdx){	
+				// 写入DBF文件
+				sprintf(MeterInfo.currReadVal, "%d.%02d", u32Tmp, u8Tmp);
+				// 跳过其他字段解析
+				index += 5;
+				break;
+			}
+		#endif
 
 		// 表口径、脉冲系数
 		ptr = (buf[index] & 0x80) > 0 ? "大" : "小";
@@ -474,11 +476,6 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		TmpBuf[0] = (TmpBuf[0] - 30) * 2;
 		TmpBuf[1] = (TmpBuf[1] - 30) * 2;
 		
-		#ifdef Project_8009_RF
-			if(MeterInfo.dbIdx != Invalid_dbIdx){
-			//	sprintf(MeterInfo.signalValue, "%d", TmpBuf[1]);	// 保存上行
-			}
-		#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
 		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", TmpBuf[0],  TmpBuf[1]);
 		index += 2;
@@ -511,19 +508,9 @@ uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	uint8 key;
 
 	// 应答长度、超时时间、重发次数
-#ifdef Project_6009_IR
-	ackLen += 15 + addrs->itemCnt * AddrLen;
-	timeout = 2000;
-	tryCnt = 3;
-#elif defined(Project_6009_RF)
-	ackLen += 15 + addrs->itemCnt * AddrLen;
-	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
-	tryCnt = 3;
-#else // Project_8009_RF
 	ackLen += 10 + addrs->itemCnt * AddrLen;
 	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
 	tryCnt = 3;
-#endif
 
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
 

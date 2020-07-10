@@ -2057,17 +2057,6 @@ void WaterCmdFunc(void)
 {
 	_GuiMenuStru menu;
 
-	/* v2.2 菜单
-	// menu.title= "<<工程调试 ";		
-	// menu.str[0]=" 常用命令 ";
-	// menu.str[1]=" 测试命令 ";
-	// menu.str[2]=" 程序升级 ";
-	// menu.str[3]=" 预缴用量 ";
-	// menu.str[4]=" 工作参数 ";
-	// menu.str[5]=" 其他操作 ";
-	// menu.str[6]=" 版本信息 ";
-	*/
-	
 	menu.left=0;
 	menu.top=0;
 	menu.no=5;
@@ -2274,6 +2263,138 @@ void MainFuncReadRealTimeData(void)
 			ackLen = 21;				// 应答长度 21	
 			// 数据域
 			Args.buf[i++] = 0x00;				// 数据格式 00	
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+		
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if( StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
+			{
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 0;
+				continue;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#if (AddrLen == 6)
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+		#else
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
+		#endif
+
+		// 发送、接收、结果显示
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+	
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+}
+
+// 设用量和脉冲系数
+void MainFuncSetMeterValAndPulseRatio(void)
+{
+	uint8 key, tryCnt = 0, i;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout, u16Tmp;
+	uint32 u32Tmp;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<设用量和脉冲系数");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
+
+			#if (AddrLen == 6)
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
+			#else
+			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
+			#endif
+		}
+			
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		CurrCmd = WaterCmd_SetBaseValPulseRatio;	// 设用量和脉冲系数
+
+		
+		switch(CurrCmd){
+		case WaterCmd_SetBaseValPulseRatio:		// 设用量和脉冲系数
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
+					StrBuf[1][0] = 0x01;
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
+				}
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+				pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
+				CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
+					"1", "10", "100", "1000");
+				break;
+			}
+			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+				sprintf(StrBuf[0], " 请输入");
+				currUi = uiRowIdx - 2 - 2;
+				isUiFinish = false;
+				continue;
+			}
+
+			memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+			BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
+
+			Args.buf[i++] = 0x06;		// 命令字	06
+			ackLen = 7;					// 应答长度 7	
+			// 数据域
+			u32Tmp = (uint32) _atof(StrBuf[0]);
+			u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
+			Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+			Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+			Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+			Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+			Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+			Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+			Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
 			Args.lastItemLen = i - 1;
 			break;
 
@@ -3083,30 +3204,21 @@ int main(void)
 {
 	_GuiMenuStru MainMenu;
 	
-	#ifdef Project_6009_RF
-	MeterNoLoad(StrDstAddr, 0);
-	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
-	#elif defined Project_6009_IR
-	MeterNoLoad(StrDstAddr, 1);
-	#else // Project_8009_RF
-	MeterNoLoad(StrDstAddr, 2);
-	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
-	#endif
-
+	MeterNoLoad(StrDstAddr);
 	SysCfgLoad();
 
 	MainMenu.left=0;
 	MainMenu.top=0;
 	MainMenu.no=8;
-	MainMenu.title =  "     桑锐手持机    ";
-	MainMenu.str[0] = " 读取IMEI+ICCID";
-	MainMenu.str[1] = " 读取用户用量 ";
-	MainMenu.str[2] = " 读取冻结数据 ";
-	MainMenu.str[3] = " 开阀 ";
-	MainMenu.str[4] = " 关阀 ";
-    MainMenu.str[5] = " 清异常 ";
-	MainMenu.str[6] = " 读取NB入网信息 ";
-	MainMenu.str[7] = " 工程调试 ";
+	MainMenu.title =  VerInfo_Name;
+	MainMenu.str[0] = "读取IMEI+ICCID";
+	MainMenu.str[1] = "读取用户用量";
+	MainMenu.str[2] = "设用量和脉冲系数";
+	MainMenu.str[3] = "开阀";
+	MainMenu.str[4] = "关阀";
+    MainMenu.str[5] = "清异常";
+	MainMenu.str[6] = "读取NB入网信息";
+	MainMenu.str[7] = "工程调试";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -3117,7 +3229,7 @@ int main(void)
 	MainMenu.key[7] = "8";
 	MainMenu.Function[0] = MainFuncReadImeiAndCcid;
 	MainMenu.Function[1] = MainFuncReadRealTimeData;
-	MainMenu.Function[2] = MainFuncReadFrozenData;
+	MainMenu.Function[2] = MainFuncSetMeterValAndPulseRatio;
 	MainMenu.Function[3] = MainFuncOpenValve;
 	MainMenu.Function[4] = MainFuncCloseValve;
     MainMenu.Function[5] = MainFuncClearException;
@@ -3127,14 +3239,7 @@ int main(void)
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
 
-	#ifdef Project_6009_RF
-	MeterNoSave(StrDstAddr, 0);
-	#elif defined Project_6009_IR
-	MeterNoSave(StrDstAddr, 1);
-	#else // Project_8009_RF
-	MeterNoSave(StrDstAddr, 2);
-	#endif
-
+	MeterNoSave(StrDstAddr);
 	SysCfgSave();
 }
 

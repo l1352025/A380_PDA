@@ -12,8 +12,8 @@
 void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp1[Size_DbMaxStr];
-	char strTmp2[Size_DbMaxStr];
+	char strTmp1[Size_DbStr];
+	char strTmp2[Size_DbStr];
 
     if(query->CellCnt > 0) return;
 
@@ -67,9 +67,9 @@ void QueryDistrictList(DistrictListSt *districts, DbQuerySt *query)
 void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[Size_DbMaxStr];
-	char strTmp1[Size_DbMaxStr];
-	char strTmp2[Size_DbMaxStr];
+	char strTmp[Size_DbStr];
+	char strTmp1[Size_DbStr];
+	char strTmp2[Size_DbStr];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -126,7 +126,7 @@ void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query)
 void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[Size_DbMaxStr];
+	char strTmp[Size_DbStr];
 	char state;
 	int len;
 

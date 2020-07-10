@@ -92,8 +92,8 @@ int FindStrInList(char ** strs, uint8 strLen, uint16 strCnt, const char *dstStr,
 void QuerySectList(SectListSt *Sects, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp1[Size_DbMaxStr];
-	//char strTmp2[Size_DbMaxStr];
+	char strTmp1[Size_DbStr];
+	//char strTmp2[Size_DbStr];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -134,17 +134,18 @@ void QuerySectList(SectListSt *Sects, DbQuerySt *query)
 }
 
 /*
-* 描 述：查询xx抄表册-抄表统计情况
-* 参 数：meters		- 户表列表：查询前先设置 meters.(抄表册编号/楼栋编号/抄表状态/显示字段)
+* 描 述：查询xx抄表册表具列表 / 统计抄表情况
+* 参 数：meters		- 户表列表：需设置 meters->selectField， 统计时设置为 Idx_Invalid，查询时设为其他
 *		 query		- 数据库查询结构
 * 返 回：void
 */
 void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
-	char strTmp[Size_DbMaxStr];
+	char strTmp[Size_DbStr];
 	char state;
 	int len;
+	bool isOnlyCount = false;
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
@@ -152,13 +153,27 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 	_Go(0);
 	meters->cnt = 0;
 	meters->idx = 0;
-	//meters->sectName[0] = 0x00;
+	meters->sectName[0] = 0x00;
 	meters->meterCnt = 0;
 	meters->readOkCnt = 0;
 	meters->readNgCnt = 0;
 	query->reqMaxCnt = Meter_Max;
 	query->resultCnt = 0;
 	query->errorCode = 0;
+
+	switch (meters->selectField)		// 列表类型：默认为表号列表
+	{
+	case Idx_MeterNum:
+	case Idx_UserNum:
+	case Idx_UserName:
+	case Idx_UserAddr:
+		break;
+	default: 
+		meters->selectField = Idx_Invalid;
+		isOnlyCount = true;
+		break;
+	}
+
 	for(i = 0; i < recCnt; i++){
 
 		if(meters->qrySectNum != NULL){
@@ -179,8 +194,8 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		}
 		
 		meters->meterCnt++;				// 当前表总数
-		_ReadField(Idx_MtrReadStatus, strTmp);		
-		strTmp[Size_MtrReadStatus - 1] = '\0';
+		_ReadField(Idx_MeterReadStatus, strTmp);		
+		strTmp[Size_MeterReadStatus - 1] = '\0';
 
 		// 状态转换 1/2/3 --> 0/1/2
 		if(strTmp[0] == '0' && strTmp[1] == '1'){
@@ -203,18 +218,8 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 			}
 		}
 
-		switch (meters->selectField)		// 列表类型：默认为表号列表
-		{
-		case Idx_MeterNum:
-		case Idx_UserNum:
-		case Idx_UserName:
-		case Idx_UserAddr:
-			break;
-		default: 
-			meters->selectField = Idx_Invalid;
-			break;
-		}
-		if(meters->selectField == Idx_Invalid){		// 未选择字段，则不构建列表
+
+		if(isOnlyCount){		// 未选择字段，则不构建列表, 只做统计
 			_Skip(1);	// 下一个数据库记录
 			continue;
 		}
@@ -228,10 +233,92 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 			break;
 		}
 
-		// 将选择的字段信息 和 数据库索引 加入列表
 		_ReadField(meters->selectField, strTmp);	// 读取字段：表号/户号/户名/地址
-
+		
+		// 将选择的字段信息 和 数据库索引 加入列表
 		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
+		StringPadRight(meters->strs[meters->cnt], 20, ' ');
+		meters->strs[meters->cnt][18] = ' ';	
+		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+		meters->dbIdx[meters->cnt] = (i + 1);	// 数据库索引从 1 开始编号
+		meters->cnt++;
+
+		_Skip(1);	// 下一个数据库记录
+	}
+	_Use("");		// 关闭数据库
+
+	query->dbCurrIdx = i;
+}
+
+/*
+* 描 述：按关键字查询表具：按 表号/户号 的关键字查询
+* 参 数：meters		- 户表列表：需设置 meters->selectField 为 Idx_MeterNum / Idx_UserNum
+*		 query		- 数据库查询结构
+* 返 回：void
+*/
+void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query)
+{
+	uint32 i, recCnt;
+	char strTmp[Size_DbStr];
+	char state;
+	int len;
+
+	_Select(1);
+	_Use(MeterDocDB);	// 打开数据库
+	recCnt = _Reccount();
+	_Go(0);
+	meters->cnt = 0;
+	meters->idx = 0;
+	query->reqMaxCnt = Meter_Max;
+	query->resultCnt = 0;
+	query->errorCode = 0;
+
+	switch (meters->selectField)		// 列表类型：默认为表号列表
+	{
+	case Idx_MeterNum:
+	case Idx_UserNum:
+		break;
+	default: 
+		meters->selectField = Idx_Invalid;
+		break;
+	}
+	if(meters->selectField == Idx_Invalid || meters->qryKeyWord == NULL){	
+		return;
+	}
+	
+
+	for(i = 0; i < recCnt; i++){
+
+		_ReadField(meters->selectField, strTmp);	// 读取字段：表号/户号/户名/地址
+		if(strstr(strTmp, meters->qryKeyWord) == NULL){
+			_Skip(1);	// 下一个数据库记录
+			continue;
+		}
+		// 将选择的字段信息 和 数据库索引 加入列表
+		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
+
+		query->resultCnt++;
+		if(query->resultCnt > query->reqMaxCnt){
+			query->errorCode = 1;
+
+			sprintf(strTmp, " 该抄表册表具数 超出最大限制 %d !", query->reqMaxCnt);
+			ShowMsg(8, 3*16, strTmp, 3000);
+			break;
+		}
+
+		_ReadField(Idx_MeterReadStatus, strTmp);		
+		strTmp[Size_MeterReadStatus - 1] = '\0';
+
+		// 状态转换 1/2/3 --> 0/1/2
+		if(strTmp[0] == '0' && strTmp[1] == '1'){		// 未抄数量
+			state = '0';				
+		}
+		else if(strTmp[0] == '0' && strTmp[1] == '2'){	// 成功数量
+			state = '1';
+		}else{											// 失败数量
+			state = '2';			
+		}
+
 		StringPadRight(meters->strs[meters->cnt], 20, ' ');
 		meters->strs[meters->cnt][18] = ' ';	
 		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
@@ -357,15 +444,6 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			meters->readNgCnt++;
 			readStatus = 2;
 		}
-		// test code
-		if(cnt < 3){
-			readStatus = 1;
-			sprintf(meterInfo->currReadVal, "30.22");
-		}
-		else if(cnt < 5){
-			readStatus = 1;
-			sprintf(meterInfo->currReadVal, "50.013");
-		}
 		
 		SaveMeterReadResult(meterInfo, 1, readStatus);		// 掌机抄表
 		_Sleep(500);
@@ -435,9 +513,9 @@ uint8 ShowMeterReadCountInfo(MeterListSt *meters)
 	dispIdx += sprintf(&dispBuf[dispIdx], "抄表册: %s\n \n", meters->sectNum);
 
 	dispIdx += sprintf(&dispBuf[dispIdx], "表具总数: %d\n", meters->meterCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "未抄: %d\n", meters->meterCnt - meters->readOkCnt - meters->readNgCnt);
-	dispIdx += sprintf(&dispBuf[dispIdx], "失败: %d\n", meters->readNgCnt);
 	dispIdx += sprintf(&dispBuf[dispIdx], "已抄成功: %d\n", meters->readOkCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "当前失败: %d\n", meters->readNgCnt);
+	dispIdx += sprintf(&dispBuf[dispIdx], "当前未抄: %d\n", meters->meterCnt - meters->readOkCnt - meters->readNgCnt);
 	//----------------------------------------------
 	_Printfxy(0, 9*16, "返回  < 完成 >  确定", Color_White);
 
@@ -460,22 +538,25 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 	MeterListSt *meters = meterReadList;
 	char state;
 
-	// 列表显示方式-界面
-	title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 4, NULL,
-		title, 
-		4,
-		"1. 按表号显示",
-		"2. 按户号显示",
-		"3. 按户名显示",
-		"4. 按地址显示");
-	while(1){
+	if(meters->selectField != Idx_Invalid){
+		title = "<<户表查询结果";
+	}
+	else{
+		// 列表显示方式-界面
+		title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
+		ListBoxCreate(&menuList, 16*4, 16*3, 12, 4, 4, NULL,
+			"显示类型", 
+			4,
+			"1. 表号",
+			"2. 户号",
+			"3. 户名",
+			"4. 地址");
 
 		_Printfxy(0, 9*16, "返回            确定", Color_White);
 		key = ShowListBox(&menuList);
 		//------------------------------------------------------------
 		if(key == KEY_CANCEL){	// 返回
-			break;
+			return key;
 		}
 
 		switch (menuList.strIdx + 1){
@@ -490,63 +571,64 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 		default:
 			break;
 		}
-		// 已抄/未抄列表-界面
-		//------------------------------------------------------------
+
 		_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 		QueryMeterList(meters, &DbQuery);	// 已抄/未抄列表 查询
-		ListBoxCreateEx(&meterList, 0, 0, 20, 7, meters->cnt, NULL,
-				&title[2], meters->strs, Size_ListStr, meters->cnt);
-		while(2){
+	}
 
-			_Printfxy(0, 9*16, "返回        户表信息", Color_White);
-			key = ShowListBoxEx(&meterList);
-			//------------------------------------------------------------
-			if(key == KEY_CANCEL){	// 返回
+	// 已抄/未抄列表/关键字查询结果列表-界面
+	//------------------------------------------------------------
+	ListBoxCreateEx(&meterList, 0, 0, 20, 7, meters->cnt, NULL,
+			&title[2], meters->strs, Size_ListStr, meters->cnt);
+	while(1){
+
+		_Printfxy(0, 9*16, "返回        户表信息", Color_White);
+		key = ShowListBoxEx(&meterList);
+		//------------------------------------------------------------
+		if(key == KEY_CANCEL){	// 返回
+			break;
+		}
+		if(key == KEY_ENTER && meters->cnt == 0){	
+			continue;
+		}
+
+		while(2){
+			// 户表信息-界面
+			//------------------------------------------------------
+			meters->idx = meterList.strIdx;
+			MeterInfo.dbIdx = meters->dbIdx[meters->idx];
+			MeterInfo.strIdx = meters->idx;
+			MeterInfo.strCnt = meters->cnt;
+			QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
+			key = ShowMeterInfo(&MeterInfo);
+			state = MeterInfo.meterReadStatus[1];	
+			state = state == '1' ? '0' : (state == '2' ? '1' : '2');	// 状态转换 1/2/3 --> 0/1/2
+			meters->strs[meterList.strIdx][18] = ' ';
+			meters->strs[meterList.strIdx][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+			//------------------------------------------------------
+			if(key == KEY_LEFT){
+				if(meterList.strIdx == 0){
+					meterList.strIdx = meterList.strCnt - 1;
+				}
+				else{
+					meterList.strIdx--;
+				}
+			}
+			else if(key == KEY_RIGHT){
+				if(meterList.strIdx == meterList.strCnt - 1){
+					meterList.strIdx = 0;
+				}
+				else{
+					meterList.strIdx++;
+				}
+			}
+			else{	// KEY_CANCEL
+				meterList.currIdx = meterList.strIdx;
 				break;
 			}
-			if(key == KEY_ENTER && meters->cnt == 0){	
-				continue;
-			}
+		} // while 2 户表信息
 
-			while(3){
-				// 户表信息-界面
-				//------------------------------------------------------
-				meters->idx = meterList.strIdx;
-				MeterInfo.dbIdx = meters->dbIdx[meters->idx];
-				MeterInfo.strIdx = meters->idx;
-				MeterInfo.strCnt = meters->cnt;
-				QueryMeterInfo(&MeterInfo, &DbQuery);	// 户表信息查询
-				key = ShowMeterInfo(&MeterInfo);
-				state = MeterInfo.meterReadStatus[1];	
-				state = state == '1' ? '0' : (state == '2' ? '1' : '2');	// 状态转换 1/2/3 --> 0/1/2
-				meters->strs[meterList.strIdx][18] = ' ';
-				meters->strs[meterList.strIdx][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
-				//------------------------------------------------------
-				if(key == KEY_LEFT){
-					if(meterList.strIdx == 0){
-						meterList.strIdx = meterList.strCnt - 1;
-					}
-					else{
-						meterList.strIdx--;
-					}
-				}
-				else if(key == KEY_RIGHT){
-					if(meterList.strIdx == meterList.strCnt - 1){
-						meterList.strIdx = 0;
-					}
-					else{
-						meterList.strIdx++;
-					}
-				}
-				else{	// KEY_CANCEL
-					meterList.currIdx = meterList.strIdx;
-					break;
-				}
-			} // while 3 户表信息
-
-		}// while 2 已抄/未抄列表
-
-	}// while 1 显示方式
+	}// while 1 已抄/未抄列表
 	
 	return key;
 }
@@ -563,15 +645,11 @@ void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatu
 	char time[20];
 	double curr, last;
 	uint8 isFlip = false;
-	char strTmp[Size_DbMaxStr];
+	char strTmp[Size_DbStr];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库
 	_Go(meterInfo->dbIdx);
-
-	#if LOG_ON
-		LogPrint("userName:%s, readType:%d, readStatus:%d, meterInfo->currReadVal:%s \r\n", meterInfo->userName, readType, readStatus, meterInfo->currReadVal);
-	#endif
 
 	readStatus = (readStatus == 0 ? 1 : readStatus == 1 ? 2 : 3);	// 抄表状态转换 0/1/2 --> 1/2/3
 
@@ -582,9 +660,9 @@ void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatu
 	sprintf(meterInfo->meterExcpType, "01");
 
 	// 更新抄表结果
-	_Replace(Idx_MtrReadStatus, meterInfo->meterReadStatus);	// 抄表状态 
-	_Replace(Idx_MtrReadType, meterInfo->meterReadType);		// 抄表性质 
-	_Replace(Idx_MtrReadDate, meterInfo->meterReadTime);		// 抄表日期
+	_Replace(Idx_MeterReadStatus, meterInfo->meterReadStatus);	// 抄表状态 
+	_Replace(Idx_MeterReadType, meterInfo->meterReadType);		// 抄表性质 
+	_Replace(Idx_MeterReadDate, meterInfo->meterReadTime);		// 抄表日期
 	if(readStatus == 2){
 
 		_ReadField(Idx_LastReadVal, strTmp);
@@ -719,16 +797,16 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 		strTmp[Size_UserAddr - 1] = '\0';
 		strcpy(meterInfo->userAddr, strTmp);	
 
-		_ReadField(Idx_MtrReadStatus, strTmp);			// 抄表状态
-		strTmp[Size_MtrReadStatus - 1] = '\0';
+		_ReadField(Idx_MeterReadStatus, strTmp);		// 抄表状态
+		strTmp[Size_MeterReadStatus - 1] = '\0';
 		strcpy(meterInfo->meterReadStatus, strTmp);	
 
-		_ReadField(Idx_MtrReadDate, strTmp);			// 抄表日期
-		strTmp[Size_MtrReadDate - 1] = '\0';
+		_ReadField(Idx_MeterReadDate, strTmp);			// 抄表日期
+		strTmp[Size_MeterReadDate - 1] = '\0';
 		strcpy(meterInfo->meterReadTime, strTmp);	
 
-		_ReadField(Idx_MtrReadType, strTmp);			// 抄表性质
-		strTmp[Size_MtrReadType - 1] = '\0';
+		_ReadField(Idx_MeterReadType, strTmp);			// 抄表性质
+		strTmp[Size_MeterReadType - 1] = '\0';
 		strcpy(meterInfo->meterReadType, strTmp);
 
 		_ReadField(Idx_MrExcepType, strTmp);			// 读数异常类型
@@ -865,7 +943,7 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		dispIdx += sprintf(&dispBuf[dispIdx], "本次用量: %s\n", meterInfo->currGasVol);
 		dispIdx += sprintf(&dispBuf[dispIdx], "本次剩余: %s\n", meterInfo->currRemainGasVol);
 		dispIdx += sprintf(&dispBuf[dispIdx], "本次读数: %s\n", meterInfo->currReadVal);
-		dispIdx += sprintf(&dispBuf[dispIdx], "本次电子读数: \n    %s\n", meterInfo->currElecReadVal);
+		dispIdx += sprintf(&dispBuf[dispIdx], "本次电子读数: \n          %s\n", meterInfo->currElecReadVal);
 		
 		dispIdx += sprintf(&dispBuf[dispIdx], "本次抄表时间: \n    %s\n", meterInfo->meterReadTime);
 		dispIdx += sprintf(&dispBuf[dispIdx], "上次抄表时间: \n    %s\n", meterInfo->lastMtrReadTime);
@@ -880,12 +958,12 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		dispIdx += sprintf(&dispBuf[dispIdx], "上次用量: %s\n", meterInfo->lastGasVol);
 		dispIdx += sprintf(&dispBuf[dispIdx], "上次剩余: %s\n", meterInfo->lastRemainGasVol);
 		dispIdx += sprintf(&dispBuf[dispIdx], "上次读数: %s\n", meterInfo->lastReadVal);
-		dispIdx += sprintf(&dispBuf[dispIdx], "上次电子读数: \n    %s\n", meterInfo->lastElecReadVal);
+		dispIdx += sprintf(&dispBuf[dispIdx], "上次电子读数: \n          %s\n", meterInfo->lastElecReadVal);
 		
 		dispIdx += sprintf(&dispBuf[dispIdx], "抄表册编号: \n    %s\n", meterInfo->sectNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "抄表册: %s\n", meterInfo->sectName);
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表册名称: \n    %s\n", meterInfo->sectName);
 		dispIdx += sprintf(&dispBuf[dispIdx], "抄表员编号: \n    %s\n", meterInfo->readerNum);
-		dispIdx += sprintf(&dispBuf[dispIdx], "抄表员: %s\n", meterInfo->readerName);
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表员姓名: \n    %s\n", meterInfo->readerName);
 		dispIdx += sprintf(&dispBuf[dispIdx], "管理单位编号: \n    %s\n", meterInfo->orgNum);
 		
 		//----------------------------------------------
@@ -1062,23 +1140,27 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 /*
 * 描 述：修复DBF文件的头部记录总数信息
 * 参 数：void
-* 返 回：void
+* 返 回：uint32 记录总数：0 - 记录总数为0 或 DBF文件不存在/打开失败
 */
-void FixDbfRecCnt(void)
+uint32 FixDbfRecCnt(void)
 {
 	uint32 recCnt = 0;
 	int fp;
 
 	if(_Access(MeterDocDB, 0) < 0){
-		return;
+		return recCnt;
 	}
 	
 	_Select(1);
-	_Use(MeterDocDB);	// 打开数据库
+	if(_Use(MeterDocDB) == 0){	// 打开数据库
+		return recCnt;
+	}
 	recCnt = _Reccount();
-	_Use("");			// 关闭数据库
+	_Use("");					// 关闭数据库
 
 	_Lseek(fp, 4, 0);
-	_Fwrite(&recCnt, 4, fp);	// 记录总数写入dbf文件头
+	_Fwrite(&recCnt, 4, fp);
 	_Fclose(fp);
+
+	return recCnt;
 }
