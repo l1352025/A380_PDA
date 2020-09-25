@@ -1991,7 +1991,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//--------------------------------------		程序升级		---------------------
 	case WaterCmd_NoticeUpgrade_OnApp:		// 通知系统升级_在app
 	case WaterCmd_NoticeUpgrade_OnBoot:		// 通知系统升级_在boot
-		if(rxlen < index + 41 || cmd != 0x70 || cmd != 0x71){
+		if(rxlen < index + 41 || (cmd != 0x70 && cmd != 0x71)){
 			break;
 		}
 		ret = CmdResult_Ok;
@@ -2010,7 +2010,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	case WaterCmd_QueryUpgradeStatus_OnBoot:	// 查询升级状态_在boot
 	case WaterCmd_QueryUpgradeStatus_OnApp:		// 查询升级状态_在app
-		if(rxlen < index + 12 || cmd != 0x73 || cmd != 0x74){
+		if(rxlen < index + 12 || (cmd != 0x73 && cmd != 0x74)){
 			break;
 		}
 		ret = CmdResult_Ok;

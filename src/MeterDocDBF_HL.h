@@ -60,7 +60,11 @@ typedef enum{
 #define Size_UserAddr		101	// 地址			"DZ"	char(100)
 #define Size_CollectorNum	11	// 采集器编号	"CJQBH"	char(10) 
 #define Size_CollectorSite	51	// 采集器位置	"CJQWZ"	char(50) 
+#ifdef Project_6009_RF_HL
+#define Size_MeterNum		13	// 表号			"BH"	char(12)	// dbf该字段长度变为 12
+#else // Project_6009_RF_HL
 #define Size_MeterNum		11	// 表号			"BH"	char(10)
+#endif
 #define Size_DistrictName	33	// 小区			"XQ"	char(32) 
 #define Size_BuildingName	33	// 楼栋			"LD"	char(32) 
 #define Size_UnitName		33	// 单元			"DY"	char(32) 

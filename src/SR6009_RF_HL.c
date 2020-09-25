@@ -5,9 +5,9 @@
 */
 #include "SR6009_RF_HL.h"
 
-#define Use_CoreFunc		1	// 是否只启用核心功能：批量抄表、读表数据、开阀、关阀、清异常
+//#define Use_CoreFunc	 	// 是否只启用核心功能：批量抄表、读表数据、开阀、关阀、清异常
 
-#if Use_CoreFunc
+#ifdef Use_CoreFunc
 #include "HJLIB.H"
 #include "string.h"
 #include "stdio.h"
@@ -22,7 +22,7 @@
 #include "SR6009_RF.c"         //  DBF数据库接口不同，其他功能与 SR6009_RF 一样
 #endif
 
-#if Use_CoreFunc
+#ifdef Use_CoreFunc
 // 常用功能
 void WaterCmdFunc_CommonCmd(void)
 {

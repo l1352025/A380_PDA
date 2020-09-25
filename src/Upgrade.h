@@ -10,7 +10,7 @@
 #define Upgrd_DocFileName   "UpgradeDoc.csv"    // 批量升级 档案文件名
 #define Upgrd_ReSendPktMax  5                   // 1轮最大补包次数
 
-#define Upgrd_LOG_ON            0               // 升级模块日志开关
+#define Upgrd_LOG_ON            1               // 升级模块日志开关
 
 // bin文件的 前128byte（实际使用69byte）保存升级代码相关信息
 typedef struct 

@@ -389,6 +389,7 @@ static void UpgradeFunc_UpgradeStart(uint8 upgradeMode)
 	if(shutdownTime == 0) shutdownTime = 120;	// 120s
 	_SetShutDonwTime(0);		// 20 - 999 有效，0 - 关闭自动关机
 
+
 	_Printfxy(0, 0, "<<开始升级", Color_White);
 	_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 	/*---------------------------------------------*/

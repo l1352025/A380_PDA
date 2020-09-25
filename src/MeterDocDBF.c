@@ -770,7 +770,7 @@ void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query)
 	uint32 i;
 	#endif
 	uint32 recCnt;
-	char *strTmp = &TmpBuf[0];
+	char strTmp[Size_DbStr];
 
 	_Select(1);
 	_Use(MeterDocDB);	// 打开数据库

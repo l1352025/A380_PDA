@@ -14,21 +14,21 @@
 #define Building_Max				100	// 一个小区-最大楼栋数
 #define Meter_Max					500	// 一栋楼-最大表数
 
-#define	Size_DistrictNum			16	// 小区编号 长度	10
-#define	Size_DistrictName			50	// 小区名称 长度	50
-#define	Size_BuildingNum			20	// 楼栋编号 长度	10
-#define	Size_BuildingName			50	// 楼栋名称 长度	50
+#define	Size_DistrictNum			11	// 小区编号 长度	10
+#define	Size_DistrictName			51	// 小区名称 长度	50
+#define	Size_BuildingNum			11	// 楼栋编号 长度	10
+#define	Size_BuildingName			51	// 楼栋名称 长度	50
 
-#define	Size_MeterNum				16	//表号长度 		12
-#define	Size_UserNum               	16	//户号长度		32
-#define Size_RoomNum              	20	//门牌号长度	16
+#define	Size_MeterNum				13	//表号长度 		12
+#define	Size_UserNum               	33	//户号长度		32
+#define Size_RoomNum              	17	//门牌号长度	16
 #define Size_MeterReadStatus        2	//抄表状态长度	1   : 0 - 未抄  1 - 成功，2 - 失败 
-#define	Size_UserName               40	//户名长度		50
+#define	Size_UserName               50	//户名长度		50
 #define Size_UserMobileNum          12	//手机号长度	50
-#define	Size_UserAddr               80	//地址长度 		100 
+#define	Size_UserAddr               100	//地址长度 		100 
 #define Size_MeterReadType			2	//抄表方式长度	1	
-#define Size_MeterReadTime          20	//抄表时间长度	20
-#define Size_MeterValue             12	//表读数		12
+#define Size_MeterReadTime          21	//抄表时间长度	20
+#define Size_MeterValue             13	//表读数		12
 #define Size_MeterStatusHex         8	//表状态Hex长度	8
 #define Size_MeterStatusStr         50	//表状态Str长度	50
 #define Size_BatteryVoltage         6   //电池电压长度	5
@@ -53,8 +53,8 @@ typedef enum{
 	Idx_BuildingNum,		// "CBEJFZBH",		// 抄表楼栋 编号
 	Idx_BuildingName,		// "CBEJFZMC",		// 抄表楼栋 名称
 	Idx_MeterNum,			// "BH",		// 表号
-	Idx_FLXS,				// "FLXS",		// 
-	Idx_MeterValue,			// "FLA",		// FL[A->] 表读数	// set
+	Idx_FLXS,				// "FLXS",		// FL系数：0~10
+	Idx_MeterValue,			// "FLA",		// 		FL[A->] 表读数	// set
 	Idx_FLB,				// "FLB",		// 
 	Idx_FLC,				// "FLC",		// 
 	Idx_FLD,				// "FLD",		// 
@@ -63,9 +63,9 @@ typedef enum{
 	Idx_FLG,				// "FLG",		// 
 	Idx_FLH,				// "FLH",		// 
 	Idx_FLI,				// "FLI",		// 
-	Idx_FLJ,				// "FLJ",		// FL[->J] 
-	Idx_LYXS,				// "LYXS",		// 
-	Idx_LYA,				// "LYA",		// LY[A->]
+	Idx_FLJ,				// "FLJ",		// 		FL[->J] 
+	Idx_LYXS,				// "LYXS",		// LY系数：0~10
+	Idx_LYA,				// "LYA",		// 		LY[A->]
 	Idx_LYB,				// "LYB",		// 
 	Idx_LYC,				// "LYC",		// 
 	Idx_LYD,				// "LYD",		// 
@@ -74,7 +74,7 @@ typedef enum{
 	Idx_LYG,				// "LYG",		// 
 	Idx_LYH,				// "LYH",		// 
 	Idx_LYI,				// "LYI",		// 
-	Idx_LYJ,				// "LYJ",		// LY[->J] 
+	Idx_LYJ,				// "LYJ",		// 		LY[->J] 
 	Idx_BLXHEX,				// "BLXHEX",	// 表类型 HEX		
 	Idx_BLXSTR,				// "BLXSTR",	// 表类型 STR		
 	Idx_MeterStatusHex,		// "BZTHEX",	// 表状态 HEX		// set
@@ -82,7 +82,7 @@ typedef enum{
 	Idx_BatteryVoltage,		// "DCDY",		// 电池电压			// set
 	Idx_MCCS,				// "MCCS",		// 脉冲常数
 	Idx_MeterReadType,		// "SGCQ",		// 抄表方式 0/1/2 - 掌机/集中器/手输	// set
-	Idx_QF,					// "QF",		// 
+	Idx_QF,					// "QF",		// 欠费？
 	Idx_SignalValue,		// "XHQD",		// 信号强度			// set
 	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间			// set
 	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0/1/2 - 未抄/成功/失败	// set
