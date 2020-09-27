@@ -5,42 +5,79 @@
 #include "string.h"
 #include "Common.h"
 
+#include "HJLIB.h"
+
 #if defined Project_8009_RF_PY 
 #include "MeterDocDBF_8009_PY.h"
 #endif
 
+
+#define FrameHeader1	0xA5		// 帧头 0xA5 0x68
+#define FrameHeader2	0x68		 
+#define FrameTail		0x16		// 帧尾 0x16	
+#define FrameFixedLen_Downlink	20	// 下行帧-固定部分长度
+#define FrameFixedLen_Uplink	37	// 上行帧-固定部分长度
+#define NBiotBj_Ver		(uint8)2	// NBiot 北京水表协议 2.0	
+
 extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
-extern uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
-extern uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
+extern uint8 PackWaterNBiotBjRequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
+extern uint8 ExplainWaterNBiotBjResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
 FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
-FuncCmdFramePack FramePack = PackWater8009RequestFrame;
-FuncCmdFrameExplain FrameExplain = ExplainWater8009ResponseFrame;
+FuncCmdFramePack FramePack = PackWaterNBiotBjRequestFrame;
+FuncCmdFrameExplain FrameExplain = ExplainWaterNBiotBjResponseFrame;
+
 
 //----------------------------------------  表端命令  ------------------------
+
+// 功能码
+typedef enum{
+	Func_ParamSet	= 0x81,
+	Func_DataReport,
+	Func_InfoQuery,
+	Func_DataTransmit,
+	Func_HistoryDataRpt,
+	Func_ReadHistoryData,
+
+	Func_Unknown
+}FuncCode;
+
+// 结果码
+typedef enum{
+	Reply_Success	= 0,
+	Reply_InfoError,
+	Reply_NotSupport,
+	Reply_Failed,
+
+	Reply_Unknown
+}ReplyCode;
+
 
 typedef enum{
 	/*
 	常用功能：	
-	1	读表数据
-	2	表开阀
-	3	表关阀
-	4	清除异常
+	1	读自定义数据
+	2	设置表地址
+	3	设置初值
+	4	读取为峰模块数据
 	*/
 	WaterCmd_ReadRealTimeData			= 0x11,	
-	WaterCmd_OpenValve,	
-	WaterCmd_CloseValve,
-	WaterCmd_ClearException
+	Cmd_ReadCustomData,	
+	Cmd_SetMeterAddr,	
+	Cmd_SetInitValue,	
+	Cmd_ReadWeiFengModuleData,	
+	Cmd_
 
-}WaterCmdDef;
+}UserCmd;
 
 
 #define CRC_POLY1 0xa001
-uint16 comPureCalCRC16ForBJ(const uint8 *pucBuf, uint16 uwLength)
+uint16 GetCRC16_NBiotBj(const uint8 *pucBuf, uint16 uwLength)
 {
     uint16 uiCRCValue=0xFFFF;
     uint8  ucLoop;
     uint8* pu8Buf = (uint8 *)pucBuf;
+
     while(uwLength--)
     {
         uiCRCValue ^= *pu8Buf++;
@@ -57,7 +94,7 @@ uint16 comPureCalCRC16ForBJ(const uint8 *pucBuf, uint16 uwLength)
             }
         }
     }
-    //uiCRCValue ^= 0xFFFF;
+
     return uiCRCValue;
 }
 
@@ -209,6 +246,103 @@ char * Water8009_GetStrErrorMsg(uint8 errorCode)
 	return str;
 }
 
+
+
+/*
+* 描  述：NB-iot北京水表 功能码
+* 参  数：code	- 编码值
+* 返回值：char *	- 解析后的字符串
+*/
+char * NBiotBj_GetStrFunctionCode(uint8 code)
+{
+	char * str = NULL;
+
+	switch(code){
+	case 0x81: str = "参数设置"; break;
+	case 0x82: str = "数据上报"; break;
+	case 0x83: str = "信息查询"; break;
+	case 0x84: str = "数据透传"; break;
+	case 0x85: str = "历史数据补报"; break;
+	case 0x86: str = "读取历史数据"; break;
+	default:
+	    str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：NB-iot北京水表 结果码
+* 参  数：code	- 编码值
+* 返回值：char *	- 解析后的字符串
+*/
+char * NBiotBj_GetStrResultCode(uint8 code)
+{
+	char * str = NULL;
+
+	switch(code){
+	case 0: str = "处理成功"; break;
+	case 1: str = "消息有误"; break;
+	case 2: str = "不支持"; break;
+	case 3: str = "处理失败"; break;
+	default:
+	    str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+
+/*
+* 描  述：NB-iot北京水表 厂商代码
+* 参  数：code	- 编码值
+* 返回值：char *	- 解析后的字符串
+*/
+char * NBiotBj_GetStrManufacturerCode(uint8 code)
+{
+	char * str = NULL;
+
+	switch(code){
+	case 0: str = "杭州竞达"; break;
+	case 1: str = "江西山川"; break;
+	case 2: str = "丹东思凯"; break;
+	case 3: str = "京兆公司"; break;
+	case 4: str = "宁波水表"; break;
+	case 5: str = "杭州山科"; break;
+	case 6: str = "山东高翔"; break;
+	case 7: str = "广州兆基"; break;
+	case 8: str = "京源"; break;
+	case 9: str = "东海"; break;
+	default:
+	    str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+/*
+* 描  述：NB-iot北京水表 设备类型
+* 参  数：code	- 编码值
+* 返回值：char *	- 解析后的字符串
+*/
+char * NBiotBj_GetStrDeviceType(uint8 code)
+{
+	char * str = NULL;
+
+	switch(code){
+	case 2: str = "无磁远传小表"; break;
+	default:
+	    str = "未知";
+		break;
+	}
+
+	return str;
+}
+
+
 //-----------------------------------		8009水表协议 打包 / 解包	-----------------------------
 
 /*
@@ -217,61 +351,50 @@ char * Water8009_GetStrErrorMsg(uint8 errorCode)
 * 参  数：buf	- 数据缓存起始地址
 		  addrs - 地址域：源地址、中继地址、目的地址
 		  cmdId - 命令字
-		  args	- 数据域参数
+		  args	- args[0] 功能码， args[m->n] 数据域
 		  retryCnt - 重发次数：0 - 第1次发送，其他 - 第n次重发
-* 返回值：uint8 帧总长度
+* 返回值：uint8 帧总长度，NBiot帧长度可能超过255
 */
-uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt)
+uint8 PackWaterNBiotBjRequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
+	static uint16 Fsn = 0;
 	static uint16 index = 0;
-	uint8 i, cmd , crc8, relayCnt;
+	uint16 len, crc16;
 
 	if(retryCnt > 0 && index > 0){
 		return index;
 	}
 
 	index = 0;
-	buf[index++] = 0xFE;		// 帧头： 固定为 FE 68
-	buf[index++] = 0x68;
-	buf[index++] = 0x01;		// 设备类型：00 - 水表， 01 - 燃气表 
-
-	// 表模块ID：5 byte	BCD 高位在前
-	memcpy(&buf[index], addrs->items[addrs->itemCnt - 1], AddrLen);
-	index += AddrLen;			
+	buf[index++] = FrameHeader1;		// 帧头： 固定为 A5 68
+	buf[index++] = FrameHeader2;
+	len = FrameFixedLen_Downlink + args->lastItemLen;	// 长度: 固定20 + 数据域长度
+	buf[index++] = (uint8)(len & 0xFF);	
+	buf[index++] = (uint8)(len >> 8);	
+	buf[index++] = (uint8)(Fsn & 0xFF);	// 序号
+	buf[index++] = (uint8)(Fsn >> 8);
+	Fsn++;
+	buf[index++] = NBiotBj_Ver;			// 协议版本
+	buf[index++] = (_GetYear() % 100);	// 平台时间
+	buf[index++] = _GetMonth();	
+	buf[index++] = _GetDay();	
+	buf[index++] = _GetHour();	
+	buf[index++] = _GetMin();	
+	buf[index++] = _GetSec();
+	buf[index++] = *args->items[0];		// 功能码
+	buf[index++] = 0x00;				// 加密标识：0-不加密， 1-加密	
 	
-	// 控制字2： bit7~4 路由级数 0 - 无路由， 4 - 1级， 8~15 - 2~9级 
-	//			bit3~0 当前位置 0 - 主机， 2 - 1级， 4~11 - 2~9级 
-	relayCnt = addrs->itemCnt - 1;
-	switch (relayCnt)
-	{
-	case 0: buf[index++] = 0x00; break;
-	case 1: buf[index++] = 0x40; break;
-	case 2: buf[index++] = 0x80; break;
-	default:
-		break;
-	}
-	// 控制字1： bit7 0/1-下/上行，bit6 0/1-应答/上报，bit5~0 - 命令字
-	cmd = *args->items[0];
-	buf[index++] = cmd;			
-	
-	// 数据域长度：路由+数据部分
-	buf[index++] = relayCnt * AddrLen + args->lastItemLen;
-	
-	// 数据域-路由（最多2个）
-	for(i = 0; i < relayCnt; i++){
-		memcpy(&buf[index], addrs->items[i], AddrLen);
-		index += AddrLen;
-	}
+	// 数据域-长度
+	buf[index++] = args->lastItemLen;
 	
 	// 数据域-数据部分
 	memcpy(&buf[index], args->items[args->itemCnt -1], args->lastItemLen);
 	index += args->lastItemLen;
 
-	buf[index++] = 0x55;		// 下行场强
-	buf[index++] = 0xAA;		// 上行场强
-	crc8 = GetCrc8(&buf[0], index);
-	buf[index++] = crc8;		// crc8 校验: 帧长 -- 上行场强
-	buf[index++] = 0x16;		// 结束符
+	crc16 = GetCRC16_NBiotBj(&buf[0], index);
+	buf[index++] = (uint8)(crc16 & 0xFF);	// crc16 校验: 帧头 --> 校验之前
+	buf[index++] = (uint8)(crc16 >> 8);
+	buf[index++] = FrameTail;				// 结束符
 
 	return index;
 }
@@ -287,35 +410,29 @@ uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, Par
 *		  dispBuf 	- 解析的显示数据
 * 返回值：uint8 解析结果：0 - 成功 , 1 - 失败 ， 2 - CRC错误， 3 - 超时无应答
 */
-uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
+uint8 ExplainWaterNBiotBjResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
 	bool ret = CmdResult_Failed;
-	uint8 crc8, relayCnt, cmd, subCmd, u8Tmp;
-	uint16 index = 0, dispIdx, length, startIdx, payloadIdx, u16Tmp;
+	uint8 relayCnt, cmd, subCmd, u8Tmp;
+	uint16 index = 0, dispIdx, length, crc16, startIdx, payloadIdx, u16Tmp;
 	uint32 u32Tmp;
 	double f64Tmp;
 	char *ptr;
 
 	dispIdx = 0;
 
-	// 显示表号
-	#if (AddrLen < 8)
-	dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
-	#else
-	dispIdx += sprintf(&dispBuf[dispIdx], "表号: \n   %s\n", StrDstAddr);
-	#endif
 
 	// 缓冲区多包中查找
 	while(1){
 
 		// min length check
-		if(rxlen < index + 15){		
+		if(rxlen < index + FrameFixedLen_Uplink){		
 			sprintf(&dispBuf[dispIdx], "结果: 超时,无应答");
 			return CmdResult_Timeout;
 		}
 
 		// start check
-		if(buf[index] == 0xFE && buf[index + 1] == 0x68){
+		if(buf[index] == FrameHeader1 && buf[index + 1] == FrameHeader2){
 			// pass
 		}else{
 			index++;
@@ -323,37 +440,15 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}
 		
 		// length check 
-		length = (uint16)(buf[index + 10] + 15);
+		length = (uint16)(buf[index + 2] + buf[index + 3] * 256);
 		if(length > rxlen){
 			index += length;
 			continue;
 		}	
 
-		// ack flag check
-		if((buf[index + 9] & 0x80) == 0x00){
-			index += length;
-			continue;
-		}
-
-		// first node check
-		if((buf[index + 8] & 0x0F) != 0x00){
-			index += length;
-			continue;
-		}
-
-		/*
-		if(cmd != WaterCmd_SetMeterNumber && memcmp(BroadAddr, DstAddr, AddrLen) != 0){
-			// dstaddr check
-			if(memcmp(&buf[index + 3], DstAddr, AddrLen) != 0){
-				index += length;
-				continue;
-			}
-		}
-		*/
-
-		// crc8 check
-		crc8 = GetCrc8(&buf[index], length - 2);
-		if(crc8 !=  buf[index + length - 2]){
+		// crc16 check
+		crc16 = GetCRC16_NBiotBj(&buf[index], length - 3);
+		if(crc16 !=  (buf[index + length - 3] + buf[index + length - 2] * 256)){
 			sprintf(&dispBuf[dispIdx], "结果: 有应答,CRC错误");
 			return CmdResult_CrcError;
 		}
@@ -364,44 +459,35 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 
 	startIdx = index;
 
-	// 跳过 帧头、设备类型
-	index += 3;
+	// 跳过 帧头、长度、序号、协议版本
+	index += 7;
 
-	// 表号ID
-	if(memcmp(&buf[index], DstAddr, AddrLen) != 0){
-
-		// 广播命令时，将应答的表地址作为新的目的地址
-		GetStringHexFromBytes(StrDstAddr, buf, index, AddrLen, 0, false);
-
-		dispIdx = 0;
-		#if (AddrLen <= 6)
-		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", StrDstAddr);
-		#else
-		dispIdx += sprintf(&dispBuf[dispIdx], "表号: \n   %s\n", StrDstAddr);
-		#endif
-	}
-	index += AddrLen;
-
-	// 控制字2：路由级别|当前位置
-	switch ((uint8)(buf[index] >> 4))
-	{
-	case 0: relayCnt = 0; break;
-	case 4: relayCnt = 1; break;
-	case 8: relayCnt = 2; break;
-	default: break;
-	}
+	// 厂家代码
+	ptr = NBiotBj_GetStrManufacturerCode(buf[index]);
+	dispIdx += sprintf(&dispBuf[dispIdx], "厂家编码: %s\n", ptr);
+	index += 1;
+	// 设备类型
+	ptr = NBiotBj_GetStrDeviceType(buf[index]);
+	dispIdx += sprintf(&dispBuf[dispIdx], "设备类型: %s\n", ptr);
+	index += 1;
+	// 模块IMEI
+	ptr = memcpy(&TmpBuf[0], &buf[index], 15);
+	TmpBuf[15] = 0x00;
+	dispIdx += sprintf(&dispBuf[dispIdx], "模块IMEI: \n    %s\n", ptr);
+	index += 15;
+	// 信号质量
+	index += 5; // 暂不解析：RSRP、SNR、覆盖等级
+	dispIdx += sprintf(&dispBuf[dispIdx], "信号质量: %d\n", buf[index]);
 	index += 1;
 
-	// 控制字1：命令字
-	cmd = (uint8)(buf[index] & 0x1F);
+	// 功能码
+	cmd = buf[index];
 	index += 1;
+	// 加密标识
+	index += 1; // 跳过
+	// 数据域长度
+	index += 2; // 跳过
 
-	// 跳过 数据域长度 --> 路由信息
-	index += (1 + relayCnt * AddrLen);
-
-	// 子命令字
-	subCmd = buf[index]; // 可能没有
-	
 	// 数据域解析
 	payloadIdx = index;
 	switch(cmdId){
@@ -410,7 +496,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	//--------------------------------------	表端命令 0x01 ~ 0x25 , 70 ~ 74		--------------------
 	//-------------------------------------------------------------------------------------------------
 	//----------------------------------------		读取用户用量		-------------
-	case WaterCmd_ReadRealTimeData:	// 读取用户用量
+	case Cmd_ReadCustomData:	// 读取用户用量
 		if(rxlen < index + 9 || cmd != 0x01){
 			break;
 		}
@@ -453,7 +539,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		break;
 
-	case WaterCmd_OpenValve:		// 开阀
+	case Cmd_SetMeterAddr:		// 设置表地址
 		if(rxlen < index || cmd != 0x05){
 			break;
 		}
@@ -484,28 +570,9 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	}
 
 
-	if(index == startIdx + length - 4)
+	if(index == startIdx + length - 3)
 	{
-		//下行/上行 信号强度
-		TmpBuf[0] = buf[index];
-		TmpBuf[1] = buf[index + 1];
-
-		if(TmpBuf[0]<31)
-        	TmpBuf[0] = 31;
-    	else if(TmpBuf[0] > 80)
-        	TmpBuf[0] = 80;
-
-		if(TmpBuf[1]<31)
-        	TmpBuf[1] = 31;
-    	else if(TmpBuf[1] > 80)
-        	TmpBuf[1] = 80;
-
-		TmpBuf[0] = (TmpBuf[0] - 30) * 2;
-		TmpBuf[1] = (TmpBuf[1] - 30) * 2;
-		
-		dispIdx += sprintf(&dispBuf[dispIdx], "                    \n");
-		dispIdx += sprintf(&dispBuf[dispIdx], "下行: %d  上行: %d\n", TmpBuf[0],  TmpBuf[1]);
-		index += 2;
+		// 解析正确
 	}
 	else{
 		#if LOG_ON
@@ -519,7 +586,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	return ret;
 }
 
-//--------------------------------------	8009水表命令 发送、接收、结果显示	----------------------------
+//--------------------------------------	命令发送、接收、结果显示	----------------------------
 /*
 * 描述： 命令发送/接收解析	- 执行完成后，等待按键：上/下键 - 滚动显示， 确认/取消键 - 返回
 * 参数： cmdid	- 当前命令标识
@@ -530,7 +597,7 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 *		tryCnt	- 重试次数 默认3次
 * 返回： uint8	- 界面退出时的按键值：确认键，取消键	
 */
-uint8 Protol8009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
+uint8 NBiotBj_TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args, uint16 ackLen, uint16 timeout, uint8 tryCnt)
 {
 	uint8 key;
 

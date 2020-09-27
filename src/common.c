@@ -2338,7 +2338,7 @@ void MeterNoSave(uint8 *mtrNo)
 
 #if defined Project_6009_RF || defined Project_6009_RF_HL
 	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#elif defined Project_6009_IR
+#elif defined Project_6009_IR || defined Project_6009_IR_BJ
 	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
 #elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
 	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
@@ -2368,7 +2368,7 @@ void MeterNoLoad(uint8 *mtrNo)
 	
 #if defined Project_6009_RF || defined Project_6009_RF_HL
 	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#elif defined Project_6009_IR
+#elif defined Project_6009_IR || defined Project_6009_IR_BJ
 	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
 #elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
 	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
