@@ -10,13 +10,14 @@
 #include "MeterDocDBF_HL.h"
 #endif
 
-extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 extern uint8 PackWater6009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
 extern uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
-FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
+#ifndef Frame_Pack_Parse
+#define Frame_Pack_Parse
 FuncCmdFramePack FramePack = PackWater6009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater6009ResponseFrame;
+#endif
 
 //----------------------------------------  表端命令  ------------------------
 /*
@@ -341,6 +342,7 @@ char * WaterBeiJing_GetStrDeviceType(uint8 typeId)
 	case 0x41:	str = "三川无磁";	break;
 	case 0x44:	str = "宁波无磁";	break;
 	case 0x35:	str = "山科无磁";	break;
+	case 0x26:	str = "高翔无磁";	break;
 	case 0x2A:	str = "东海无磁";	break;
 	case 0x2B:	str = "京源无磁";	break;
 	default:
@@ -2750,7 +2752,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	uint8 key;
 
 	// 应答长度、超时时间、重发次数
-#ifdef Project_6009_IR
+#if defined Project_6009_IR || defined Project_6009_IR_HX
 	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
@@ -2763,6 +2765,9 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	timeout = 2000 + (addrs->itemCnt - 1) * 2000;
 	tryCnt = 2;
 #endif
+
+	FramePack = PackWater6009RequestFrame;
+	FrameExplain = ExplainWater6009ResponseFrame;
 
 	ProtolCommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
 

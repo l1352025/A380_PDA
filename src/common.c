@@ -35,6 +35,8 @@ UI_ItemList UiList;
 bool LcdOpened;
 bool IsNoAckCmd;
 
+FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
+
 //---------------------------------  通用方法  -------------------------------------
 //
 //	IndexOf				在数组中查找子数组，可指定查找的起始位置和范围
@@ -1722,7 +1724,7 @@ int GetStringHexFromBytes(char * strHex, uint8 bytes[], int iStart, int iLength,
 			strHex[index++] = separate;
 		}
 	}
-	strHex[index++] = 0x00;
+	strHex[index++] = 0x00;		// ？？ 长度多了1个
 
 	return index;
 }
@@ -2180,10 +2182,12 @@ CmdResult ProtolCommandTranceiver(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args
 	// }
 
 	_GUIRectangleFill(0, 1*16 + 8, 160, 8*16 + 8, Color_White);
+#ifndef Project_6009_IR_HX
 #if (AddrLen <= 6)
 	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号: %s ", StrDstAddr);
 #else
 	PrintfXyMultiLine_VaList(0, 1*16 + 8, "表号:\n   %s ", StrDstAddr);
+#endif
 #endif
 
 	cmdResult = CommandTranceiver(cmdid, addrs, args, ackLen, timeout, tryCnt);
@@ -2338,7 +2342,7 @@ void MeterNoSave(uint8 *mtrNo)
 
 #if defined Project_6009_RF || defined Project_6009_RF_HL
 	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#elif defined Project_6009_IR || defined Project_6009_IR_BJ
+#elif defined Project_6009_IR || defined Project_6009_IR_HX
 	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
 #elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
 	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 
@@ -2368,7 +2372,7 @@ void MeterNoLoad(uint8 *mtrNo)
 	
 #if defined Project_6009_RF || defined Project_6009_RF_HL
 	_Lseek(fp, 0, 0);	// byte [0 ~ 19] 12位表号 
-#elif defined Project_6009_IR || defined Project_6009_IR_BJ
+#elif defined Project_6009_IR || defined Project_6009_IR_HX
 	_Lseek(fp, 40, 0);	// byte [40 ~ 59] 16位表号 
 #elif defined Project_8009_RF || defined Project_8009_RF_PY || defined Project_8009_RF_HL
 	_Lseek(fp, 60, 0);	// byte [60 ~ 79] 10位表号 

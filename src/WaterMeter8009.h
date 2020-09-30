@@ -10,13 +10,14 @@
 #include "MeterDocDBF_HL.h"
 #endif
 
-extern void CycleInvoke_OpenLcdLight_WhenKeyPress(uint8 currKey);
 extern uint8 PackWater8009RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt);
 extern uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf);
 
-FuncCmdCycleHandler TranceiverCycleHook = CycleInvoke_OpenLcdLight_WhenKeyPress;
+#ifndef Frame_Pack_Parse
+#define Frame_Pack_Parse
 FuncCmdFramePack FramePack = PackWater8009RequestFrame;
 FuncCmdFrameExplain FrameExplain = ExplainWater8009ResponseFrame;
+#endif
 
 //----------------------------------------  ±Ì∂À√¸¡Ó  ------------------------
 /*

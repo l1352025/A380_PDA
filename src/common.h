@@ -41,12 +41,27 @@ typedef unsigned char bool;
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR    
     //#define CurrBaud    (uint8 *)"9600,E,8,1" 
-    #define CurrBaud    (uint8 *)"9600,N,8,1"            
-	//#define CurrBaud    (uint8 *)"2400,N,8,1"
+    //#define CurrBaud    (uint8 *)"9600,N,8,1"            
+	#define CurrBaud    (uint8 *)"2400,N,8,1"
     #define VerInfo_Msg    (char *)"        "         // 版本备注信息
     #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
-    //#define AddrLen     8           // 地址长度(byte)：8 
-    #define AddrLen     7           // 地址长度(byte)：7    // 14位表号版
+    #define AddrLen     8           // 地址长度(byte)：8 
+    //#define AddrLen     7           // 地址长度(byte)：7    // 14位表号版
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
+    #define LogPort     CurrPort            // 日志输出串口
+    #define UseBroadAddr    1               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
+#elif defined(Project_6009_IR_HX)        // 6009-红外-海大定制版
+    #define VerInfo_Name    (char *)"  桑锐N609HX抄表程序"  // 程序名
+    #define VerInfo_RevNo   (char *)"1.0 预览1"	            // 版本号
+    #define VerInfo_RevDate (char *)"2020-09-29"        // 版本日期
+    #define TransType   (char *)"红外透传"       		// 通信方式	
+	#define CurrPort    Trans_IR              
+	#define CurrBaud    (uint8 *)"2400,N,8,1"
+    #define VerInfo_Msg    (char *)"        "         // 版本备注信息
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
+    #define AddrLen     8           // 地址长度(byte)：8    // 16位表号版
     #define VerLen      40          // 版本长度(byte)：40 
     #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
     #define LogPort     CurrPort            // 日志输出串口
@@ -130,7 +145,11 @@ typedef unsigned char bool;
 #endif
 
 
-//#define VerInfo_Release     // 发布时必须定义该宏， 调试时注释
+#define VerInfo_Release     // 发布时必须定义该宏， 调试时注释
+
+#ifndef VerInfo_Release
+    #pragma 当前LOG未关闭！发布时请关闭
+#endif
 
 // 发布时，关闭log 并 打开蜂鸣器
 #ifndef VerInfo_Release
@@ -319,6 +338,7 @@ void MeterNoLoad(uint8 *mtrNo);
 void SysCfgLoad(void);
 void SysCfgSave(void);
 void VersionInfoFunc(void);
+#define Memcpy_AddNull(pDst, pSrc, len) do { memcpy(pDst, pSrc, len); ((uint8 *)pDst)[len] = 0x00; }while(0)
 
 //--------------------------------		全局变量	 ---------------------------------------
 //extern char Screenbuff[160*(160/3+1)*2]; 

@@ -1973,7 +1973,7 @@ void WaterCmdFunc_WorkingParams(void)
 				break;
 
 			case 21:
-				CurrCmd = WaterCmd_NbReportRealTimeDataNow;		// NB立即上报实时数据
+				CurrCmd = WaterCmd_NbReportRealTimeDataNow;		// NB上报实时数据
 				if(false == isUiFinish){
 					break;
 				}

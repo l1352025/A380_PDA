@@ -3,7 +3,7 @@
 *	桑锐6009水表手持机 - 红外版 <北京NB-Iot>
 *
 */
-#include "SR6009_IR_BJ.h"
+#include "SR6009_IR_HX.h"
 
 #include "HJLIB.H"
 #include "string.h"
@@ -12,10 +12,8 @@
 #include "common.h"
 #include "common.c"
 #include "WaterMeter.h"
-#include "Upgrade.h"
-#include "Upgrade.c"
-#include "List.h"
-#include "List.c"
+#include "ProtoHandle_NBiot_BJ.h"
+#include "ProtoHandle_DH_IR.h"
 
 
 // --------------------------------  水表模块通信  -----------------------------------------
@@ -24,7 +22,7 @@
 // 读IMEI+ICCID
 void MainFuncReadImeiAndCcid(void)
 {
-	uint8 key, tryCnt = 0, i;
+	uint8 key, menuItemNo, tryCnt = 0, i;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
@@ -72,11 +70,11 @@ void MainFuncReadImeiAndCcid(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_ReadImeiAndCcid;	// "读取IMEI+ICCID"
-
+		menuItemNo = 1;
 		
-		switch(CurrCmd){
-		case WaterCmd_ReadImeiAndCcid:		// "读取IMEI+ICCID"
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = WaterCmd_ReadImeiAndCcid;		// 读取IMEI+ICCID
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
 				break;
@@ -151,7 +149,7 @@ void MainFuncReadImeiAndCcid(void)
 // 读取北京水表参数
 void MainFuncReadBeijingWaterMeterParams(void)
 {
-	uint8 key, tryCnt = 0, i;
+	uint8 key, menuItemNo, tryCnt = 0, i;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
@@ -165,7 +163,7 @@ void MainFuncReadBeijingWaterMeterParams(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<读取用户用量");
+		sprintf(CurrCmdName, "<<读取北京水表参数");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
@@ -190,11 +188,114 @@ void MainFuncReadBeijingWaterMeterParams(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_ReadRealTimeData;	// "读取用户用量"
-
+		menuItemNo = 1;
 		
-		switch(CurrCmd){
-		case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = WaterCmd_ReadBeiJingWaterMeterParams;		// 读取北京水表参数
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				break;
+			}
+			Args.buf[i++] = 0x26;		// 命令字	26
+			ackLen = 69;				// 应答长度 69
+			// 数据域
+			Args.buf[i++] = 0x00;		// 命令选项 00 - 读取， 01 - 设置		
+			Args.lastItemLen = i - 1; 
+			break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+		
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			if( StrDstAddr[0] < '0' || StrDstAddr[0] > '9')
+			{
+				sprintf(StrDstAddr, " 请输入");
+				currUi = 0;
+				continue;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 地址填充
+		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+		#if (AddrLen == 6)
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
+		#else
+		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
+		#endif
+
+		// 发送、接收、结果显示
+		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+	
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+}
+
+// 读取用户用量 rename --> 读自定义数据
+void MainFuncReadRealTimeData(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<读自定义数据");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
+
+			#if (AddrLen == 6)
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
+			#else
+			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
+			#endif
+		}
+			
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		menuItemNo = 1;
+		
+		switch(menuItemNo){
+		case 1:	
+			CurrCmd = WaterCmd_ReadRealTimeData;	// 读自定义数据 （即原来的 “读取用户用量”）
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
 				break;
@@ -251,10 +352,10 @@ void MainFuncReadBeijingWaterMeterParams(void)
 	}
 }
 
-// 读自定义数据
-void MainFuncReadCustomData(void)
+// NB上报实时数据
+void MainFuncNbReportRealTimeData(void)
 {
-	uint8 key, tryCnt = 0, i;
+	uint8 key, menuItemNo, tryCnt = 0, i;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
@@ -268,7 +369,7 @@ void MainFuncReadCustomData(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<读取冻结数据");
+		sprintf(CurrCmdName, "<<NB上报实时数据");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
@@ -279,6 +380,7 @@ void MainFuncReadCustomData(void)
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
+
 			#if (AddrLen == 6)
 			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 			#else
@@ -292,413 +394,19 @@ void MainFuncReadCustomData(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
+		menuItemNo = 1;
 		
-		switch(CurrCmd){
-		case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
-			/*---------------------------------------------*/
+		switch(menuItemNo){
+		case 1:	
+			CurrCmd = WaterCmd_NbReportRealTimeDataNow;		// NB上报实时数据
 			if(false == isUiFinish){
-				sprintf(StrBuf[0], "0 (0-9有效)");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
 				break;
 			}
-			
-			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-				currUi = 1;
-				isUiFinish = false;
-				continue;
-			}
-			Args.buf[i++] = 0x02;		// 命令字	02
-			ackLen = 114;				// 应答长度 88/114	
-			// 数据域
-			Args.buf[i++] = 0x01;				// 数据格式 01/02
-			Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-			Args.buf[i++] = _GetYear()%100;		
-			Args.buf[i++] = _GetMonth();		
-			Args.buf[i++] = _GetDay();			
-			Args.buf[i++] = _GetHour();			
-			Args.buf[i++] = _GetMin();			
-			Args.buf[i++] = _GetSec();			
-			Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
-			Args.lastItemLen = i - 1;
-			break;
-
-		default: 
-			break;
-		}
-				
-		// 创建 “中继地址输入框” 后， 显示UI
-		if(false == isUiFinish){
-	
-			key = ShowUI(UiList, &currUi);
-
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, " 请输入");
-				currUi = 0;
-				continue;
-			}
-
-			isUiFinish = true;
-			continue;	// go back to get ui args
-		}
-
-		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-		#if (AddrLen == 6)
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-		#else
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-		#endif
-
-		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-		
-		
-		// 继续 / 返回
-		if (key == KEY_CANCEL){
-			break;
-		}else{
-			isUiFinish = false;
-			continue;
-		}
-	}
-}
-
-// 读为峰模块数据
-void MainFuncReadWeiFengModuleDatas(void)
-{
-	uint8 key, tryCnt = 0, i;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
-
-	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-	isUiFinish = false;
-
-	while(1){
-		
-		_ClearScreen();
-
-		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<读取冻结数据");
-		_Printfxy(0, 0, CurrCmdName, Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-		/*---------------------------------------------*/
-		//----------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-
-		if(false == isUiFinish){
-			(*pUiCnt) = 0;
-			uiRowIdx = 2;
-			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
-			#else
-			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
-			#endif
-		}
-			
-		// 命令参数处理
-		i = 0;	
-		Args.itemCnt = 2;
-		Args.items[0] = &Args.buf[0];   // 命令字
-		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_ReadFrozenData;		// "读取冻结正转数据"
-		
-		switch(CurrCmd){
-		case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
-			/*---------------------------------------------*/
-			if(false == isUiFinish){
-				sprintf(StrBuf[0], "0 (0-9有效)");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
-				break;
-			}
-			
-			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-				currUi = 1;
-				isUiFinish = false;
-				continue;
-			}
-			Args.buf[i++] = 0x02;		// 命令字	02
-			ackLen = 114;				// 应答长度 88/114	
-			// 数据域
-			Args.buf[i++] = 0x01;				// 数据格式 01/02
-			Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-			Args.buf[i++] = _GetYear()%100;		
-			Args.buf[i++] = _GetMonth();		
-			Args.buf[i++] = _GetDay();			
-			Args.buf[i++] = _GetHour();			
-			Args.buf[i++] = _GetMin();			
-			Args.buf[i++] = _GetSec();			
-			Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
-			Args.lastItemLen = i - 1;
-			break;
-
-		default: 
-			break;
-		}
-				
-		// 创建 “中继地址输入框” 后， 显示UI
-		if(false == isUiFinish){
-	
-			key = ShowUI(UiList, &currUi);
-
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, " 请输入");
-				currUi = 0;
-				continue;
-			}
-
-			isUiFinish = true;
-			continue;	// go back to get ui args
-		}
-
-		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-		#if (AddrLen == 6)
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-		#else
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-		#endif
-
-		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-		
-		
-		// 继续 / 返回
-		if (key == KEY_CANCEL){
-			break;
-		}else{
-			isUiFinish = false;
-			continue;
-		}
-	}
-}
-
-// 设置表地址
-void MainFuncSetMeterAddr(void)
-{
-	uint8 key, tryCnt = 0, i;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout;
-	uint8 *time = &TmpBuf[200], *timeBytes = &TmpBuf[300];
-
-	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-	isUiFinish = false;
-
-	while(1){
-		
-		_ClearScreen();
-
-		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<设置表端时钟");
-		_Printfxy(0, 0, CurrCmdName, Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-		/*---------------------------------------------*/
-		//----------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-
-		if(false == isUiFinish){
-			(*pUiCnt) = 0;
-			uiRowIdx = 2;
-			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
-			#else
-			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
-			#endif
-		}
-			
-		// 命令参数处理
-		i = 0;	
-		Args.itemCnt = 2;
-		Args.items[0] = &Args.buf[0];   // 命令字
-		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_SetMeterTime;	// 设置表端时钟
-
-		switch(CurrCmd){
-		case WaterCmd_SetMeterTime:		// "设置表端时钟"
-			/*---------------------------------------------*/
-			if(false == isUiFinish){
-				_GetDateTime(time, '-',  ':');
-				DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
-				
-				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "时 间:");
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
-				TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
-				TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
-				TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
-				TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
-				TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
-				break;
-			}
-			// 时间有效值校验
-			if( (i = TimeStrsToTimeBytes(timeBytes, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
-				currUi = 3 + (i -1);
-				isUiFinish = false;
-				continue;
-			}
-
-			sprintf(time, "%s-%s-%s %s:%s:%s",
-				StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
-			_SetDateTime(time);
-
 			i = 0;
-			Args.buf[i++] = 0x14;		// 命令字	14
-			ackLen = 2;					// 应答长度 2	
+			Args.buf[i++] = 0x21;		// 命令字	21
+			ackLen = 1;					// 应答长度 1	
 			// 数据域
-			Args.buf[i++] = DecToBcd(timeBytes[0]);		// 时间 - yyyy/mm/dd HH:mm:ss
-			Args.buf[i++] = DecToBcd(timeBytes[1]);		
-			Args.buf[i++] = DecToBcd(timeBytes[2]);		
-			Args.buf[i++] = DecToBcd(timeBytes[3]);			
-			Args.buf[i++] = DecToBcd(timeBytes[4]);			
-			Args.buf[i++] = DecToBcd(timeBytes[5]);			
-			Args.buf[i++] = DecToBcd(timeBytes[6]);	
-			Args.lastItemLen = i - 1;
-			break;
-
-		default:
-			break;
-		}
-
-		// 创建 “中继地址输入框” 后， 显示UI
-		if(false == isUiFinish){
-		
-			key = ShowUI(UiList, &currUi);
-
-			if (key == KEY_CANCEL){
-				break;
-			}
-
-			if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
-				sprintf(StrDstAddr, " 请输入");
-				currUi = 0;
-				continue;
-			}
-
-			isUiFinish = true;
-			continue;	// go back to get ui args
-		}
-
-		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-		#if (AddrLen == 6)
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-		#else
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-		#endif
-
-		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
-		
-		
-		// 继续 / 返回
-		if (key == KEY_CANCEL){
-			break;
-		}else{
-			isUiFinish = false;
-			continue;
-		}
-	}
-}
-
-// 设置初值
-void MainFuncSetMeterInitValue(void)
-{
-	uint8 key, tryCnt = 0, i;
-	UI_Item * pUi = &UiList.items[0];
-	uint8 * pUiCnt = &UiList.cnt;
-	uint8 currUi = 0, uiRowIdx, isUiFinish;
-	uint16 ackLen = 0, timeout, u16Tmp;
-	uint32 u32Tmp;
-
-	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
-	isUiFinish = false;
-
-	while(1){
-		
-		_ClearScreen();
-
-		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<设用量和脉冲系数");
-		_Printfxy(0, 0, CurrCmdName, Color_White);
-		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
-		/*---------------------------------------------*/
-		//----------------------------------------------
-		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
-
-		if(false == isUiFinish){
-			(*pUiCnt) = 0;
-			uiRowIdx = 2;
-
-			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
-			#else
-			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
-			#endif
-		}
-			
-		// 命令参数处理
-		i = 0;	
-		Args.itemCnt = 2;
-		Args.items[0] = &Args.buf[0];   // 命令字
-		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_SetBaseValPulseRatio;	// 设用量和脉冲系数
-
-		
-		switch(CurrCmd){
-		case WaterCmd_SetBaseValPulseRatio:		// 设用量和脉冲系数
-			/*---------------------------------------------*/
-			if(false == isUiFinish){
-				if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
-					StrBuf[1][0] = 0x01;
-				}
-				else{
-					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
-				}
-				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
-				pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-				CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
-					"1", "10", "100", "1000");
-				break;
-			}
-			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-				sprintf(StrBuf[0], " 请输入");
-				currUi = uiRowIdx - 2 - 2;
-				isUiFinish = false;
-				continue;
-			}
-
-			memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
-			BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
-
-			Args.buf[i++] = 0x06;		// 命令字	06
-			ackLen = 7;					// 应答长度 7	
-			// 数据域
-			u32Tmp = (uint32) _atof(StrBuf[0]);
-			u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
-			Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
-			Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
-			Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
-			Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
-			Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
-			Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
-			Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+			Args.buf[i++] = 0x01;		// 命令选项：1-上报实时数据
 			Args.lastItemLen = i - 1;
 			break;
 
@@ -747,10 +455,132 @@ void MainFuncSetMeterInitValue(void)
 	}
 }
 
-// 设置上报周期
-void MainFuncSetReportCycle(void)
+// 读自定义数据
+void MainFuncReadCustomData(void)
 {
-	uint8 key, tryCnt = 0, i;
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<读自定义数据");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回            执行", Color_White);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		menuItemNo = 1;
+		
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = UserCmd_ReadCustomData;	// 读自定义数据
+			/*---------------------------------------------*/
+			i = 0;
+			Args.buf[i++] = Func_DataTransmit;	// 命令字
+			ackLen = 17;						// 应答长度	
+			// 数据域
+			Args.buf[i++] = Tag_DataTransmit;	// tag: 06-数据透传
+			Args.buf[i++] = 2;					// len: 1 + 1 
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 0x00;				// dataId: 0-读自定义数据
+			Args.buf[i++] = 0x00;	
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+				
+		// 发送、接收、结果显示
+		key = NBiotBj_TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+}
+
+// 读为峰模块数据
+void MainFuncReadWeiFengModuleDatas(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<读为峰模块数据");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回            执行", Color_White);
+
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		menuItemNo = 1;
+		
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = UserCmd_ReadWeiFengModuleData;		// 读取为峰模块数据
+			/*---------------------------------------------*/
+			i = 0;
+			Args.buf[i++] = Func_DataTransmit;	// 命令字
+			ackLen = 23;						// 应答长度	
+			// 数据域
+			Args.buf[i++] = Tag_DataTransmit;	// tag: 06-数据透传
+			Args.buf[i++] = 2;					// len: 1 + 1 
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 82;				// dataId: 82- 0x52 读取为峰模块数据
+			Args.buf[i++] = 0x80;	
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+				
+		// 发送、接收、结果显示
+		key = NBiotBj_TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			continue;
+		}
+	}
+}
+
+// 设置表地址
+void MainFuncSetMeterAddr(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i;
 	UI_Item * pUi = &UiList.items[0];
 	uint8 * pUiCnt = &UiList.cnt;
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
@@ -764,7 +594,7 @@ void MainFuncSetReportCycle(void)
 		_ClearScreen();
 
 		// 公共部分 :  界面显示
-		sprintf(CurrCmdName, "<<清异常");
+		sprintf(CurrCmdName, "<<设置表地址");
 		_Printfxy(0, 0, CurrCmdName, Color_White);
 		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
 		/*---------------------------------------------*/
@@ -775,12 +605,8 @@ void MainFuncSetReportCycle(void)
 		if(false == isUiFinish){
 			(*pUiCnt) = 0;
 			uiRowIdx = 2;
-			#if (AddrLen == 6)
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
-			#else
 			LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
-			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);	
-			#endif
+			TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "   ", StrBuf[0], 7*2, (7*2*8 + 8), true);	
 		}
 			
 		// 命令参数处理
@@ -788,28 +614,39 @@ void MainFuncSetReportCycle(void)
 		Args.itemCnt = 2;
 		Args.items[0] = &Args.buf[0];   // 命令字
 		Args.items[1] = &Args.buf[1];	// 数据域
-		CurrCmd = WaterCmd_ClearException;		// " 清异常命令 ";
+		menuItemNo = 1;
 		
-		switch(CurrCmd){
-		case WaterCmd_ClearException:		// " 清异常命令 ";
+
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = UserCmd_SetMeterAddr;		// 设置表地址
 			/*---------------------------------------------*/
 			if(false == isUiFinish){
 				break;
 			}
-			Args.buf[i++] = 0x05;		// 命令字	05
-			ackLen = 1;					// 应答长度 1	
+			
+			i = 0;
+			Args.buf[i++] = Func_DataTransmit;	// 命令字	
+			ackLen = 81;						// 应答长度 	
 			// 数据域
-			Args.buf[i++] = 0x00;		// 命令选项 00	
+			Args.buf[i++] = Tag_DataTransmit;	// tag: 06-数据透传
+			Args.buf[i++] = 8;					// len: 1 + 7 
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 53;					// dataId: 53-0x35 设表地址
+
+			GetBytesFromStringHex(&TmpBuf[0], 0, 7, StrBuf[0], 0, true);
+			memcpy(&Args.buf[i], &TmpBuf[0], 7);
+			i += 7;
 			Args.lastItemLen = i - 1;
 			break;
 
-		default: 
+		default:
 			break;
 		}
 
 		// 创建 “中继地址输入框” 后， 显示UI
 		if(false == isUiFinish){
-	
+		
 			key = ShowUI(UiList, &currUi);
 
 			if (key == KEY_CANCEL){
@@ -826,16 +663,240 @@ void MainFuncSetReportCycle(void)
 			continue;	// go back to get ui args
 		}
 
-		// 地址填充
-		Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-		#if (AddrLen == 6)
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
-		#else
-		PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
-		#endif
 
 		// 发送、接收、结果显示
-		key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		key = NBiotBj_TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+}
+
+// 设置初值
+void MainFuncSetMeterInitValue(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
+	uint32 u32Tmp;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<设置初值");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
+		}
+			
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		menuItemNo = 1;
+		
+		switch(menuItemNo){
+		case 1:
+			CurrCmd = UserCmd_SetInitValue;		// 设置初值
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
+					StrBuf[1][0] = 0x01;
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 1 * 20);
+				}
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "正向用量:", StrBuf[0], 10, 11*8, true);
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "反向用量: 默认为0");
+				break;
+			}
+			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
+				sprintf(StrBuf[0], " 请输入");
+				currUi = uiRowIdx - 2 - 2;
+				isUiFinish = false;
+				continue;
+			}
+
+			memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 1 * 20);
+			BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
+
+			u32Tmp = (uint32) _atof(StrBuf[0]);
+
+			i = 0;
+			Args.buf[i++] = Func_DataTransmit;	// 命令字
+			ackLen = 81;						// 应答长度	
+			// 数据域
+			Args.buf[i++] = Tag_DataTransmit;	// tag: 06-数据透传
+			Args.buf[i++] = 9;					// len: 1 + 8 
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 52;					// dataId: 52-0x34  设表底数
+			Args.buf[i++] = (uint8)(u32Tmp & 0xFF);			// 正向用量	
+			Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+			Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+			Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+			Args.buf[i++] = 0;								// 反向用量
+			Args.buf[i++] = 0;
+			Args.buf[i++] = 0;
+			Args.buf[i++] = 0;
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+		
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 发送、接收、结果显示
+		key = NBiotBj_TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+		
+		// 继续 / 返回
+		if (key == KEY_CANCEL){
+			break;
+		}else{
+			isUiFinish = false;
+			continue;
+		}
+	}
+}
+
+// 设置上报周期
+void MainFuncSetReportCycle(void)
+{
+	uint8 key, menuItemNo, tryCnt = 0, i, u8Tmp;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint16 ackLen = 0, timeout;
+
+	memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+	isUiFinish = false;
+
+	while(1){
+		
+		_ClearScreen();
+
+		// 公共部分 :  界面显示
+		sprintf(CurrCmdName, "<<设置上报周期");
+		_Printfxy(0, 0, CurrCmdName, Color_White);
+		_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+		/*---------------------------------------------*/
+		//----------------------------------------------
+		_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+		_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+		if(false == isUiFinish){
+			(*pUiCnt) = 0;
+			uiRowIdx = 2;
+		}
+			
+		// 命令参数处理
+		i = 0;	
+		Args.itemCnt = 2;
+		Args.items[0] = &Args.buf[0];   // 命令字
+		Args.items[1] = &Args.buf[1];	// 数据域
+		menuItemNo = 1;
+		
+		switch(menuItemNo){
+		case 1:	
+			CurrCmd = UserCmd_SetPeriodReportFreq;
+			/*---------------------------------------------*/
+			if(false == isUiFinish){
+				if(BackupBuf[ArgIdx_FixTimeVal -1] != Param_Unique){		
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_FixTimeVal], 1 * 20);
+				}
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报频率(h):", StrBuf[0], 2, 3*8, true);
+				break;
+			}
+			if(StrBuf[0][0] > '9' || StrBuf[0][0] < '1'){
+				sprintf(StrBuf[0], " 请输入");
+				currUi = uiRowIdx - 2 - 2;
+				isUiFinish = false;
+				continue;
+			}
+
+			memcpy(&BackupBuf[ArgIdx_FixTimeVal], &StrBuf[0][0], 1 * 20);
+			BackupBuf[ArgIdx_FixTimeVal - 1] = Param_Unique;
+
+			u8Tmp = (uint8) _atof(StrBuf[0]);
+
+			if(u8Tmp > 24){
+				sprintf(StrBuf[0], " 请输入");
+				currUi = uiRowIdx - 2 - 2;
+				isUiFinish = false;
+				continue;
+			}
+
+			i = 0;
+			Args.buf[i++] = Func_SetInternalParam;	// 命令字
+			ackLen = 13;						// 应答长度	
+			// 数据域
+			Args.buf[i++] = Func_SetInternalParam;	// 命令字
+			Args.buf[i++] = 0;		// 密码
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 0;	
+			Args.buf[i++] = 1;		// 参数个数
+			Args.buf[i++] = Tag_PeriodReportFreq;	// 参数序号
+			Args.buf[i++] = 1;		// 参数长度
+			Args.buf[i++] = u8Tmp;	// 参数值			
+			Args.lastItemLen = i - 1;
+			break;
+
+		default: 
+			break;
+		}
+
+		// 创建 “中继地址输入框” 后， 显示UI
+		if(false == isUiFinish){
+	
+			key = ShowUI(UiList, &currUi);
+
+			if (key == KEY_CANCEL){
+				break;
+			}
+
+			isUiFinish = true;
+			continue;	// go back to get ui args
+		}
+
+		// 发送、接收、结果显示
+		key = DonghaiIR_TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 		
 		
 		// 继续 / 返回
@@ -868,7 +929,7 @@ int main(void)
 	MainMenu.str[4] = "设置初值";
     MainMenu.str[5] = "设置上报周期";
 	MainMenu.str[6] = "读为峰模块数据";
-	MainMenu.str[7] = "版本信息";  // 扩展时替换为 "工程调试";
+	MainMenu.str[7] = "NB上报实时数据";
 	MainMenu.key[0] = "1";
 	MainMenu.key[1] = "2";
 	MainMenu.key[2] = "3";
@@ -879,12 +940,12 @@ int main(void)
 	MainMenu.key[7] = "8";
 	MainMenu.Function[0] = MainFuncReadImeiAndCcid;
 	MainMenu.Function[1] = MainFuncReadBeijingWaterMeterParams;
-	MainMenu.Function[2] = MainFuncReadCustomData;
+	MainMenu.Function[2] = MainFuncReadRealTimeData;
 	MainMenu.Function[3] = MainFuncSetMeterAddr;
 	MainMenu.Function[4] = MainFuncSetMeterInitValue;
     MainMenu.Function[5] = MainFuncSetReportCycle;
 	MainMenu.Function[6] = MainFuncReadWeiFengModuleDatas;
-	MainMenu.Function[7] = VersionInfoFunc;
+	MainMenu.Function[7] = MainFuncNbReportRealTimeData;
 	MainMenu.FunctionEx=0;
 	_OpenLcdBackLight();
 	_Menu(&MainMenu);	
