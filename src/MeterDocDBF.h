@@ -23,6 +23,7 @@
 #define	Size_UserNum               	33	//户号长度		32
 #define Size_RoomNum              	17	//门牌号长度	16
 #define Size_MeterReadStatus        2	//抄表状态长度	1   : 0 - 未抄  1 - 成功，2 - 失败 
+#define Size_ValveStatus        	2	//自定义阀门状态长度 1 : 0/1/2 - 关/开/未知
 #define	Size_UserName               50	//户名长度		50
 #define Size_UserMobileNum          12	//手机号长度	50
 #define	Size_UserAddr               100	//地址长度 		100 
@@ -86,7 +87,7 @@ typedef enum{
 	Idx_SignalValue,		// "XHQD",		// 信号强度			// set
 	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间			// set
 	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0/1/2 - 未抄/成功/失败	// set
-	Idx_BLZDA,				// "BLZDA",		// BLZD[A->]
+	Idx_ValveStatus,		// "BLZDA",		// BLZD[A->]	（用作阀门状态：0/1/2 - 关/开/未知）
 	Idx_BLZDB,				// "BLZDB",		// 
 	Idx_BLZDC,				// "BLZDC",		// 集中器 编号
 	Idx_BLZDD,				// "BLZDD",		// 集中器 名称

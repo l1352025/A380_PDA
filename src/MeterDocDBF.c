@@ -1813,3 +1813,646 @@ void MainFuncBatchMeterReading(void)
 	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 }
 #endif
+
+// 批量开关阀 - 6009/8009通用版
+#if defined Project_6009_RF || defined Project_8009_RF
+void BatchOpenCloseValve(void)
+{
+	uint8 key;
+	ListBox menuList, menuList_2, menuList_3;
+	ListBoxEx XqList, LdList;				// 小区/楼栋列表
+	_GuiInputBoxStru inputSt;
+	UI_Item * pUi = &UiList.items[0];
+	uint8 * pUiCnt = &UiList.cnt;
+	uint8 currUi = 0, uiRowIdx, isUiFinish;
+	uint8 *ptr;
+	uint16 dispIdx, i;
+	char *dispBuf = &DispBuf, *strTmp = &TmpBuf[0], *time = &TmpBuf[200];
+	char *qryStrXq = &TmpBuf[400], *qryStrLd = &TmpBuf[600];
+	uint8 qryTypeXq, qryTypeLd;
+	uint16 qryIndexXq, qryIndexLd;
+	uint32 recCnt;
+
+	recCnt = FixDbfRecCnt();	// 修复记录总数
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
+	
+	if(recCnt == 0){
+		_GUIRectangleFill(0, 3*16 - 8, 160, 6*16 + 8, Color_White);
+		PrintfXyMultiLine_VaList(0, 3*16, "  当前档案为空！\n 请先下载抄表档案，\n 再进行批量操作");
+		_GUIRectangle(0, 3*16 - 8, 160, 6*16 + 8, Color_Black);
+		_Sleep(2500);
+		return;
+	}
+
+	// 菜单
+	//------------------------------------------------------------
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 5, NULL,
+		"<<批量开关阀",
+		5,
+		"1. 按楼栋开关阀",
+		"2. 清空阀门状态",
+		"3. 户表查询",
+		"4. 阀门状态统计"
+	);
+	while(1){
+
+		_Printfxy(0, 9*16, "返回            确定", Color_White);
+		key = ShowListBox(&menuList);
+		//------------------------------------------------------------
+		if (key == KEY_CANCEL){	// 返回
+			break;
+		}
+		memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+		isUiFinish = false;
+
+		switch(menuList.strIdx + 1){
+		case 1:		// 按楼栋抄表
+
+			// 小区列表-界面
+			//------------------------------------------------------------
+			_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+			QueryDistrictList(&Districts, &DbQuery);
+			ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
+				"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
+			while(2){
+				
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				key = ShowListBoxEx(&XqList);
+				//------------------------------------------------------------
+				if (key == KEY_CANCEL){	// 返回
+					break;
+				}
+
+				// xx小区-楼栋列表-界面
+				//------------------------------------------------------------
+				_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+				Buildings.qryDistricNum = Districts.nums[XqList.strIdx];
+				QueryBuildingList(&Buildings, &DbQuery);
+				ListBoxCreateEx(&LdList, 0, 0, 20, 7, Buildings.cnt, NULL,
+					"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
+				//------------------------------------------------------------
+				while(3){
+	
+					_Printfxy(0, 9*16, "返回            确定", Color_White);
+					key = ShowListBoxEx(&LdList);
+					//------------------------------------------------------------
+					if(key == KEY_CANCEL){	// 返回
+						break;
+					}
+
+					// 清空路由
+					StrRelayAddr[0][0] = 0x00;
+					StrRelayAddr[1][0] = 0x00;
+					StrRelayAddr[2][0] = 0x00;
+
+					// 楼栋抄表-界面
+					//------------------------------------------------------------
+					Meters.qryDistricNum = Districts.nums[XqList.strIdx];
+					Meters.qryBuildingNum = Buildings.nums[LdList.strIdx];
+				#if defined Project_6009_RF
+					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 6, NULL,
+						"<<按楼栋开关阀", 
+						6,
+						"1. 自动批量开阀",
+						"2. 自动批量关阀",
+						"3. 阀门未知列表",
+						"4. 已开阀列表",
+						"5. 已关阀列表",
+						"6. 阀门状态统计");
+				#else // defined Project_8009_RF
+					ListBoxCreate(&menuList_2, 0, 0, 20, 7, 7, NULL,
+						"<<楼栋抄表", 
+						7,
+						"1. 自动抄表",
+						"2. 已抄成功列表",
+						"3. 未抄失败列表",
+						"4. 抄表统计",
+						"5. 清空抄表结果",
+						"6. 重置抄表时间",
+						"7. 设置路由");
+				#endif
+					while(4){
+
+						_Printfxy(0, 9*16, "返回            确定", Color_White);
+						key = ShowListBox(&menuList_2);
+						//------------------------------------------------------------
+						if(key == KEY_CANCEL){	// 返回
+							break;
+						}
+
+						switch (menuList_2.strIdx + 1){
+						case 1:		// 自动抄表
+							Meters.selectField = Idx_MeterNum;
+							Meters.qryMeterReadStatus = "0";
+							_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+							QueryMeterList(&Meters, &DbQuery);
+							key = ShowAutoMeterReading(&Meters);
+							break;
+
+						case 2:		// 已抄列表
+							Meters.selectField = Idx_Invalid;
+							Meters.qryMeterReadStatus = "1";
+							key = ShowMeterList(&Meters);
+							break;
+						case 3:		// 未抄/失败列表
+							Meters.selectField = Idx_Invalid;
+							Meters.qryMeterReadStatus = "0";
+							key = ShowMeterList(&Meters);
+							break;
+
+						case 4:		// 抄表统计
+							Meters.selectField = Idx_Invalid;
+							_Printfxy(0, 9*16, "    <  统计中  >    ", Color_White);
+							QueryMeterList(&Meters, &DbQuery);
+							key = ShowMeterReadCountInfo(&Meters);
+							break;
+
+						case 5:		// 清空抄表结果
+							//-------------------------------------------------------
+							_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
+							_Printfxy(0, 4*16, " 确定要清空        ", Color_White);
+							_Printfxy(0, 5*16, " 当前楼栋抄表结果吗?", Color_White);
+							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							key = _ReadKey();
+							//-------------------------------------------------------
+							if(key != KEY_ENTER){
+								break;
+							}
+							_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
+							_Printfxy(0, 4*16, "  当前楼栋         ", Color_White);
+							_Printfxy(0, 5*16, "  抄表结果清空中... ", Color_White);
+							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							//------------------------------------------------------------
+							_Select(1);
+							_Use(MeterDocDB);	// 打开数据库
+							_Go(0);
+							for(i = 0; i < recCnt; i++){
+								_ReadField(Idx_DistrictNum, strTmp);	// 小区编号 过滤
+								strTmp[Size_DistrictNum - 1] = '\0';
+								if(strcmp(Meters.qryDistricNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_ReadField(Idx_BuildingNum, strTmp);	// 楼栋编号 过滤
+								strTmp[Size_BuildingNum - 1] = '\0';
+								if(strcmp(Meters.qryBuildingNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+								strTmp[Size_MeterReadStatus - 1] = '\0';
+								if(strTmp[0] == '0'){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_Replace(Idx_MeterReadStatus, "0");	
+								_Replace(Idx_MeterReadTime, "");
+								_Replace(Idx_MeterReadType, "");
+								_Replace(Idx_MeterValue, "");
+								_Replace(Idx_MeterStatusHex, "");
+								_Replace(Idx_MeterStatusStr, "");
+								_Replace(Idx_BatteryVoltage, "");
+								_Replace(Idx_SignalValue, "");
+								_Skip(1);
+							}
+							_Use("");		// 关闭数据库
+							//------------------------------------------------------------
+							_Printfxy(0, 5*16, "  抄表结果清空完成! ", Color_White);
+							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							_Sleep(2500);
+							break;
+
+						case 6:		// 重置抄表时间
+							//-------------------------------------------------------
+							_GUIRectangleFill(0, 3*16 - 8, 160, 7*16 + 8, Color_White);
+							_GUIRectangle(0, 3*16 - 8, 160, 7*16 + 8, Color_Black);
+							memset(StrBuf, 0, TXTBUF_LEN * TXTBUF_MAX);
+							isUiFinish = false;
+							while(true){
+								if(false == isUiFinish){
+									(*pUiCnt) = 0;
+									uiRowIdx = 3;
+									_GetDateTime(time, '-',  ':');
+									DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+									
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
+									TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+									TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+									TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+									TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+									TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+									TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "确定将抄表时间重置");
+									LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "为当前系统时间吗?");
+									
+									key = ShowUI(UiList, &currUi);
+									if (key == KEY_CANCEL){
+										break;
+									}
+									isUiFinish = true;
+								}
+
+								// 时间有效值校验
+								if( (i = TimeStrsToTimeBytes(&TmpBuf[0], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+									currUi = 1 + (i -1);
+									isUiFinish = false;
+									continue;
+								}
+
+								sprintf(time, "%s-%s-%s %s:%s:%s",
+									StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+								_SetDateTime(time);
+								break;
+							}
+							if (key == KEY_CANCEL){
+								break;
+							}
+
+							_Printfxy(8, 5*16, "当前楼栋           ", Color_White);
+							_Printfxy(8, 6*16, "抄表时间重置中... ", Color_White);
+							//------------------------------------------------------------
+							_Select(1);
+							_Use(MeterDocDB);	// 打开数据库
+							_Go(0);
+							for(i = 0; i < recCnt; i++){
+								_ReadField(Idx_DistrictNum, strTmp);	// 小区编号 过滤
+								strTmp[Size_DistrictNum - 1] = '\0';
+								if(strcmp(Meters.qryDistricNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_ReadField(Idx_BuildingNum, strTmp);	// 楼栋编号 过滤
+								strTmp[Size_BuildingNum - 1] = '\0';
+								if(strcmp(Meters.qryBuildingNum, strTmp) != 0){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+								strTmp[Size_MeterReadStatus - 1] = '\0';
+								if(strTmp[0] == '0'){
+									_Skip(1);	// 下一个数据库记录
+									continue;
+								}
+
+								_Replace(Idx_MeterReadTime, time);
+								_Skip(1);
+							}
+							_Use("");		// 关闭数据库
+							//------------------------------------------------------------
+							_Printfxy(8, 6*16, "抄表时间重置完成！ ", Color_White);
+							_Sleep(2500);
+							break;
+						
+						#if defined Project_8009_RF
+						case 7:		// 设置路由
+							ShowSettingRoutes();
+							break;
+						#endif
+
+						default:
+							break;
+						}
+
+					}// while 4 楼栋抄表
+				}// while 3 楼栋列表
+			}// while 2 小区列表
+			break;
+
+		case 2:		// 清空抄表结果
+			//-------------------------------------------------------
+			_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
+			_Printfxy(0, 4*16, "  确定要清空       ", Color_White);
+			_Printfxy(0, 5*16, "  所有抄表结果吗?   ", Color_White);
+			_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+			key = _ReadKey();
+			//-------------------------------------------------------
+			if(key != KEY_ENTER){
+				break;
+			}
+			_GUIRectangleFill(0, 4*16 - 8, 160, 5*16 + 8, Color_White);
+			_Printfxy(0, 4*16, "  清空抄表结果中... ", Color_White);
+			_GUIRectangle(0, 4*16 - 8, 160, 5*16 + 8, Color_Black);
+			//-------------------------------------------------------
+			_Select(1);
+			_Use(MeterDocDB);	// 打开数据库
+			_Go(0);
+			for(i = 0; i < recCnt; i++){
+				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+				strTmp[Size_MeterReadStatus - 1] = '\0';
+				if(strTmp[0] == '0'){
+					_Skip(1);	// 下一个数据库记录
+					continue;
+				}
+				_Replace(Idx_MeterReadStatus, "0");
+				_Replace(Idx_MeterReadTime, "");
+				_Replace(Idx_MeterReadType, "");
+				_Replace(Idx_MeterValue, "");
+				_Replace(Idx_MeterStatusHex, "");
+				_Replace(Idx_MeterStatusStr, "");
+				_Replace(Idx_BatteryVoltage, "");
+				_Replace(Idx_SignalValue, "");
+				_Skip(1);		// 下一个数据库记录
+			}
+			_Use("");			// 关闭数据库
+			//-------------------------------------------------------
+			_Printfxy(0, 4*16, "  清空抄表结果完成！", Color_White);
+			_GUIRectangle(0, 4*16 - 8, 160, 5*16 + 8, Color_Black);
+			_Sleep(2500);
+			break;
+
+		case 3:		// 重置抄表时间
+			//-------------------------------------------------------
+			_GUIRectangleFill(0, 3*16 - 8, 160, 7*16 + 8, Color_White);
+			_GUIRectangle(0, 3*16 - 8, 160, 7*16 + 8, Color_Black);
+			while(true){
+				if(false == isUiFinish){
+					(*pUiCnt) = 0;
+					uiRowIdx = 3;
+
+					_GetDateTime(time, '-',  ':');
+					DatetimeToTimeStrs(time, StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+					
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "系统时间:");
+					TextBoxCreate(&pUi[(*pUiCnt)++], 0*8, (uiRowIdx)*16, " ", StrBuf[0], 4, 4*8, false);	// YYYY
+					TextBoxCreate(&pUi[(*pUiCnt)++], 5*8, (uiRowIdx)*16, "-", StrBuf[1], 2, 2*8, false);	// MM
+					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, "-", StrBuf[2], 2, 2*8, false);	// dd
+					TextBoxCreate(&pUi[(*pUiCnt)++], 11*8, (uiRowIdx)*16, " ", StrBuf[3], 2, 2*8, false);	// HH
+					TextBoxCreate(&pUi[(*pUiCnt)++], 14*8, (uiRowIdx)*16, ":", StrBuf[4], 2, 2*8, false);	// mm
+					TextBoxCreate(&pUi[(*pUiCnt)++], 17*8, (uiRowIdx++)*16, ":", StrBuf[5], 2, 2*8, false);	// ss
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "确定将抄表时间重置");
+					LableCreate(&pUi[(*pUiCnt)++], 8, (uiRowIdx++)*16, "为当前系统时间吗?");
+					
+					key = ShowUI(UiList, &currUi);
+					if (key == KEY_CANCEL){
+						break;
+					}
+					isUiFinish = true;
+				
+				}
+				// 时间有效值校验
+				if( (i = TimeStrsToTimeBytes(&TmpBuf[0], StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5])) > 0){
+					currUi = 1 + (i -1);
+					isUiFinish = false;
+					continue;
+				}
+
+				sprintf(time, "%s-%s-%s %s:%s:%s",
+					StrBuf[0], StrBuf[1], StrBuf[2], StrBuf[3], StrBuf[4], StrBuf[5]);
+				_SetDateTime(time);
+				break;
+			}
+			//-------------------------------------------------------
+			if(key == KEY_CANCEL){
+				break;
+			}
+			_Printfxy(8, 5*16, "所有档案          ", Color_White);
+			_Printfxy(8, 6*16, "抄表时间重置中... ", Color_White);
+			//------------------------------------------------------------
+			_Select(1);
+			_Use(MeterDocDB);	// 打开数据库
+			_Go(0);
+			for(i = 0; i < recCnt; i++){
+				_ReadField(Idx_MeterReadStatus, strTmp);	// 抄表状态 过滤
+				strTmp[Size_MeterReadStatus - 1] = '\0';
+				if(strTmp[0] == '0'){
+					_Skip(1);	// 下一个数据库记录
+					continue;
+				}
+				_Replace(Idx_MeterReadTime, time);
+				_Skip(1);
+			}
+			_Use("");		// 关闭数据库
+			//------------------------------------------------------------
+			_Printfxy(8, 6*16, "抄表时间重置完成！", Color_White);
+			_Sleep(2500);
+			break;
+
+		case 4:		// 户表查询
+			// 户表查询-界面
+			//------------------------------------------------------------
+			ListBoxCreate(&menuList_2, 0, 0, 20, 7, 3, NULL,
+				"<<户表查询", 
+				3,
+				"1. 按表号查询",
+				"2. 按户号查询",
+				"3. 按门牌号查询");
+			while(2){
+
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				key = ShowListBox(&menuList_2);
+				//------------------------------------------------------------
+				if(key == KEY_CANCEL){	// 返回
+					break;
+				}
+
+				// 户表查询-输入界面
+				//------------------------------------------------------------
+				_ClearScreen();
+				sprintf(&TmpBuf[0], "<<%s", &(menuList_2.str[menuList_2.strIdx][3]));
+				_Printfxy(0, 0*16, &TmpBuf[0], Color_White);
+				_GUIHLine(0, 1*16 + 4, 160, Color_Black);	
+				Meters.qryKeyWord = StrBuf[0];
+				switch (menuList_2.strIdx + 1){
+				case 1: ptr = "输入表号: "; Meters.selectField = Idx_MeterNum; break;
+				case 2: ptr = "输入户号: "; Meters.selectField = Idx_UserNum; break;
+				case 3: ptr = "输入门牌号: "; Meters.selectField = Idx_UserRoomNum; break;
+				default: break;
+				}
+				_Printfxy(0, 2*16, ptr, Color_White);
+				StrBuf[0][0] = 0x00;
+				inputSt.left = 0;
+				inputSt.top = 3*16;
+				inputSt.width = 10*16;
+				inputSt.hight = 16;
+				inputSt.caption = "";
+				inputSt.context = StrBuf[0];
+				inputSt.datelen = 20;
+				inputSt.IsClear = true;
+				inputSt.keyUpDown = false;
+				inputSt.type = 1;
+				_GUIHLine(0, 9*16 - 4, 160, Color_Black);	
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				//------------------------------------------------------------
+				if(KEY_CANCEL ==  _GetStr(&inputSt)){
+					continue;
+				}
+				StringTrimStart(StrBuf[0],  ' ');
+				StringTrimEnd(StrBuf[0],  ' ');
+
+				// 关键字 查询
+				_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+				QueryMeterListByKeyword(&Meters, &DbQuery);	
+				if(DbQuery.resultCnt > 0){
+					ShowMeterList(&Meters);
+				}
+				else{
+					_GUIRectangleFill(0, 4*16 - 8, 160, 5*16 + 8, Color_White);
+					_Printfxy(0, 4*16, " 查询失败，未找到 ", Color_White);
+					_GUIRectangle(0, 4*16 - 8, 160, 5*16 + 8, Color_Black);
+					_Sleep(2500);
+				}
+				
+			} // while 2 户表查询
+			break;
+
+		case 5:		// 抄表统计
+			// 抄表统计-界面
+			//------------------------------------------------------------
+			ListBoxCreate(&menuList_2, 0, 0, 20, 3, 3, NULL,
+				"<<抄表统计", 
+				3, 
+				"1. 小区选择>",
+				"2. 楼栋选择>",
+				"3. 统计");
+			//------------------------------------------------------------
+			sprintf(qryStrXq, "全部");
+			sprintf(qryStrLd, "全部");
+			qryTypeXq = 0;		// 0 - 全部， 1 - 选择某个
+			qryTypeLd = 0;		// 0 - 全部， 1 - 选择某个
+			qryIndexXq = 0;		// 当前选择的小区 在列表中索引
+			qryIndexLd = 0;		// 当前选择的楼栋 在列表中索引
+			while(2){
+
+				_ClearScreen();
+				// 抄表统计-界面
+				//---------------------------------------------------------------------
+				dispBuf = &DispBuf;
+				dispIdx = 0;
+				dispIdx += sprintf(&dispBuf[dispIdx], "小区: %s\n", qryStrXq);
+				dispIdx += sprintf(&dispBuf[dispIdx], "楼栋: %s", qryStrLd);
+				PrintfXyMultiLine(0, 5*16, dispBuf, 7);
+				//----------------------------------------------------------------------
+				_GUIHLine(0, 9*16 - 4, 160, Color_Black);
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				key = ShowListBox(&menuList_2);
+				//----------------------------------------------------------------------
+				if(key == KEY_CANCEL){	// 返回
+					break;
+				}
+				
+				if(menuList_2.strIdx == 0){		// 小区选择
+					//----------------------------------------------
+					ListBoxCreate(&menuList_3, 2*16, 2*16, 12, 2, 2, NULL, 
+					"小区选择", 2, "全部", "选择某个");
+					key = ShowListBox(&menuList_3);
+					//----------------------------------------------
+					if(key == KEY_CANCEL){	// 未选择，返回
+						continue;
+					}
+
+					if(menuList_3.strIdx == 0){
+						qryTypeXq = 0;
+						sprintf(qryStrXq, "全部");
+					}
+					else{
+						// 小区列表-界面
+						//------------------------------------------------------------
+						_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+						QueryDistrictList(&Districts, &DbQuery);
+						ListBoxCreateEx(&XqList, 0, 0, 20, 7, Districts.cnt, NULL,
+							"<<小区选择", Districts.names, Size_ListStr, Districts.cnt);
+						_Printfxy(0, 9*16, "返回            确定", Color_White);
+						key = ShowListBoxEx(&XqList);
+						//------------------------------------------------------------
+						if (key == KEY_CANCEL){		// 未选择列表项
+							continue;
+						}
+
+						qryTypeXq = 1;
+						qryIndexXq = XqList.strIdx;
+
+						_Select(1);
+						_Use(MeterDocDB);	// 打开数据库
+						recCnt = _Reccount();
+						if(_LocateEx(Idx_DistrictNum, '=', Districts.nums[qryIndexXq], 1, recCnt, 0) > 0){ 
+							_ReadField(Idx_DistrictName, qryStrXq);	// 读出小区名
+						}
+						_Use("");			// 关闭数据库
+					}
+
+				}
+				else if(menuList_2.strIdx == 1){	// 楼栋选择
+					//----------------------------------------------
+					ListBoxCreate(&menuList_3, 2*16, 3*16, 12, 2, 2, NULL, 
+					"楼栋选择", 2, "全部", "选择某个");
+					key = ShowListBox(&menuList_3);
+					//----------------------------------------------
+					if(key == KEY_CANCEL){	// 未选择，返回
+						continue;
+					}
+
+					if(menuList_3.strIdx == 0){
+						qryTypeLd = 0;
+						sprintf(qryStrLd, "全部");
+					}
+					else{
+
+						if(qryTypeXq == 0){
+							_GUIRectangleFill(0, 4*16 - 8, 160, 6*16 + 8, Color_White);
+							_Printfxy(0, 4*16, " 选择某个楼栋时 ", Color_White);
+							_Printfxy(0, 5*16, " 必须选择所在小区! ", Color_White);
+							_GUIRectangle(0, 4*16 - 8, 160, 6*16 + 8, Color_Black);
+							_Sleep(2500);
+							continue;
+						}
+
+						// xx小区-楼栋列表-界面
+						//------------------------------------------------------------
+						_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
+						Buildings.qryDistricNum = Districts.nums[qryIndexXq];
+						QueryBuildingList(&Buildings, &DbQuery);
+						ListBoxCreateEx(&LdList, 0, 0, 20, 7, Buildings.cnt, NULL,
+							"<<楼栋选择", Buildings.names, Size_ListStr, Buildings.cnt);
+
+						_Printfxy(0, 9*16, "返回            确定", Color_White);
+						key = ShowListBoxEx(&LdList);
+						//------------------------------------------------------------
+						if (key == KEY_CANCEL){		// 未选择列表项
+							continue;
+						}
+
+						qryTypeLd = 1;
+						qryIndexLd = LdList.strIdx;
+
+						_Select(1);
+						_Use(MeterDocDB);	// 打开数据库
+						recCnt = _Reccount();
+						if(_LocateEx(Idx_BuildingNum, '=', Buildings.nums[qryIndexLd], 1, recCnt, 0) > 0){ 
+							_ReadField(Idx_BuildingName, qryStrLd);	// 读出楼栋名
+						}
+						_Use("");			// 关闭数据库
+					}
+					
+				}
+				else {	// if(menuList_2.strIdx == 3){	// 统计
+					Meters.qryDistricNum = (qryTypeXq == 0 ? NULL : Districts.nums[qryIndexXq]);
+					Meters.qryBuildingNum = (qryTypeLd == 0 ? NULL : Buildings.nums[qryIndexLd]);
+					Meters.selectField = Idx_Invalid;
+					_Printfxy(0, 9*16, "    <  统计中  >    ", Color_White);
+					QueryMeterList(&Meters, &DbQuery);
+					if(Meters.districName[0] == 0x00){
+						strcpy(Meters.districName, "全部");
+					}
+					if(Meters.buildingName[0] == 0x00){
+						strcpy(Meters.buildingName, "全部");
+					}
+					key = ShowMeterReadCountInfo(&Meters);
+				}
+			}
+			break;
+
+		default: 
+			break;
+		}
+
+	} // while 1 批量抄表
+
+	FixDbfRecCnt();	// 修复记录总数
+	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
+}
+#endif
