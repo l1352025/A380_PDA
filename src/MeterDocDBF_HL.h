@@ -136,10 +136,10 @@ typedef struct{
 	uint16 	idx;			// 列表项索引
 	uint16	cnt;			// 列表项总数
 	uint16 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
+	uint8 	qryMeterReadStatus;		// 抄表状态
 	char 	*qryDistricNum;			// 小区编号/名称：空值表示所有
 	char 	*qryBuildingNum;		// 楼栋编号/名称：空值表示所有
 	char 	*qryUnitNum;			// 单元编号/名称：空值表示所有
-	char 	*qryMeterReadStatus;	// 抄表状态
 	char	*qryKeyWord;			// 查询的关键字
 	char 	districName[Size_DistrictName];		// 小区名
 	char 	buildingName[Size_BuildingName];	// 楼栋名

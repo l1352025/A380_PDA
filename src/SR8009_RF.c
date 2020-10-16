@@ -1869,17 +1869,30 @@ void WaterCmdFunc(void)
 	
 	menu.left=0;
 	menu.top=0;
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.no=4;
+	#else
 	menu.no=3;
+	#endif
 	menu.title= "<<工程调试 ";		// 工程调试 --> 即原来的 表端操作
 	menu.str[0]=" 常用功能 ";
 	menu.str[1]=" 功能配置 ";
 	menu.str[2]=" DMA项目 ";
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.str[3]=" 批量开关阀 ";
+	#endif
 	menu.key[0]="1";
 	menu.key[1]="2";
 	menu.key[2]="3";
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.key[3]="4";
+	#endif
 	menu.Function[0]=WaterCmdFunc_CommonCmd;
 	menu.Function[1]=WaterCmdFunc_FunctionConfig;
 	menu.Function[2]=WaterCmdFunc_DmaProjectCmd;
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.Function[3]=BatchOpenCloseValve;
+	#endif
 	menu.FunctionEx=0;
 	_Menu(&menu);	
 }

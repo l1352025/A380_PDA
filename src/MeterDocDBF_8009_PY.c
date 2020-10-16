@@ -143,7 +143,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
 	char strTmp[Size_DbStr];
-	char state;
+	uint8 state;
 	int len;
 	bool isOnlyCount = false;
 
@@ -199,23 +199,22 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 
 		// 状态转换 1/2/3 --> 0/1/2
 		if(strTmp[0] == '0' && strTmp[1] == '1'){
-			state = '0';				// 未抄数量
+			state = 0;				// 未抄数量
 		}
 		else if(strTmp[0] == '0' && strTmp[1] == '2'){
 			meters->readOkCnt++;		// 成功数量
-			state = '1';
+			state = 1;
 		}else{
 			meters->readNgCnt++;		// 失败数量
-			state = '2';			
+			state = 2;			
 		}
 
 		
-		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
-			if((meters->qryMeterReadStatus[0] == '1' && state != '1')
-				|| (meters->qryMeterReadStatus[0] == '0' && state == '1')){
-				_Skip(1);	// 下一个数据库记录
-				continue;
-			}
+		// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
+		if((meters->qryMeterReadStatus == 1 && state != 1)
+			|| (meters->qryMeterReadStatus == 0 && state == 1)){
+			_Skip(1);	// 下一个数据库记录
+			continue;
 		}
 
 
@@ -239,7 +238,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
 		StringPadRight(meters->strs[meters->cnt], 20, ' ');
 		meters->strs[meters->cnt][18] = ' ';	
-		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+		meters->strs[meters->cnt][19] = (state == 0 ? 'N' : (state == 1 ? 'Y' : 'F'));
 		meters->dbIdx[meters->cnt] = (i + 1);	// 数据库索引从 1 开始编号
 		meters->cnt++;
 
@@ -484,7 +483,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	
 	while(1){
 		key = _ReadKey();
-		if(key == KEY_CANCEL || KEY_ENTER){
+		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
 		_Sleep(100);
@@ -543,7 +542,7 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 	}
 	else{
 		// 列表显示方式-界面
-		title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
+		title = (meters->qryMeterReadStatus == 1 ? "<<已抄成功列表" : "<<未抄失败列表");
 		ListBoxCreate(&menuList, 16*4, 16*3, 12, 4, 4, NULL,
 			"显示类型", 
 			4,

@@ -221,7 +221,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
 	char strTmp[Size_DbStr];
-	char state;
+	uint8 state;
 	int len;
 
 	_Select(1);
@@ -289,22 +289,21 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		strTmp[Size_MeterReadStatus - 1] = '\0';
 		
 		if(strTmp[0] == '0'){
-			state = '0';				// 未抄数量
+			state = 0;				// 未抄数量
 		}
 		else if(strTmp[0] == '1'){
 			meters->readOkCnt++;		// 成功数量
-			state = '1';
+			state = 1;
 		}else{
 			meters->readNgCnt++;		// 失败数量
-			state = '2';			
+			state = 2;			
 		}
 		
-		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
-			if((meters->qryMeterReadStatus[0] == '1' && state != '1')
-				|| (meters->qryMeterReadStatus[0] == '0' && state == '1')){
-				_Skip(1);	// 下一个数据库记录
-				continue;
-			}
+		// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
+		if((meters->qryMeterReadStatus == 1 && state != 1)
+			|| (meters->qryMeterReadStatus == 0 && state == 1)){
+			_Skip(1);	// 下一个数据库记录
+			continue;
 		}
 
 		switch (meters->selectField)		// 列表类型：默认为表号列表
@@ -339,7 +338,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
 		StringPadRight(meters->strs[meters->cnt], 20, ' ');
 		meters->strs[meters->cnt][18] = ' ';	
-		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+		meters->strs[meters->cnt][19] = (state == 0 ? 'N' : (state == 1 ? 'Y' : 'F'));
 		meters->dbIdx[meters->cnt] = (i + 1);	// 数据库索引从 1 开始编号
 		meters->cnt++;
 
@@ -360,6 +359,7 @@ void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
 	char strTmp[Size_DbStr];
+	char strTmp2[Size_DbStr];
 	char state;
 	int len;
 
@@ -394,17 +394,18 @@ void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query)
 			_Skip(1);	// 下一个数据库记录
 			continue;
 		}
-		// 将选择的字段信息 和 数据库索引 加入列表
-		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
-
+		
 		query->resultCnt++;
 		if(query->resultCnt > query->reqMaxCnt){
 			query->errorCode = 1;
 
-			sprintf(strTmp, " 该抄表册表具数 超出最大限制 %d !", query->reqMaxCnt);
-			ShowMsg(8, 3*16, strTmp, 3000);
+			sprintf(strTmp2, " 该抄表册表具数 超出最大限制 %d !", query->reqMaxCnt);
+			ShowMsg(8, 3*16, strTmp2, 3000);
 			break;
 		}
+
+		// 将选择的字段信息 和 数据库索引 加入列表
+		len = StringCopyFromTail(meters->strs[meters->cnt], strTmp, 18);
 
 		_ReadField(Idx_MeterReadStatus, strTmp);		
 		strTmp[Size_MeterReadStatus - 1] = '\0';
@@ -632,7 +633,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 	
 	while(1){
 		key = _ReadKey();
-		if(key == KEY_CANCEL || KEY_ENTER){
+		if(key == KEY_CANCEL || key == KEY_ENTER){
 			break;
 		}
 		_Sleep(100);
@@ -736,7 +737,7 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 	}
 	else{
 		// 列表显示方式-界面
-		title = (meters->qryMeterReadStatus[0] == '1' ? "<<已抄成功列表" : "<<未抄失败列表");
+		title = (meters->qryMeterReadStatus == 1 ? "<<已抄成功列表" : "<<未抄失败列表");
 		ListBoxCreate(&menuList, 16*4, 16*3, 12, 4, 5, NULL,
 			"显示类型", 
 			5,
@@ -846,6 +847,10 @@ void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatu
 		sprintf(meterInfo->meterStatusHex, "0000");
 		sprintf(meterInfo->meterStatusStr, "手工录入");
 		sprintf(meterInfo->batteryVoltage, "3.3");
+	}
+
+	if(meterInfo->valveStatus[0] != '0'){
+		meterInfo->valveStatus[0] = '1';	// 不是关阀，即为默认开阀
 	}
 
 	// 更新抄表结果
@@ -1387,7 +1392,6 @@ uint32 FixDbfRecCnt(void)
 }
 
 // 批量抄表 - 6009/8009 和龙定制版
-#if defined Project_6009_RF_HL || defined Project_8009_RF_HL
 void MainFuncBatchMeterReading(void)
 {
 	uint8 key;
@@ -1525,7 +1529,7 @@ void MainFuncBatchMeterReading(void)
 						switch (menuList_2.strIdx + 1){
 						case 1:		// 自动抄表
 							Meters.selectField = Idx_MeterNum;
-							Meters.qryMeterReadStatus = "0";
+							Meters.qryMeterReadStatus = 0;
 							_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 							QueryMeterList(&Meters, &DbQuery);
 							key = ShowAutoMeterReading(&Meters);
@@ -1533,12 +1537,12 @@ void MainFuncBatchMeterReading(void)
 
 						case 2:		// 已抄列表
 							Meters.selectField = Idx_Invalid;
-							Meters.qryMeterReadStatus = "1";
+							Meters.qryMeterReadStatus = 1;
 							key = ShowMeterList(&Meters);
 							break;
-						case 3:		// 未抄列表
+						case 3:		// 未抄/失败列表
 							Meters.selectField = Idx_Invalid;
-							Meters.qryMeterReadStatus = "0";
+							Meters.qryMeterReadStatus = 0;
 							key = ShowMeterList(&Meters);
 							break;
 
@@ -2046,4 +2050,3 @@ void MainFuncBatchMeterReading(void)
 	FixDbfRecCnt();	// 修复记录总数
 	MeterInfo.dbIdx = Invalid_dbIdx;  // 清空当前表数据库索引，防止抄表结果写入
 }
-#endif

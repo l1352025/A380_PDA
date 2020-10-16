@@ -3,7 +3,9 @@
 *	桑锐6009水表手持机 - 红外版
 *
 */
+#ifndef Protocol_6009
 #include "SR6009_IR.h"
+#endif
 
 #include "HJLIB.H"
 #include "string.h"

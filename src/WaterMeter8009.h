@@ -851,9 +851,10 @@ uint8 ExplainWater8009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			#if defined Project_6009_RF || defined Project_8009_RF
 				u8Tmp = sprintf(&MeterInfo.meterStatusStr[0], "阀门%s", ptr);
 			#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
-				sprintf(MeterInfo.valveStatus, "%d", (buf[index - 1] & 0x20) > 0 ? 0 : 1);	// 状态转换 0x20/0x40 --> 0/1 （关/开）
 				u8Tmp = 0;
 			#endif
+			// 状态转换 2/1/0 --> 0/1/2 （关/开/未知）
+			sprintf(MeterInfo.valveStatus, "%d", (buf[index - 1] & 0x20) > 0 ? 0 : ((buf[index - 1] & 0x40) > 0 ? 1 : 2) );		
 			}
 		#endif
 

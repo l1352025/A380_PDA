@@ -1784,8 +1784,8 @@ extern int InitPktInfo(PacketInfo *pktInfo, char *fileName, uint16 pktSize, uint
 	}
 	_Lseek(fp, pktStartIdx, 0);
 	#if Upgrd_FileBuf_Enable
-		_Fread(&FileBuf[0], (fileLen - 128), fp);
-		crc16 = GetCrc16(&FileBuf[256], (uint32)(fileLen - 128 - 256), 0x8408);
+		_Fread(&BigBuf[0], (fileLen - 128), fp);
+		crc16 = GetCrc16(&BigBuf[256], (uint32)(fileLen - 128 - 256), 0x8408);
 	#else
 		_Fread(tmpBuf, 128*2, fp);
 		while(0 == _Feof(fp)){
@@ -1860,7 +1860,7 @@ extern int  CopyPktToBuf(PacketInfo *pktInfo, uint16 pktIdx, uint8 *buf)
 	int len = (pktInfo->packetCnt - 1 == pktIdx ? pktInfo->lastPktSize : pktInfo->packetSize);
 
 	#if Upgrd_FileBuf_Enable
-		memcpy(buf, &FileBuf[pktInfo->packetSize * pktIdx], len);
+		memcpy(buf, &BigBuf[pktInfo->packetSize * pktIdx], len);
 	#else
 		_Lseek(pktInfo->filePtr, pktInfo->pktStartIdx + pktInfo->packetSize * pktIdx, 0);
 		_Fread(buf, len, pktInfo->filePtr);

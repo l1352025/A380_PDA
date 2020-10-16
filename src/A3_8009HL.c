@@ -1,11 +1,11 @@
 /*
 *
-*	桑锐6009手持机-Lora版本（和龙-定制版）
+*	桑锐8009手持机-FSK版本（和龙-定制版）
 *
 */
-#include "SR6009_RF_HL.h"
+#include "A3_8009HL.h"
 
-//#define Use_CoreFunc	 	// 是否只启用核心功能：批量抄表、读表数据、开阀、关阀、清异常
+//#define Use_CoreFunc			// 是否只启用核心功能：批量抄表、读表数据、开阀、关阀、清异常
 
 #ifdef Use_CoreFunc
 #include "HJLIB.H"
@@ -15,11 +15,11 @@
 #include "common.c"
 #include "MeterDocDBF_HL.h"		
 #include "MeterDocDBF_HL.c"
-#include "WaterMeter.h"
+#include "WaterMeter8009.h"
 #else
 #include "MeterDocDBF_HL.h"		
 #include "MeterDocDBF_HL.c"
-#include "SR6009_RF.c"         //  DBF数据库接口不同，其他功能与 SR6009_RF 一样
+#include "SR8009_RF.c"         //  DBF数据库接口不同，其他功能与 SR8009_RF 一样
 #endif
 
 #ifdef Use_CoreFunc
@@ -36,16 +36,13 @@ void WaterCmdFunc_CommonCmd(void)
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 7, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 4, NULL,
 		"<<工程调试",
-		7,
-		"1. 读取用户用量",
-		"2. 读取冻结数据",
-		"3. 开阀",
-		"4. 强制开阀",
-		"5. 关阀",
-		"6. 强制关阀",
-		"7. 清异常命令"
+		4,
+		"1. 读表数据",
+		"2. 表开阀",
+		"3. 表关阀",
+		"4. 清表状态"
 	);
 
 	while(1){
@@ -73,12 +70,12 @@ void WaterCmdFunc_CommonCmd(void)
 			/*---------------------------------------------*/
 		 	//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
-			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+			_Printfxy(0, 9*16, "返回   <输入>   确定", Color_White);
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
 				uiRowIdx = 2;
-				#if (AddrLen == 6)
+				#if (AddrLen <= 6)
 				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:", StrDstAddr, AddrLen*2, (AddrLen*2*8 + 8), true);
 				#else
 				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表 号:");
@@ -94,107 +91,47 @@ void WaterCmdFunc_CommonCmd(void)
 			CurrCmd = (0x10 + menuItemNo);
 
 			switch(CurrCmd){
-			case WaterCmd_ReadRealTimeData:		// "读取用户用量"
+			case WaterCmd_ReadRealTimeData:		// 读表数据
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
 				}
 				Args.buf[i++] = 0x01;		// 命令字	01
-				ackLen = 21;				// 应答长度 21	
+				ackLen = 9;				// 应答长度 9/13	
 				// 数据域
-				Args.buf[i++] = 0x00;				// 数据格式 00	
 				Args.lastItemLen = i - 1;
 				break;
 
-			case WaterCmd_ReadFrozenData:		// "读取冻结正转数据"
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					sprintf(StrBuf[0], "0 (0-9有效)");
-					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "序 号:", StrBuf[0], 1, 2*8, true);
-					break;
-				}
-				
-				if(StrBuf[0][0] > '9' || StrBuf[0][0] < '0'){
-					currUi = 1;
-					isUiFinish = false;
-					continue;
-				}
-				Args.buf[i++] = 0x02;		// 命令字	02
-				ackLen = 114;				// 应答长度 88/114	
-				// 数据域
-				Args.buf[i++] = 0x01;				// 数据格式 01/02
-				Args.buf[i++] = _GetYear()/100;		// 时间 - yyyy/mm/dd HH:mm:ss
-				Args.buf[i++] = _GetYear()%100;		
-				Args.buf[i++] = _GetMonth();		
-				Args.buf[i++] = _GetDay();			
-				Args.buf[i++] = _GetHour();			
-				Args.buf[i++] = _GetMin();			
-				Args.buf[i++] = _GetSec();			
-				Args.buf[i++] = StrBuf[0][0] - '0';	// 冻结数据序号	
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_OpenValve:			// " 开阀 "
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
-			
-			case WaterCmd_OpenValveForce:		// " 强制开阀 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x01;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
-
-            case WaterCmd_CloseValve:		// " 关阀 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x00;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_CloseValveForce:		// " 强制关阀 ";
-				/*---------------------------------------------*/
-				if(false == isUiFinish){
-					break;
-				}
-				Args.buf[i++] = 0x03;		// 命令字	03
-				ackLen = 3;					// 应答长度 3	
-				// 数据域
-				Args.buf[i++] = 0x01;		// 强制标识 	0 - 不强制， 1 - 强制
-				Args.buf[i++] = 0x00;		// 开关阀标识	0 - 关阀， 1 - 开阀
-				Args.lastItemLen = i - 1;
-				break;
-
-			case WaterCmd_ClearException:		// " 清异常命令 ";
+			case WaterCmd_OpenValve:			// 开阀 
 				/*---------------------------------------------*/
 				if(false == isUiFinish){
 					break;
 				}
 				Args.buf[i++] = 0x05;		// 命令字	05
-				ackLen = 1;					// 应答长度 1	
+				ackLen = 0;					// 应答长度 0	
 				// 数据域
-				Args.buf[i++] = 0x00;		// 命令选项 00	
+				Args.lastItemLen = i - 1;
+				break;
+
+            case WaterCmd_CloseValve:			// 关阀
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 0;					// 应答长度 0	
+				// 数据域
+				Args.lastItemLen = i - 1;
+				break;
+
+			case WaterCmd_ClearException:		// 清异常命令
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x03;		// 命令字	03
+				ackLen = 0;					// 应答长度 0	
+				// 数据域
 				Args.lastItemLen = i - 1;
 				break;
 
@@ -204,8 +141,9 @@ void WaterCmdFunc_CommonCmd(void)
 
 			// 创建 “中继地址输入框” 后， 显示UI
 			if(false == isUiFinish){
+
 				uiRowIdx += CreateRelayAddrsUi(pUi, pUiCnt, uiRowIdx);
-				
+
 				key = ShowUI(UiList, &currUi);
 
 				if (key == KEY_CANCEL){
@@ -213,7 +151,7 @@ void WaterCmdFunc_CommonCmd(void)
 				}
 
 				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9' ){
-					sprintf(StrDstAddr, " 请输入");
+					sprintf(StrDstAddr, " ");
 					currUi = 0;
 					continue;
 				}
@@ -223,15 +161,15 @@ void WaterCmdFunc_CommonCmd(void)
 			}
 
 			// 地址填充
-			Water6009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
-			#if (AddrLen == 6)
+			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
+			#if (AddrLen <= 6)
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号: %s", StrDstAddr);
 			#else
 			PrintfXyMultiLine_VaList(0, 2*16, "表 号:\n   %s", StrDstAddr);
 			#endif
 
 			// 发送、接收、结果显示
-			key = Protol6009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
+			key = Protol8009TranceiverWaitUI(CurrCmd, &Addrs, &Args, ackLen, timeout, tryCnt);
 			
 			
 			// 继续 / 返回
@@ -245,6 +183,7 @@ void WaterCmdFunc_CommonCmd(void)
 		
 	}
 }
+
 
 
 // 工程调试		

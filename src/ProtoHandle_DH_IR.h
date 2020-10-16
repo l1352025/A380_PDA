@@ -165,7 +165,6 @@ char * DonghaiIR_GetStrDeviceType(uint8 code)
 */
 uint8 Pack_DonghaiIR_RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, ParamsBuf *args, uint8 retryCnt)
 {
-	static uint16 Fsn = 0;
 	static uint16 index = 0;
 	uint16 len, crc16;
 
@@ -204,11 +203,12 @@ uint8 Pack_DonghaiIR_RequestFrame(uint8 * buf, ParamsBuf *addrs, uint16 cmdId, P
 uint8 Explain_DonghaiIR_ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dstAddr, uint16 cmdId, uint16 ackLen, char *dispBuf)
 {
 	CmdResult ret = CmdResult_Failed;
-	uint8 funcId, tagId, dataId, u8Tmp;
-	uint16 index = 0, dispIdx, length, dataLen, crc16, startIdx, payloadIdx, u16Tmp;
-	uint32 u32Tmp;
-	int32 i32Tmp;
-	char *ptr;
+	uint8 funcId, u8Tmp;
+	uint16 index = 0, dispIdx, length, crc16, startIdx, payloadIdx;
+	//uint16 u16Tmp;
+	//uint32 u32Tmp;
+	//int32 i32Tmp;
+	//char *ptr;
 
 	dispIdx = 0;
 

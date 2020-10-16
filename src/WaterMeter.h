@@ -4,7 +4,7 @@
 #include "stdio.h"
 #include "Common.h"
 
-#if defined Project_6009_RF || defined Project_8009_RF
+#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_8009_RF
 #include "MeterDocDBF.h"
 #elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
 #include "MeterDocDBF_HL.h"
@@ -265,7 +265,7 @@ void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 	参数传递方式2：const char (*strRelayAddrs)[20]
 	参数传递方式3：const char **strRelayAddrs, uint addrLen
 	 */
-	#if defined Project_6009_RF || defined Project_6009_RF_HL
+	#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_6009_RF_HL 
 	uint8 i;
 	#endif
 
@@ -275,7 +275,7 @@ void Water6009_PackAddrs(ParamsBuf *addrs, const char strDstAddr[], const char s
 	memcpy(addrs->items[addrs->itemCnt], LocalAddr, AddrLen);
 	addrs->itemCnt++;
 
-	#if defined Project_6009_RF || defined Project_6009_RF_HL
+	#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_6009_RF_HL
 	// 中继地址
 	for(i = 0; i < RELAY_MAX; i++){
 		if(strRelayAddrs[i][0] >= '0' && strRelayAddrs[i][0] <= '9'){
@@ -618,7 +618,7 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
-	#if defined Project_6009_RF || defined Project_6009_RF_HL
+	#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_6009_RF_HL
 		len += sprintf(&buf[len], "LoRaWan状态   :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
 	#else // Project_6009_IR
 		len += sprintf(&buf[len], "欠费蜂鸣器      :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
@@ -1034,14 +1034,15 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		#ifdef Use_DBF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
-			#if defined Project_6009_RF || defined Project_8009_RF
+			#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_8009_RF
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X%02X", buf[index - 3], buf[index - 2], buf[index - 1]);
 				sprintf(&MeterInfo.meterStatusStr[u16Tmp], "阀门%s", ptr);
 			#elif defined Project_6009_RF_HL || defined Project_8009_RF_HL
 				sprintf(MeterInfo.meterStatusHex, "%02X%02X", buf[index - 3], buf[index - 2]);
-				sprintf(MeterInfo.valveStatus, "%d", buf[index - 1] == 2 ? 0 : 1 );		// 状态转换 2/1 --> 0/1 （关/开）
 				MeterInfo.meterStatusStr[u16Tmp - 1] = '\0';
 			#endif
+			// 状态转换 2/1/0 --> 0/1/2 （关/开/未知）
+			sprintf(MeterInfo.valveStatus, "%d", buf[index - 1] == 2 ? 0 : (buf[index - 1] == 1 ? 1 : 2) );		
 			}
 		#endif
 		//电池电压
@@ -2714,7 +2715,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 	{
 		//下行/上行 信号强度
 		#ifdef Use_DBF
-		#if defined Project_6009_RF || defined Project_8009_RF
+		#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_8009_RF
 			if(MeterInfo.dbIdx != Invalid_dbIdx){
 				sprintf(MeterInfo.signalValue, "%d", buf[index + 1]);	// 保存上行
 			}
@@ -2756,7 +2757,7 @@ uint8 Protol6009TranceiverWaitUI(uint8 cmdid, ParamsBuf *addrs, ParamsBuf *args,
 	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 2000;
 	tryCnt = 3;
-#elif defined Project_6009_RF || defined Project_6009_RF_HL
+#elif defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_6009_RF_HL
 	ackLen += 15 + addrs->itemCnt * AddrLen;
 	timeout = 10000 + (addrs->itemCnt - 2) * 6000 * 2;
 	tryCnt = 3;

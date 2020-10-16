@@ -2358,7 +2358,11 @@ void WaterCmdFunc(void)
 	
 	menu.left=0;
 	menu.top=0;
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.no=8;
+	#else
 	menu.no=7;
+	#endif
 	menu.title= "<<工程调试 ";		// 工程调试 --> 即原来的 表端操作
 	menu.str[0]=" 常用命令 ";
 	menu.str[1]=" 测试命令 ";
@@ -2366,7 +2370,12 @@ void WaterCmdFunc(void)
 	menu.str[3]=" 预缴用量 ";
 	menu.str[4]=" 工作参数 ";
 	menu.str[5]=" 其他操作 ";
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.str[6]=" 批量开关阀 ";
+	menu.str[7]=" 版本信息 ";
+	#else
 	menu.str[6]=" 版本信息 ";
+	#endif
 	menu.key[0]="1";
 	menu.key[1]="2";
 	menu.key[2]="3";
@@ -2374,13 +2383,21 @@ void WaterCmdFunc(void)
 	menu.key[4]="5";
 	menu.key[5]="6";
 	menu.key[6]="7";
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.key[7]="8";
+	#endif
 	menu.Function[0]=WaterCmdFunc_CommonCmd;
 	menu.Function[1]=WaterCmdFunc_TestCmd;
 	menu.Function[2]=WaterCmdFunc_Upgrade;
 	menu.Function[3]=WaterCmdFunc_PrepaiedVal;
 	menu.Function[4]=WaterCmdFunc_WorkingParams;
 	menu.Function[5]=WaterCmdFunc_Other;
+	#ifdef UseFunc_BatchOpenCloseValve
+	menu.Function[6]=BatchOpenCloseValve;
+	menu.Function[7]=VersionInfoFunc;
+	#else
 	menu.Function[6]=VersionInfoFunc;
+	#endif
 	menu.FunctionEx=0;
 	_Menu(&menu);	
 }

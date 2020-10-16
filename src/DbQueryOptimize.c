@@ -127,7 +127,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 {
 	uint32 i, recCnt;
 	char strTmp[Size_DbStr];
-	char state;
+	uint8 state;
 	int len;
 
 	_Select(1);
@@ -183,22 +183,21 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		_ReadField(Idx_MeterReadStatus, strTmp);		
 		strTmp[Size_MeterReadStatus - 1] = '\0';
 		if(strTmp[0] == '1'){
-			state = '1';
+			state = 1;
 			meters->readOkCnt++;		// 成功数量
 		}
 		else if(strTmp[0] == '2'){
-			state = '2';
+			state = 2;
 			meters->readNgCnt++;		// 失败数量
 		}else{
-			state = '0';				// 未抄数量
+			state = 0;				// 未抄数量
 		}
 		
-		if(meters->qryMeterReadStatus != NULL){			// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
-			if((meters->qryMeterReadStatus[0] == '1' && state != '1')
-				|| (meters->qryMeterReadStatus[0] == '0' && state == '1')){
-				_Skip(1);	// 下一个数据库记录
-				continue;
-			}
+		// 抄表状态 过滤  ‘0’ - 未抄/失败， ‘1’ - 已抄
+		if((meters->qryMeterReadStatus == 1 && state != 1)
+			|| (meters->qryMeterReadStatus == 0 && state == 1)){
+			_Skip(1);	// 下一个数据库记录
+			continue;
 		}
 
 		switch (meters->selectField)		// 列表类型：默认为表号列表
@@ -234,7 +233,7 @@ void QueryMeterList(MeterListSt *meters, DbQuerySt *query)
 		len = sprintf(meters->strs[meters->cnt], strTmp);
 		StringPadRight(meters->strs[meters->cnt], 20, ' ');
 		meters->strs[meters->cnt][18] = ' ';	
-		meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+		meters->strs[meters->cnt][19] = (state == 0 ? 'N' : (state == 1 ? 'Y' : 'F'));
 		meters->dbIdx[meters->cnt] = (i + 1);	// 数据库索引从 1 开始编号
 		meters->cnt++;
 

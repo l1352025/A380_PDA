@@ -13,6 +13,7 @@
 #define District_Max				50	// 最大小区数
 #define Building_Max				100	// 一个小区-最大楼栋数
 #define Meter_Max					500	// 一栋楼-最大表数
+#define AllBuildings_Max			2500	// 所有小区-最大楼栋数(平均每个小区50栋楼)
 
 #define	Size_DistrictNum			11	// 小区编号 长度	10
 #define	Size_DistrictName			51	// 小区名称 长度	50
@@ -87,7 +88,7 @@ typedef enum{
 	Idx_SignalValue,		// "XHQD",		// 信号强度			// set
 	Idx_MeterReadTime,		// "CBSJ",		// 抄表时间			// set
 	Idx_MeterReadStatus,	// "CBZT",		// 抄表状态 0/1/2 - 未抄/成功/失败	// set
-	Idx_ValveStatus,		// "BLZDA",		// BLZD[A->]	（用作阀门状态：0/1/2 - 关/开/未知）
+	Idx_ValveStatus,		// "BLZDA",		// BLZD[A->]	（自定义阀门状态：0/1/2 - 关/开/未知）
 	Idx_BLZDB,				// "BLZDB",		// 
 	Idx_BLZDC,				// "BLZDC",		// 集中器 编号
 	Idx_BLZDD,				// "BLZDD",		// 集中器 名称
@@ -174,6 +175,12 @@ typedef struct {
 }DbQuerySt;
 #endif
 
+//---------------	编号-名称 结构
+typedef struct{
+	char 	num[5];				// 列表项字符串：编号 最大长度 4位 0~9999
+	char 	name[Size_ListStr];	// 列表项字符串：名称 最大长度 20位
+}NumNameSt;
+
 //---------------	小区列表
 typedef struct{
 	char 	nums[District_Max][Size_ListStr];	// 列表项字符串：小区编号
@@ -192,21 +199,33 @@ typedef struct{
 }BuildingListSt;
 
 //---------------	xx小区 - xx楼栋 - 户表列表（表号/户号/门牌号/户名） 
+typedef enum{
+	QryBy_ReadStatus = 0,
+	QryBy_ValveStatus,
+	QryBy_KeyWord
+}QryType;
+
 typedef struct{
 	uint32 	dbIdx[Meter_Max];				// 列表项对应的数据库索引
 	char 	strs[Meter_Max][Size_ListStr];	// 列表项字符串：表号/户号/门牌号/户名/地址
 	uint16 	idx;			// 列表项索引
 	uint16	cnt;			// 列表项总数
-	uint16 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
-	char 	*qryDistricNum;			// 小区编号：空值表示所有
-	char 	*qryBuildingNum;		// 楼栋编号：空值表示所有
-	char 	*qryMeterReadStatus;	// 抄表状态
-	char	*qryKeyWord;			// 查询的关键字
 	char 	districName[Size_DistrictName];		// 小区名
 	char 	buildingName[Size_BuildingName];	// 楼栋名
-	uint16 	meterCnt;		// 当前表总数：未抄+成功+失败
-	uint16 	readOkCnt;		// 成功数量
-	uint16 	readNgCnt;		// 失败数量
+	uint16 	selectField;	// 要显示的字段：表号/户号/门牌号/户名/地址
+	uint16	qryType;		// 查询的类型：0-按抄表状态查询，1-按阀门状态查询，3-按关键字查询
+	uint8 	qryMeterReadStatus;		// 抄表状态：0-未抄，1-已抄，2-失败，NULL-所有
+	uint8 	qryValveStatus;			// 阀门状态：0-关阀，1-开阀，2-未知，3-关阀/未知，4-开阀/未知，NULL-所有
+	char 	*qryDistricNum;			// 小区编号：空值表示所有
+	char 	*qryBuildingNum;		// 楼栋编号：空值表示所有
+	char	*qryKeyWord;			// 查询的关键字
+	uint16 	meterCnt;		// 当前表总数
+	uint16 	readNotCnt;		// 未抄数量
+	uint16 	readOkCnt;		// 已抄成功数量
+	uint16 	readNgCnt;		// 已抄失败数量
+	uint16 	valveOpenCnt;		// 已开阀数量
+	uint16 	valveCloseCnt;		// 已关阀数量
+	uint16 	valveUnknownCnt;	// 阀门未知数量
 }MeterListSt;
 
 
@@ -233,6 +252,7 @@ typedef struct
 	char	meterStatusStr[Size_MeterStatusStr];
 	char	batteryVoltage[Size_BatteryVoltage];
 	char	signalValue[Size_SignalValue];
+	char	valveStatus[Size_ValveStatus];		// （自定义阀门状态：0/1/2 - 关/开/未知）
 }MeterInfoSt;
 
 
@@ -249,14 +269,26 @@ extern void QueryBuildingList(BuildingListSt *buildings, DbQuerySt *query);
 extern void QueryMeterList(MeterListSt *meters, DbQuerySt *query);
 extern void QueryMeterListByKeyword(MeterListSt *meters, DbQuerySt *query);
 extern uint8 ShowMeterReadCountInfo(MeterListSt *meters);
+extern uint8 ShowValveStatusCountInfo(MeterListSt *meters);
 extern uint8 ShowMeterList(MeterListSt *meters);
 extern void ShowSettingRoutes(void);
 extern uint8 ShowAutoMeterReading(MeterListSt *meters);
+extern uint8 ShowAutoOpenCloseValve(MeterListSt *meters, uint8 valveCtrl);
 extern void SaveMeterReadResult(MeterInfoSt *meterInfo, uint8 readType, uint8 readStatus);
+extern void SaveValveStatus(MeterInfoSt *meterInfo, uint8 valveStatus);
 extern void QueryMeterInfo(MeterInfoSt *meterInfo, DbQuerySt *query);
 extern uint8 ShowMeterInfo(MeterInfoSt *meterInfo);
 extern uint32 FixDbfRecCnt(void);
 
 extern void MainFuncBatchMeterReading(void);
+
+#ifdef UseFunc_ReSetDistrictAndBuildingNo
+extern void ReSetDistrictAndBuildingNo(void);
+extern bool IsReSetNo(void);
+#endif
+
+#ifdef UseFunc_BatchOpenCloseValve
+extern void BatchOpenCloseValve(void);
+#endif
 
 #endif

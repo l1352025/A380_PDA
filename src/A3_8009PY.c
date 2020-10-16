@@ -3,7 +3,7 @@
 *	桑锐8009气表手持机 - RF版 (濮阳定制版)
 *
 */
-#include "SR8009_RF_PY.h"
+#include "A3_8009PY.h"
 
 #include "HJLIB.H"
 #include "string.h"
@@ -116,7 +116,7 @@ void MainFuncBatchMeterReading(void)
 					switch (menuList_2.strIdx + 1){
 					case 1:		// 自动抄表
 						Meters.selectField = Idx_MeterNum;
-						Meters.qryMeterReadStatus = "0";
+						Meters.qryMeterReadStatus = 0;
 						_Printfxy(0, 9*16, "    <  查询中  >    ", Color_White);
 						QueryMeterList(&Meters, &DbQuery);
 						key = ShowAutoMeterReading(&Meters);
@@ -124,12 +124,12 @@ void MainFuncBatchMeterReading(void)
 
 					case 2:		// 已抄列表
 						Meters.selectField = Idx_Invalid;
-						Meters.qryMeterReadStatus = "1";
+						Meters.qryMeterReadStatus = 1;
 						key = ShowMeterList(&Meters);
 						break;
 					case 3:		// 未抄/失败列表
 						Meters.selectField = Idx_Invalid;
-						Meters.qryMeterReadStatus = "0";
+						Meters.qryMeterReadStatus = 0;
 						key = ShowMeterList(&Meters);
 						break;
 

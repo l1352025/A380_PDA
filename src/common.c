@@ -4,18 +4,19 @@
 #include "common.h"
 
 // --------------------------------  全局变量  -----------------------------------------
-//char Screenbuff[160*(160/3+1)*2]; 
 #if Upgrd_FileBuf_Enable
 uint8 DispBuf[128 * 1024];					// 4k ~ 128K
 #else
-uint8 DispBuf[14 * 1024];					// 4k ~ 14K
+uint8 DispBuf[80 * 1024];					// 4k ~ 80K
 #endif
 uint8 * const LogBuf = &DispBuf[4096];     	// 4k ~ 
 uint8 * const TmpBuf = &DispBuf[8192];     	// 2K ~ 
 uint8 * const BackupBuf = &DispBuf[10240];	// 2k ~ 
 uint8 * const ArgBuf = &DispBuf[12288];		// 2k ~ 
 #if Upgrd_FileBuf_Enable
-uint8 * const FileBuf = &DispBuf[14336];	// 116k 
+uint8 * const BigBuf = &DispBuf[14336];	    // 116k 
+#else
+uint8 * const BigBuf = &DispBuf[14336];		// 66K
 #endif
 uint8 TxBuf[1024];
 uint8 RxBuf[1024];
@@ -1347,6 +1348,43 @@ void StringPadRight(const char * srcStr, int totalLen, char padChar)
 		*pw++ = padChar;
 	}
 	*pw = 0x00;
+}
+
+/**
+ * 字符串转换为整数
+ * @param str - 数字字符串: 如 123 或 123.23
+ * @param intValue	- 整数值：123
+ * @return bool - 返回转换结果：true - 成功， false - 失败
+*/
+bool StringToInt(const char *str, int *intValue)
+{
+	int temp = 0;
+	char *p = str;
+
+	if(*p == '+' || *p == '-'){
+		p++;
+	}
+
+	if(*p == 0x00) return false;
+
+	while(*p != 0x00){
+		if(*p < '0' || *p > '9'){
+			return false;
+		}
+		temp = temp * 10 + (*p - '0');
+		p++;
+
+		if(*p == '.'){
+			break;
+		}
+	}
+	if(*str == '-'){
+		temp = -temp;
+	}
+
+	*intValue = temp;
+	
+	return true;
 }
 
 /**

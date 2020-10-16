@@ -132,7 +132,7 @@ typedef struct{
 	uint16	cnt;			// 列表项总数
 	uint16 	selectField;	// 要显示的字段：表号/户号/地址/户名/地址
 	char 	*qrySectNum;			// 抄表册编号：空值表示所有
-	char 	*qryMeterReadStatus;	// 抄表状态
+	uint8 	qryMeterReadStatus;		// 抄表状态
 	char	*qryKeyWord;			// 查询的关键字
 	char 	sectNum[Size_SectNum];			// 抄表册编号
 	char 	sectName[Size_SectName];		// 抄表册名称
