@@ -904,8 +904,9 @@ void WaterCmdFunc_WorkingParams(void)
 					if(StrBuf[0][0] > 1){
 						StrBuf[0][0] = 0;
 					}
-                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:", &StrBuf[0][0], 2, 
-						"Coap", "Udp");
+					LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "工作模式:");
+                    CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "", &StrBuf[0][0], 4, 
+						"Coap电信", "Udp移动", "Coap联通", "OneNet移动");
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx)*16, "  IP:", StrBuf[1], 3, 3*8, true);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 8*8, (uiRowIdx)*16, ".", StrBuf[2], 3, 3*8, true);
 					TextBoxCreate(&pUi[(*pUiCnt)++], 12*8, (uiRowIdx)*16, ".", StrBuf[3], 3, 3*8, true);
@@ -936,7 +937,7 @@ void WaterCmdFunc_WorkingParams(void)
 				ackLen = 2;					// 应答长度 2	
 				// 数据域
 				Args.buf[i++] = 0x01;		// 命令选项：0-读取， 1-设置
-				Args.buf[i++] = (0xA0 + (uint8)StrBuf[0][0]);	// 模式：A0-coap, A1-udp
+				Args.buf[i++] = (0x01 + (uint8)StrBuf[0][0]);	// 模式：1-coap电信, 2-udp移动, 3-coap联通， 4-onenet移动
 				Args.buf[i++] = (uint8)(ip[0] & 0xFF);	// IP
 				Args.buf[i++] = (uint8)(ip[1] & 0xFF);	
 				Args.buf[i++] = (uint8)(ip[2] & 0xFF);		
@@ -1038,8 +1039,13 @@ void WaterCmdFunc_WorkingParams(void)
 					_Printfxy(0, 9*16, "返回 <等待输入> 继续", Color_White);
 					(*pUiCnt) = 0;
 					uiRowIdx = 2;
+					#ifndef Protocol_N609
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "LoRaWan状态 :", &StrBuf[0][3], 2, 
+						"关", "开");
+					#else
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "欠费蜂鸣器  :", &StrBuf[0][3], 2, 
 						"关", "开");
+					#endif
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "主动告警    :", &StrBuf[0][4], 2, 
 						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "上报冻结数据:", &StrBuf[0][5], 2, 
@@ -1079,9 +1085,16 @@ void WaterCmdFunc_WorkingParams(void)
 						"关", "开");
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "掉电关阀功能:", &StrBuf[0][10], 2, 
 						"关", "开");
+					#ifndef Protocol_N609
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "RF休眠策略  :", &StrBuf[0][11], 2, 
 						"关", "开");
 					StrBuf[0][12] = 0X00;  // 保留
+					#else
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "指定频点    :", &StrBuf[0][11], 2, 
+						"关", "开");
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "触发NB上报  :", &StrBuf[0][12], 2, 
+						"关", "开");
+					#endif
 					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "煤气泄漏检测:", &StrBuf[0][13], 2, 
 						"关", "开");
 					StrBuf[0][14] = 0X00;  // 保留

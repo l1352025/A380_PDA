@@ -618,9 +618,9 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
-	#if defined Project_6009_RF || defined Project_6009_RF_TN || defined Project_6009_RF_HL
+	#ifndef Protocol_N609
 		len += sprintf(&buf[len], "LoRaWan状态   :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
-	#else // Project_6009_IR
+	#else
 		len += sprintf(&buf[len], "欠费蜂鸣器      :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
 	#endif
 	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
@@ -630,10 +630,15 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "自动信道分配    :%s\n", ((stateCode & 0x0100) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "防锈功能        :%s\n", ((stateCode & 0x0200) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "掉电关阀功能    :%s\n", ((stateCode & 0x0400) > 0 ? "开" : " 关"));
+	#ifndef Protocol_N609
 	len += sprintf(&buf[len], "RF休眠策略      :%s\n", ((stateCode & 0x0800) > 0 ? "开" : " 关"));
-	// 保留 len += sprintf(&buf[len], "离线自动关阀    :%s\n", ((stateCode & 0x1000) > 0 ? "开" : " 关"));
+	// 保留 0x1000
+	#else
+	len += sprintf(&buf[len], "指定频点        :%s\n", ((stateCode & 0x0800) > 0 ? "开" : " 关"));
+	len += sprintf(&buf[len], "触发NB上报      :%s\n", ((stateCode & 0x1000) > 0 ? "开" : " 关"));
+	#endif
 	len += sprintf(&buf[len], "煤气泄漏检测    :%s\n", ((stateCode & 0x2000) > 0 ? "开" : " 关"));
-	// 保留
+	// 保留 0x4000
 	len += sprintf(&buf[len], "流速控制功能    :%s\n", ((stateCode & 0x8000) > 0 ? "开" : " 关"));
 
 	return len;
@@ -1629,8 +1634,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 工作模式
 		switch (buf[index]){
-		case 0xA0:	ptr = "Coap"; break;
-		case 0xA1:	ptr = "Udp"; break;
+		case 0x01:	ptr = "Coap电信"; break;
+		case 0x02:	ptr = "Udp移动"; break;
+		case 0x03:	ptr = "Coap联通"; break;
+		case 0x04:	ptr = "OneNet移动"; break;
 		default: ptr = "未知"; break;
 		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "工作模式: %s\n", ptr);
@@ -2602,8 +2609,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "通信频段: Band %d\n", buf[index]);
 		index += 1;
 		switch (buf[index]){
-		case 0x01:	ptr = "COAP";	break;
-		case 0x02:	ptr = "UDP";	break;
+		case 0x01:	ptr = "COAP电信";	break;
+		case 0x02:	ptr = "UDP移动";	break;
+		case 0x03:	ptr = "COAP联通";	break;
+		case 0x04:	ptr = "ONENET移动";	break;
 		default:  ptr = "未知";	break;
 		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "连接方式: %s\n", ptr);
