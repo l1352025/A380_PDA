@@ -53,7 +53,7 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_IR_DH)        // 6009-红外-东海定制版
     #define VerInfo_Name    (char *)"  桑锐N609DH抄表程序"  // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"	            // 版本号
+    #define VerInfo_RevNo   (char *)"1.1 预览1"	            // 版本号
     #define VerInfo_RevDate (char *)"2020-10-15"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR              
@@ -68,7 +68,7 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_IR_DB)        // 6009-红外-远传定制版
     #define VerInfo_Name    (char *)"  桑锐N609DB抄表程序"  // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"	            // 版本号
+    #define VerInfo_RevNo   (char *)"1.1 预览1"	            // 版本号
     #define VerInfo_RevDate (char *)"2020-10-15"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR              
@@ -83,7 +83,7 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_IR_D)        // 6009-红外-石家庄定制版
     #define VerInfo_Name    (char *)"  桑锐N609D抄表程序"  // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"	            // 版本号
+    #define VerInfo_RevNo   (char *)"1.1 预览1"	            // 版本号
     #define VerInfo_RevDate (char *)"2020-11-06"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR              
@@ -98,7 +98,7 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_IR_HX)        // 6009-红外-海大定制版
     #define VerInfo_Name    (char *)"  桑锐N609HX抄表程序"  // 程序名
-    #define VerInfo_RevNo   (char *)"1.0 预览1"	            // 版本号
+    #define VerInfo_RevNo   (char *)"1.1 预览1"	            // 版本号
     #define VerInfo_RevDate (char *)"2020-09-29"        // 版本日期
     #define TransType   (char *)"红外透传"       		// 通信方式	
 	#define CurrPort    Trans_IR              

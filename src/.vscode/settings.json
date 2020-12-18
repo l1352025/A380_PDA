@@ -1,0 +1,7 @@
+{
+    "files.exclude": {
+        "**/.bak": true,
+        "**/.hex": true
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
+}

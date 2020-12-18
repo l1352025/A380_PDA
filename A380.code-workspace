@@ -1,0 +1,36 @@
+{
+	"folders": [
+		{
+			"name": "通信工具",
+			"path": "A380手持机PC通讯工具\\通信工具"
+		},
+		{
+			"name": "doc",
+			"path": "doc"
+		},
+		{
+			"name": "arm-Include",
+			"path": "arm\\Include"
+		},
+		{
+			"name": "src",
+			"path": "src"
+		},
+		{
+			"name": "test",
+			"path": "test_code"
+		},
+	],
+	"settings": {
+		"files.associations": {
+			"string.h": "c",
+			"cstdio": "cpp"
+		},
+		"files.exclude": {
+			"**/*.bak": true,
+			"**/*.a": true,
+			"**/*.L": true,
+			"**/*.hex": true
+		}
+	}
+}
