@@ -541,7 +541,7 @@ uint8 ShowAutoMeterReading(MeterListSt *meters)
 			// 应答长度、超时时间、重发次数
 			ackLen += 15 + Addrs.itemCnt * AddrLen;
 			timeout = 8000 + (Addrs.itemCnt - 2) * 6000 * 2;
-			tryCnt = 3;
+			tryCnt = 1;
 		#else // Protocol_8009
 			// 地址填充
 			Water8009_PackAddrs(&Addrs, StrDstAddr, StrRelayAddr);
@@ -974,8 +974,8 @@ uint8 ShowMeterList(MeterListSt *meterReadList)
 			key = ShowMeterInfo(&MeterInfo);
 			state = MeterInfo.meterReadStatus[0];	
 			if(meters->qryType == QryBy_ReadStatus){
-				meters->strs[meters->cnt][18] = ' ';	
-				meters->strs[meters->cnt][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
+				meters->strs[meterList.strIdx][18] = ' ';	
+				meters->strs[meterList.strIdx][19] = (state == '0' ? 'N' : (state == '1' ? 'Y' : 'F'));
 			}
 			//------------------------------------------------------
 			if(key == KEY_LEFT){
@@ -2720,7 +2720,7 @@ bool IsReSetNo(void)
 		ldName[Size_ListStr - 1] = '\0';
 		ptr = &ldName[0];
 		while(*ptr != '\0'){
-			if(*ptr == '-'){
+			if(*ptr == '-' || *ptr == '#'){
 				*ptr = '\0';
 				break;
 			}
@@ -2855,11 +2855,11 @@ void ReSetDistrictAndBuildingNo(void)
 			ptr++;
 			ldName++;
 		}
-		// 截取最多20字符，并去掉分隔符‘-’后面内容
+		// 截取最多20字符，并去掉分隔符‘-’ 或 ‘#’后面内容
 		ldName[Size_ListStr - 1] = '\0';
 		ptr = &ldName[0];
 		while(*ptr != '\0'){
-			if(*ptr == '-'){
+			if(*ptr == '-' || *ptr == '#'){
 				*ptr = '\0';
 				break;
 			}

@@ -24,7 +24,11 @@
 	"settings": {
 		"files.associations": {
 			"string.h": "c",
-			"cstdio": "cpp"
+			"cstdio": "cpp",
+			"meterdocdbf.h": "c",
+			"watermeter8009.h": "c",
+			"a3_6009tn.h": "c",
+			"a3_6009a.h": "c"
 		},
 		"files.exclude": {
 			"**/*.bak": true,

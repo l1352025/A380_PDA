@@ -987,9 +987,9 @@ void WaterCmdFunc_CommonCmd(void)
 					}
 					TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
 					pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][1], 2, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
 						"小", "大");
-					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 3, 
+					CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
 						"1", "10", "100");
 					break;
 				}
@@ -1017,7 +1017,7 @@ void WaterCmdFunc_CommonCmd(void)
 				case 2: u8Tmp = 100; break;
 				default: u8Tmp = 10; break;
 				}
-				Args.buf[i++] = (uint8)((StrBuf[1][1] << 7) | u8Tmp);	// 表口径|脉冲系数	
+				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 表口径|脉冲系数	
 				Args.lastItemLen = i - 1;
 				break;
 

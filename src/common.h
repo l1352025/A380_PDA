@@ -111,10 +111,25 @@ typedef unsigned char bool;
     #define LogPort     CurrPort            // 日志输出串口
     #define UseBroadAddr    1               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
+#elif defined(Project_6009_IR_TA)        // 6009-红外-上水定制版
+    #define VerInfo_Name    (char *)"  桑锐N609TA抄表程序"  // 程序名
+    #define VerInfo_RevNo   (char *)"1.0"	            // 版本号
+    #define VerInfo_RevDate (char *)"2020-09-29"        // 版本日期
+    #define TransType   (char *)"红外透传"       		// 通信方式	
+	#define CurrPort    Trans_IR              
+	#define CurrBaud    (uint8 *)"9600,E,8,1"
+    #define VerInfo_Msg    (char *)"        "         // 版本备注信息
+    #define UseCrc16    0           // 是否使用Crc16校验算法：0 - crc8校验， 1 - crc16校验
+    #define AddrLen     8           // 地址长度(byte)：8    // 16位表号版
+    #define VerLen      40          // 版本长度(byte)：40 
+    #define ShowEMI_ON  1           // 显示磁干扰状态开关：1
+    #define LogPort     CurrPort            // 日志输出串口
+    #define UseBroadAddr    1               // 使用广播地址抄表 D4D4D4D4D4D4D4D4 
+    #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)      // 6009-Lora
     #define VerInfo_Name    (char *)"  桑锐6009抄表程序"   // 程序名
-    #define VerInfo_RevNo   (char *)"3.0"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-10-16"        // 版本日期
+    #define VerInfo_RevNo   (char *)"3.2"               // 版本号
+    #define VerInfo_RevDate (char *)"2021-04-13"        // 版本日期
     #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -130,7 +145,7 @@ typedef unsigned char bool;
 #elif defined(Project_6009_RF_HL)   // 6009-Lora-和龙定制版
     #define VerInfo_Name    (char *)"  桑锐6009HL抄表程序"    // 程序名
     #define VerInfo_RevNo   (char *)"1.0"            // 版本号
-    #define VerInfo_RevDate (char *)"2020-09-18"        // 版本日期
+    #define VerInfo_RevDate (char *)"2021-09-18"        // 版本日期
     #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -144,8 +159,8 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF_TN)   // 6009-Lora-洮南定制版
     #define VerInfo_Name    (char *)"  桑锐6009TN抄表程序"    // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"            // 版本号
-    #define VerInfo_RevDate (char *)"2020-10-15"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.3"            // 版本号
+    #define VerInfo_RevDate (char *)"2021-04-13"        // 版本日期
     #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -160,8 +175,8 @@ typedef unsigned char bool;
     #define UseFunc_ReSetDistrictAndBuildingNo  // 定义时，启用的功能：对"JK.DBF"文件中小区和楼栋重新编号
 #elif defined(Project_8009_RF)      // 8009-RF
     #define VerInfo_Name    (char *)"  桑锐8009抄表程序"   // 程序名
-    #define VerInfo_RevNo   (char *)"1.3"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-10-16"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.5"               // 版本号
+    #define VerInfo_RevDate (char *)"2021-05-19"        // 版本日期
     #define TransType   (char *)"FSK透传"              	// 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -176,8 +191,8 @@ typedef unsigned char bool;
     #define UseFunc_BatchOpenCloseValve     // 定义时，启用的功能：批量开关阀
 #elif defined(Project_8009_RF_HL)   // 8009-RF-和龙定制版
     #define VerInfo_Name    (char *)"  桑锐8009HL抄表程序"   // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-09-18"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.1"               // 版本号
+    #define VerInfo_RevDate (char *)"2020-05-19"        // 版本日期
     #define TransType   (char *)"FSK透传"               // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -191,8 +206,8 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_8009_RF_TN)   // 8009-RF-洮南定制版
     #define VerInfo_Name    (char *)"  桑锐8009TN抄表程序"   // 程序名
-    #define VerInfo_RevNo   (char *)"1.0"               // 版本号
-    #define VerInfo_RevDate (char *)"2020-10-14"        // 版本日期
+    #define VerInfo_RevNo   (char *)"1.3"               // 版本号
+    #define VerInfo_RevDate (char *)"2021-05-19"        // 版本日期
     #define TransType   (char *)"FSK透传"               // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 
@@ -226,8 +241,10 @@ typedef unsigned char bool;
 #define VerInfo_Release     // 发布时必须定义该宏， 调试时注释
 
 #ifndef VerInfo_Release
-    #warning
-    #pragma warning(当前LOG未关闭！发布时请关闭)
+    //#warning 当前LOG未关闭！发布时请关闭
+    //#pragma warning 当前LOG未关闭！发布时请关闭 
+    //#pragma message( " Warning: 当前LOG未关闭！发布时请关闭  " )
+    //#error 当前LOG未关闭！发布时请关闭
 #endif
 
 // 发布时，关闭log 并 打开蜂鸣器

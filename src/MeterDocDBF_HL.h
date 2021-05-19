@@ -11,7 +11,7 @@
 #define Use_DBF
 
 #define District_Max			50		// 最大小区数
-#define Building_Max			100		// 一个小区 - 最大楼栋数
+#define Building_Max			500		// 一个小区 - 最大楼栋数
 #define Meter_Max				500		// 一栋楼 - 最大表数
 #define Uint_Max				50		// 一栋楼 - 最大单元数
 
