@@ -967,7 +967,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, AddrLen, 0, false);
-		TmpBuf[AddrLen] = 0x00;
+		TmpBuf[AddrLen * 2] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += AddrLen;
 		// 转发结果
@@ -2248,7 +2248,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = buf[index - 1];
 		for(i = 0; i < u8Tmp; i++){
 			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-			TmpBuf[6] = 0x00;
+			TmpBuf[6 * 2] = 0x00;
 			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 			ptr = Water6009_GetStrDeviceType(buf[index]);
@@ -2272,7 +2272,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = buf[index - 1];
 		for(i = 0; i < u8Tmp; i++){
 			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-			TmpBuf[6] = 0x00;
+			TmpBuf[6* 2] = 0x00;
 			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 			ptr = Water6009_GetStrErrorMsg(buf[index]);
@@ -2290,7 +2290,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		u8Tmp = (rxlen - index - 4) / 7;
 		for(i = 0; i < u8Tmp; i++){
 			GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-			TmpBuf[6] = 0x00;
+			TmpBuf[6* 2] = 0x00;
 			dispIdx += sprintf(&dispBuf[dispIdx], "节点 %2d:%s\n", i + 1, &TmpBuf[0]);
 			index += 6;
 			ptr = Water6009_GetStrErrorMsg(buf[index]);
@@ -2322,7 +2322,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-		TmpBuf[6] = 0x00;
+		TmpBuf[6* 2] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += 6;
 		// 设备类型
@@ -2360,7 +2360,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-		TmpBuf[6] = 0x00;
+		TmpBuf[6* 2] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += 6;
 		// 命令状态
@@ -2377,7 +2377,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-		TmpBuf[6] = 0x00;
+		TmpBuf[6* 2] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += 6;
 		// 命令状态
@@ -2439,7 +2439,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ret = CmdResult_Ok;
 		// 表号
 		GetStringHexFromBytes(&TmpBuf[0], &buf[index], 0, 6, 0, false);
-		TmpBuf[6] = 0x00;
+		TmpBuf[6* 2] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "表号: %s\n", &TmpBuf[0]);
 		index += 6;
 		// 命令状态
@@ -2544,6 +2544,12 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 			break;
 		}
 		ret = CmdResult_Ok;
+	#ifdef Project_6009_IR_F
+		// 出厂编号
+		GetStringHexFromBytes(&TmpBuf[0], &buf[index + 74 + 2], 0, 8, 0, false);
+		TmpBuf[8 * 2] = 0x00;
+		dispIdx += sprintf(&dispBuf[dispIdx], "出厂编号: \n   %s\n", &TmpBuf[0]);
+	#endif
 		// 模块运行参数
 		ptr = Water6009_GetStrDeviceType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "仪表类型: %s\n", ptr);
@@ -2609,10 +2615,10 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "通信频段: Band %d\n", buf[index]);
 		index += 1;
 		switch (buf[index]){
-		case 0x01:	ptr = "COAP电信";	break;
-		case 0x02:	ptr = "UDP移动";	break;
-		case 0x03:	ptr = "COAP联通";	break;
-		case 0x04:	ptr = "ONENET移动";	break;
+		case 0x01:	ptr = "Coap电信";	break;
+		case 0x02:	ptr = "Udp移动";	break;
+		case 0x03:	ptr = "Coap联通";	break;
+		case 0x04:	ptr = "OneNet移动";	break;
 		default:  ptr = "未知";	break;
 		}
 		dispIdx += sprintf(&dispBuf[dispIdx], "连接方式: %s\n", ptr);
@@ -2663,7 +2669,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 1;	
 		dispIdx += sprintf(&dispBuf[dispIdx], "侦听工作时长: %d%s\n",  buf[index], (u8Tmp == 0x01 ? "小时" : "天"));
 		index += 1;	
-		index += 10; // 保留
+		index += 10; // 保留 --> 出厂编号
 		memcpy(&VerInfo[0], &buf[index], VerLen);
 		VerInfo[VerLen] = 0x00;
 		dispIdx += sprintf(&dispBuf[dispIdx], "软件版本: %s\n", &VerInfo[0]);

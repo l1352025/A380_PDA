@@ -1295,14 +1295,15 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 		}
 
 		// 户表命令-界面
-		ListBoxCreate(&menuList, 3*16, 2*16, 14, 5, 5, NULL, 
+		ListBoxCreate(&menuList, 3*16, 2*16, 14, 5, 6, NULL, 
 			"户表命令", 
-			5, 
+			6, 
 			"1. 抄表",
 			"2. 开阀",
 			"3. 关阀",
 			"4. 清异常",
-			"5. 手工录入");
+			"5. 手工录入",
+			"6. 设表底数");
 		//---------------------
 		key = ShowListBox(&menuList);
 		if(key == KEY_CANCEL){	// 取消执行命令，重新显示户表信息
@@ -1417,6 +1418,99 @@ uint8 ShowMeterInfo(MeterInfoSt *meterInfo)
 				break;
 			}
 			continue;		// 显示户表信息
+
+		case 6:
+			CurrCmd = WaterCmd_SetBaseValPulseRatio;	// 设用量和脉冲系数
+			while(2){
+				(*pUiCnt) = 0;
+				uiRowIdx = 2;
+				currUi = 0;
+				sprintf(StrBuf[2], "表号: %s", StrDstAddr);
+				LableCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, StrBuf[2]);
+				if(BackupBuf[ArgIdx_MtrValPalse -1] != Param_Unique){		
+					StrBuf[1][0] = 0x01;
+				}
+				else{
+					memcpy(&StrBuf[0][0], &BackupBuf[ArgIdx_MtrValPalse], 2 * 20);
+				}
+
+			#ifdef Protocol_6009
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "用户用量:", StrBuf[0], 10, 11*8, true);
+				pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
+				CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][0], 4, 
+					"1", "10", "100", "1000");
+				
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				key = ShowUI(UiList, &currUi);
+
+				if (key == KEY_CANCEL){
+					break;
+				}
+
+				if(false == StringToDecimal(StrBuf[0], 2, &u8Tmp, &u32Tmp, &u16Tmp)){
+					sprintf(StrBuf[0], " ");
+					continue;
+				}
+
+				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
+
+				Args.buf[i++] = 0x06;		// 命令字	06
+				ackLen = 7;					// 应答长度 7	
+				// 数据域
+				u32Tmp = (uint32) _atof(StrBuf[0]);
+				u16Tmp = (uint16)((float)((_atof(StrBuf[0]) - u32Tmp)*1000.0));
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);		// 用户用量	
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);
+				Args.buf[i++] = (uint8)((u32Tmp >> 24) & 0xFF);
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);		
+				Args.buf[i++] = (uint8)((u16Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)StrBuf[1][0];		// 脉冲系数	
+				Args.lastItemLen = i - 1;
+			#else // Protocol_8009
+				TextBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表底数:", StrBuf[0], 9, 11*8, true);
+				pUi[(*pUiCnt) -1].ui.txtbox.dotEnable = 1;
+				CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "表端口径:", &StrBuf[1][0], 2, 
+					"小", "大");
+				CombBoxCreate(&pUi[(*pUiCnt)++], 0, (uiRowIdx++)*16, "脉冲系数:", &StrBuf[1][1], 3, 
+					"1", "10", "100");
+
+				_Printfxy(0, 9*16, "返回            确定", Color_White);
+				key = ShowUI(UiList, &currUi);
+
+				if (key == KEY_CANCEL){
+					break;
+				}
+
+				if(false == StringToDecimal(StrBuf[0], 2, &u8Tmp, &u32Tmp, &u16Tmp)){
+					sprintf(StrBuf[0], " ");
+					currUi = 1;
+					continue;
+				}
+
+				memcpy(&BackupBuf[ArgIdx_MtrValPalse], &StrBuf[0][0], 2 * 20);
+				BackupBuf[ArgIdx_MtrValPalse - 1] = Param_Unique;
+
+				Args.buf[i++] = 0x04;		// 命令字	04
+				ackLen = 5;					// 应答长度 5	
+				// 数据域
+				Args.buf[i++] = (uint8)((u32Tmp >> 16) & 0xFF);		// 表底数：整数 3byte
+				Args.buf[i++] = (uint8)((u32Tmp >> 8) & 0xFF);
+				Args.buf[i++] = (uint8)(u32Tmp & 0xFF);	
+				Args.buf[i++] = (uint8)(u16Tmp & 0xFF);				// 表底数：小数 1byte
+				switch (StrBuf[1][1])
+				{
+				case 0: u8Tmp = 1; break;
+				case 1: u8Tmp = 10; break;
+				case 2: u8Tmp = 100; break;
+				default: u8Tmp = 10; break;
+				}
+				Args.buf[i++] = (uint8)((StrBuf[1][0] << 7) | u8Tmp);	// 表口径|脉冲系数	
+				Args.lastItemLen = i - 1;
+			#endif
+				break;
+			}
 
 		default: 
 			break;

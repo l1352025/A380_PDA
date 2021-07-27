@@ -11,7 +11,7 @@
 #define Use_DBF
 
 #define District_Max				50	// 最大小区数
-#define Building_Max				500	// 一个小区-最大楼栋数
+#define Building_Max				200	// 一个小区-最大楼栋数 (最大约200，超出将内存不够，导致死机！！)
 #define Meter_Max					500	// 一栋楼-最大表数
 #define AllBuildings_Max			2500	// 所有小区-最大楼栋数(平均每个小区50栋楼)
 

@@ -3,7 +3,9 @@
 *	桑锐6009水表手持机 - 红外版 <北京NB-Iot>
 *
 */
+#ifndef Protocol_NBiot_BJ
 #include "A3_N609HX.h"
+#endif
 
 #include "HJLIB.H"
 #include "string.h"
