@@ -29,7 +29,8 @@
 			"watermeter8009.h": "c",
 			"a3_6009tn.h": "c",
 			"a3_6009a.h": "c",
-			"a3_n609ta.h": "c"
+			"a3_n609ta.h": "c",
+			"a3_n609a.h": "c"
 		},
 		"files.exclude": {
 			"**/*.bak": true,

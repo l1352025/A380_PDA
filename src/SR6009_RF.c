@@ -1763,13 +1763,14 @@ void WaterCmdFunc_WorkingParams(void)
 	uint8 currUi = 0, uiRowIdx, isUiFinish;
 	uint16 ackLen = 0, timeout, u16Tmp;
 	uint32 u32Tmp;
+	char strDstAddrBak[20];
 
 	_ClearScreen();
 
 	// 菜单
-	ListBoxCreate(&menuList, 0, 0, 20, 7, 8, NULL,
+	ListBoxCreate(&menuList, 0, 0, 20, 7, 10, NULL,
 		"<<工作参数",
-		8,
+		10,
 		"1. 设用量和脉冲系数",
 		"2. 清除反转计量数据",
 		"3. 读取功能使能状态",
@@ -1777,7 +1778,9 @@ void WaterCmdFunc_WorkingParams(void)
 		"5. 设置定量上传",
 		"6. 设置定时定量上传",
 		"7. 读表端时钟",
-		"8. 校表端时钟"
+		"8. 校表端时钟",
+		"9. 读表端用量",
+		"10.读表端参数"
 	);
 
 	while(1){
@@ -1805,6 +1808,12 @@ void WaterCmdFunc_WorkingParams(void)
 			//----------------------------------------------
 			_GUIHLine(0, 9*16 - 4, 160, Color_Black);
 			_Printfxy(0, 9*16, "返回 <等待输入> 执行", Color_White);
+
+			if(menuItemNo == 10){
+				// 读表端参数命令使用广播地址 D4D4...
+				memcpy(strDstAddrBak, StrDstAddr, 20);
+				strncpy(StrDstAddr, "D4D4D4D4D4D4D4D4", AddrLen * 2);
+			}
 
 			if(false == isUiFinish){
 				(*pUiCnt) = 0;
@@ -2014,6 +2023,30 @@ void WaterCmdFunc_WorkingParams(void)
 				Args.lastItemLen = i - 1;
 				break;
 
+			case (0x50 + 9): 
+				CurrCmd = WaterCmd_ReadRealTimeData;		// 读表端用量 / "读取用户用量"
+				/*---------------------------------------------*/
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x01;		// 命令字	01
+				ackLen = 21;				// 应答长度 21	
+				// 数据域
+				Args.buf[i++] = 0x00;				// 数据格式 00	
+				Args.lastItemLen = i - 1;
+				break;
+   
+			case (0x50 + 10): 
+				CurrCmd = WaterCmd_ReadModuleRunningParams;		// 读表端参数 / 读取模块运行参数
+				 
+				if(false == isUiFinish){
+					break;
+				}
+				Args.buf[i++] = 0x3A;		// 命令字	3A
+				ackLen = 124;				// 应答长度 124	
+				Args.lastItemLen = i - 1; 
+				break;
+
 			default: 
 				break;
 			}
@@ -2029,7 +2062,7 @@ void WaterCmdFunc_WorkingParams(void)
 					break;
 				}
 
-				if(StrDstAddr[0] < '0' || StrDstAddr[0] > '9'  ){
+				if( StrDstAddr[0] != 'D' && (StrDstAddr[0] < '0' || StrDstAddr[0] > '9')){
 					sprintf(StrDstAddr, " 请输入");
 					currUi = 0;
 					continue;
@@ -2059,7 +2092,10 @@ void WaterCmdFunc_WorkingParams(void)
 				continue;
 			}
 		}
-		
+		if(menuItemNo == 10 && StrDstAddr[0] == 'D'){
+			// 广播命令失败时，恢复原来地址
+			memcpy(StrDstAddr, strDstAddrBak, 20);
+		}
 	}
 }
 

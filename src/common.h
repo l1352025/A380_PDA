@@ -143,8 +143,8 @@ typedef unsigned char bool;
     #define Upgrd_FileBuf_Enable    0       // 使用大文件缓存：整个App文件读到内存缓存 *FileBuf
 #elif defined(Project_6009_RF)      // 6009-Lora
     #define VerInfo_Name    (char *)"  桑锐6009抄表程序"   // 程序名
-    #define VerInfo_RevNo   (char *)"3.3"               // 版本号
-    #define VerInfo_RevDate (char *)"2021-07-27"        // 版本日期
+    #define VerInfo_RevNo   (char *)"3.4"               // 版本号
+    #define VerInfo_RevDate (char *)"2021-12-21"        // 版本日期
     #define TransType   (char *)"LoRa透传"              // 通信方式	
 	#define CurrPort    Trans_IR_Quick          
 	#define CurrBaud    (uint8 *)"9600,E,8,1" 

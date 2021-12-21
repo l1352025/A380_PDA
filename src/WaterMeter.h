@@ -31,7 +31,8 @@ FuncCmdFrameExplain FrameExplain = ExplainWater6009ResponseFrame;
 */
 typedef enum{
 
-	WaterCmd_ReadMeterCfgInfo	 	= 0x04,	// 读取表端参数配置信息
+	// 读取表端参数配置信息
+	WaterCmd_ReadMeterCfgInfo	 	= 0x04,	
 	
 	/*
 	常用命令：	
@@ -618,11 +619,11 @@ uint16 Water6009_GetStrMeterFuncEnableState(uint16 stateCode, char * buf)
 	len += sprintf(&buf[len], "磁干扰关阀功能  :%s\n", ((stateCode & 0x0001) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "上报数据加密    :%s\n", ((stateCode & 0x0002) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "防拆卸检测功能  :%s\n", ((stateCode & 0x0004) > 0 ? "开" : " 关"));
-	#ifndef Protocol_N609
-		len += sprintf(&buf[len], "LoRaWan状态   :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
-	#else
-		len += sprintf(&buf[len], "欠费蜂鸣器      :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
-	#endif
+#ifndef Protocol_N609
+	len += sprintf(&buf[len], "LoRaWan状态     :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
+#else
+	len += sprintf(&buf[len], "欠费蜂鸣器      :%s\n", ((stateCode & 0x0008) > 0 ? "开" : " 关"));
+#endif
 	len += sprintf(&buf[len], "主动告警        :%s\n", ((stateCode & 0x0010) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "上报冻结数据    :%s\n", ((stateCode & 0x0020) > 0 ? "开" : " 关"));
 	len += sprintf(&buf[len], "透支关阀功能    :%s\n", ((stateCode & 0x0040) > 0 ? "开" : " 关"));
@@ -2588,16 +2589,33 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		ptr = Water6009_GetStrSensorType(buf[index]);
 		dispIdx += sprintf(&dispBuf[dispIdx], "计量传感器类型: \n  %s\n", ptr);
 		index += 1;
+	#ifndef Protocol_N609
+		u32Tmp = buf[index] + (buf[index + 1] << 8) + (buf[index + 2] << 16); 
+		dispIdx += sprintf(&dispBuf[dispIdx], "基准接收频率: %d\n", u32Tmp);
+		index += 3;
+		dispIdx += sprintf(&dispBuf[dispIdx], "抄表接收信道: %d\n", (buf[index] & 0x0F));
+		dispIdx += sprintf(&dispBuf[dispIdx], "应答接收信道: %d\n", (buf[index] >> 4));
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "发射信道: %d\n", buf[index]);
+		index += 1;
+		dispIdx += sprintf(&dispBuf[dispIdx], "发射功率: %d\n", buf[index]);
+		index += 1;
+	#else
 		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-IP地址: \n  %d.%d.%d.%d\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]);
 		index += 4;
 		dispIdx += sprintf(&dispBuf[dispIdx], "服务器-端口号: %d\n", (buf[index] + buf[index + 1] * 256));
 		index += 2;
+	#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "水表防锈间隔: %d天\n", (buf[index] + buf[index + 1] * 256));
 		index += 1;
 		dispIdx += sprintf(&dispBuf[dispIdx], "系统调试级别: %d\n", buf[index]);
 		index += 1;
 		GetStringHexFromBytes(TmpBuf, buf, index, 4, 0, false);
+		dispIdx += sprintf(&dispBuf[dispIdx], "运营商编号: %s\n", TmpBuf);
+	#ifndef Protocol_N609
+		// 编号不用解析
+	#else
 		if(TmpBuf[3] == '0' && TmpBuf[4] == '4'){
 			ptr = "中国移动";
 		}else if(TmpBuf[3] == '0' && TmpBuf[4] == '1'){
@@ -2605,13 +2623,16 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		}else if(TmpBuf[3] == '1' && TmpBuf[4] == '1'){
 			ptr = "中国电信";
 		}
-		dispIdx += sprintf(&dispBuf[dispIdx], "运营商编号: %s\n", TmpBuf);
 		dispIdx += sprintf(&dispBuf[dispIdx], " SIM卡类型: %s\n", ptr);
+	#endif
 		index += 4;
 		dispIdx += sprintf(&dispBuf[dispIdx], "当前系统时间: \n %02X%02X-%02X-%02X %02X:%02X:%02X\n", 
 			buf[index], buf[index + 1], buf[index + 2], buf[index + 3]
 			, buf[index + 4], buf[index + 5], buf[index + 6]);
 		index += 7;
+	#ifndef Protocol_N609
+		index += 4; // 保留
+	#else
 		dispIdx += sprintf(&dispBuf[dispIdx], "通信频段: Band %d\n", buf[index]);
 		index += 1;
 		switch (buf[index]){
@@ -2624,6 +2645,7 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		dispIdx += sprintf(&dispBuf[dispIdx], "连接方式: %s\n", ptr);
 		index += 1;
 		index += 2; // 保留
+	#endif
 		dispIdx += sprintf(&dispBuf[dispIdx], "报警限值: %d\n", buf[index]);
 		index += 1;
 		u16Tmp = ((uint16)(buf[index + 1] << 8) + buf[index]);
@@ -2632,11 +2654,11 @@ uint8 ExplainWater6009ResponseFrame(uint8 * buf, uint16 rxlen, const uint8 * dst
 		index += 2;
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "预缴用量:%d.%03d\n", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "预缴用量:%u.%03d\n", u32Tmp, u16Tmp);
 		index += 6;
 		u32Tmp = ((buf[index + 3] << 24) + (buf[index + 2] << 16) + (buf[index + 1] << 8) + buf[index]);
 		u16Tmp = ((buf[index + 5] << 8) + buf[index + 4]);
-		dispIdx += sprintf(&dispBuf[dispIdx], "参考用量:%d.%03d\n", u32Tmp, u16Tmp);
+		dispIdx += sprintf(&dispBuf[dispIdx], "参考用量:%u.%03d\n", u32Tmp, u16Tmp);
 		index += 6;
 		u16Tmp = (buf[index] + buf[index + 1] * 256);
 		dispIdx += sprintf(&dispBuf[dispIdx], "模块测试状态如下\n");
